@@ -20,7 +20,6 @@ export default function Aplicaciones() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Mis servicios publicados con conteo de aplicaciones
     const { data: svcs } = await supabase
       .from('servicios')
       .select('*')
@@ -35,7 +34,7 @@ export default function Aplicaciones() {
     setServicioActivo(servicio);
     const { data } = await supabase
       .from('aplicaciones')
-      .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades)')
+      .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url)')
       .eq('servicio_id', servicio.id)
       .order('created_at', { ascending: false });
     setAplicaciones(data || []);
@@ -49,19 +48,38 @@ export default function Aplicaciones() {
         .eq('id', aplicacionId);
 
       if (decision === 'aceptado') {
-        // Actualizar servicio a en_proceso
         await supabase.from('servicios')
           .update({ estado: 'en_proceso' })
           .eq('id', servicioActivo.id);
 
-        // Rechazar las demás aplicaciones
         await supabase.from('aplicaciones')
           .update({ estado: 'rechazado' })
           .eq('servicio_id', servicioActivo.id)
           .neq('id', aplicacionId);
+
+        // Email al prestador aceptado
+        const appAceptada = aplicaciones.find(a => a.id === aplicacionId);
+        try {
+          await fetch('/api/enviar-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'aplicacion_aceptada',
+              destinatario: 'fernando.najera.nm@gmail.com',
+              datos: {
+                prestador: appAceptada?.usuarios?.nombre || 'Prestador',
+                cliente: usuario?.nombre || 'Cliente',
+                trabajo: servicioActivo.titulo,
+                precio: appAceptada?.precio_ofrecido || servicioActivo.presupuesto,
+                fecha: servicioActivo.fecha,
+              },
+            }),
+          });
+        } catch (emailErr) {
+          console.log('Email no enviado pero aplicación aceptada');
+        }
       }
 
-      // Recargar aplicaciones
       await verAplicaciones(servicioActivo);
     } catch (err) {
       console.error(err);
@@ -93,7 +111,6 @@ export default function Aplicaciones() {
     );
   }
 
-  // Vista de aplicaciones de un servicio específico
   if (servicioActivo) {
     return (
       <main className="min-h-screen bg-gray-50 pb-32">
@@ -124,10 +141,15 @@ export default function Aplicaciones() {
               {aplicaciones.map((app) => (
                 <div key={app.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
 
-                  {/* Header del prestador */}
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                      {app.usuarios?.nombre?.charAt(0) || '?'}
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      {app.usuarios?.foto_url ? (
+                        <img src={app.usuarios.foto_url} alt={app.usuarios.nombre} className="w-full h-full object-cover"/>
+                      ) : (
+                        <span className="text-white font-bold text-lg">
+                          {app.usuarios?.nombre?.charAt(0) || '?'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-gray-900">{app.usuarios?.nombre || 'Prestador'}</p>
@@ -141,7 +163,6 @@ export default function Aplicaciones() {
                     </span>
                   </div>
 
-                  {/* Habilidades */}
                   {app.usuarios?.habilidades?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {app.usuarios.habilidades.slice(0, 3).map((h: string) => (
@@ -150,7 +171,6 @@ export default function Aplicaciones() {
                     </div>
                   )}
 
-                  {/* Precio y mensaje */}
                   <div className="bg-gray-50 rounded-xl p-3 mb-4">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-gray-500">Precio ofrecido</span>
@@ -161,7 +181,6 @@ export default function Aplicaciones() {
                     )}
                   </div>
 
-                  {/* Botones solo si está pendiente */}
                   {app.estado === 'pendiente' && (
                     <div className="flex gap-3">
                       <button
@@ -192,7 +211,6 @@ export default function Aplicaciones() {
           )}
         </div>
 
-        {/* BOTTOM NAV */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
           <div className="max-w-md mx-auto flex justify-around">
             <a href="/home-cliente" className="flex flex-col items-center gap-1">
@@ -222,7 +240,6 @@ export default function Aplicaciones() {
     );
   }
 
-  // Lista de mis servicios
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
@@ -275,7 +292,6 @@ export default function Aplicaciones() {
         )}
       </div>
 
-      {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
         <div className="max-w-md mx-auto flex justify-around">
           <a href="/home-cliente" className="flex flex-col items-center gap-1">
