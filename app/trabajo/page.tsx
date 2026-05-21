@@ -22,11 +22,9 @@ export default function DetalleTrabafo() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Por ahora cargamos el primer trabajo activo
-    // En el futuro usaremos el ID de la URL
     const { data: servicios } = await supabase
       .from('servicios')
-      .select('*, usuarios(nombre, calificacion)')
+      .select('*, usuarios(nombre, calificacion, foto_url)')
       .eq('estado', 'activo')
       .neq('cliente_id', user.id)
       .order('created_at', { ascending: false })
@@ -51,6 +49,34 @@ export default function DetalleTrabafo() {
         estado: 'pendiente',
       });
       if (dbError) throw dbError;
+
+      // Obtener email del cliente
+      const { data: clienteData } = await supabase
+        .from('usuarios')
+        .select('nombre')
+        .eq('id', trabajo.cliente_id)
+        .single();
+
+      // Enviar email de notificación
+      try {
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'nueva_aplicacion',
+            destinatario: 'fernando.najera.nm@gmail.com', // temporal hasta tener emails reales
+            datos: {
+              cliente: clienteData?.nombre || 'Cliente',
+              prestador: usuario.nombre,
+              trabajo: trabajo.titulo,
+              precio: miPrecio || trabajo.presupuesto,
+            },
+          }),
+        });
+      } catch (emailErr) {
+        console.log('Email no enviado pero aplicación guardada');
+      }
+
       setAplicado(true);
     } catch (err: any) {
       setError('Ya aplicaste a este trabajo o hubo un error.');
@@ -173,8 +199,14 @@ export default function DetalleTrabafo() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">👤 Cliente</h3>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-              {trabajo.usuarios?.nombre?.charAt(0) || '?'}
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+              {trabajo.usuarios?.foto_url ? (
+                <img src={trabajo.usuarios.foto_url} alt="cliente" className="w-full h-full object-cover"/>
+              ) : (
+                <span className="text-white font-bold text-lg">
+                  {trabajo.usuarios?.nombre?.charAt(0) || '?'}
+                </span>
+              )}
             </div>
             <div>
               <p className="font-bold text-gray-900">{trabajo.usuarios?.nombre || 'Cliente'}</p>
