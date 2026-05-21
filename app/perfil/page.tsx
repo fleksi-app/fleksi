@@ -2,6 +2,29 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+const habilidades = [
+  '🧹 Limpieza del hogar',
+  '🌿 Jardinería',
+  '🎨 Pintura',
+  '🔧 Mantenimiento general',
+  '⚡ Electricidad',
+  '🚿 Plomería',
+  '🚚 Fletes y traslados',
+  '🪑 Armado de muebles',
+  '🔩 Mecánica básica',
+  '🔑 Cerrajería',
+  '📺 Instalación TV/repisas/cortinas',
+  '🪵 Carpintería ligera',
+  '📦 Mudanza ligera / Ayudante',
+  '👔 Planchado / Lavandería',
+  '💅 Uñas / Estética',
+  '🎪 Staff para eventos',
+  '🍽️ Mesero',
+  '🍳 Cocinero particular',
+  '🚗 Chofer ejecutivo',
+  '🗣️ Intérprete / Traductor',
+];
+
 export default function Perfil() {
   const [usuario, setUsuario] = useState<any>(null);
   const [editando, setEditando] = useState(false);
@@ -10,13 +33,10 @@ export default function Perfil() {
   const [descripcion, setDescripcion] = useState('');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-
-  const habilidades = ['🔧 Plomería', '⚡ Electricidad', '🍽️ Mesero', '🧹 Limpieza', '🚗 Chofer', '🍳 Cocina', '🔨 Carpintería', '🎨 Pintura'];
   const [habilidadesSeleccionadas, setHabilidadesSeleccionadas] = useState<string[]>([]);
+  const [habilidadCustom, setHabilidadCustom] = useState('');
 
-  useEffect(() => {
-    cargarPerfil();
-  }, []);
+  useEffect(() => { cargarPerfil(); }, []);
 
   const cargarPerfil = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -50,6 +70,14 @@ export default function Perfil() {
     );
   };
 
+  const agregarHabilidadCustom = () => {
+    const val = habilidadCustom.trim();
+    if (val && !habilidadesSeleccionadas.includes(val)) {
+      setHabilidadesSeleccionadas(prev => [...prev, val]);
+      setHabilidadCustom('');
+    }
+  };
+
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
@@ -81,7 +109,7 @@ export default function Perfil() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Tarjeta de perfil */}
+        {/* Tarjeta principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl flex-shrink-0">
@@ -95,7 +123,7 @@ export default function Perfil() {
               ) : (
                 <h2 className="font-extrabold text-gray-900 text-lg">{nombre || 'Sin nombre'}</h2>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap mt-1">
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   {usuario?.rol || 'prestador'}
                 </span>
@@ -131,7 +159,7 @@ export default function Perfil() {
           ) : (
             <div className="flex gap-3">
               <button onClick={() => setEditando(false)}
-                className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-gray-400 transition">
+                className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold transition">
                 Cancelar
               </button>
               <button onClick={guardarPerfil} disabled={guardando}
@@ -169,7 +197,7 @@ export default function Perfil() {
         {/* Habilidades */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-3">
             {habilidades.map((h) => (
               <button key={h} onClick={() => editando && toggleHabilidad(h)}
                 className={`px-3 py-1.5 rounded-full text-sm font-semibold transition ${
@@ -180,9 +208,41 @@ export default function Perfil() {
                 {h}
               </button>
             ))}
+
+            {/* Habilidades personalizadas */}
+            {habilidadesSeleccionadas
+              .filter(h => !habilidades.includes(h))
+              .map((h) => (
+                <span key={h} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                  {h}
+                  {editando && (
+                    <button onClick={() => toggleHabilidad(h)} className="ml-1 text-white/70 hover:text-white">✕</button>
+                  )}
+                </span>
+              ))
+            }
           </div>
+
+          {/* Agregar habilidad personalizada */}
+          {editando && (
+            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+              <input
+                type="text"
+                placeholder="Agregar habilidad personalizada..."
+                value={habilidadCustom}
+                onChange={(e) => setHabilidadCustom(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && agregarHabilidadCustom()}
+                className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"
+              />
+              <button onClick={agregarHabilidadCustom}
+                className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-sm">
+                + Agregar
+              </button>
+            </div>
+          )}
+
           {!editando && habilidadesSeleccionadas.length === 0 && (
-            <p className="text-gray-400 text-sm mt-2">Edita tu perfil para agregar habilidades</p>
+            <p className="text-gray-400 text-sm">Edita tu perfil para agregar habilidades</p>
           )}
         </div>
 
