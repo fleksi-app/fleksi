@@ -22,7 +22,6 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Tagline */}
         <h1 className="text-4xl font-extrabold text-gray-900 leading-tight mb-4">
           Tu trabajo,<br/>
           <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -34,28 +33,26 @@ export default function Home() {
           Conectamos personas que necesitan un servicio con quienes pueden hacerlo. Rápido, seguro y flexible.
         </p>
 
-        {/* Botones de rol */}
         <div className="flex flex-col gap-4">
-          <button className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:opacity-90 transition">
+          <a href="/registro" className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:opacity-90 transition text-center">
             👷 Soy prestador de servicios
-          </button>
-          <button className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition">
+          </a>
+          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
             🙋 Necesito un servicio
-          </button>
-          <button className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition">
+          </a>
+          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
             🏢 Soy empresa
-          </button>
-          <button className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition">
+          </a>
+          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
             ✈️ Soy viajero
-          </button>
+          </a>
         </div>
 
-        {/* Login */}
         <p className="mt-8 text-gray-400 text-sm">
           ¿Ya tienes cuenta?{" "}
-          <span className="text-purple-600 font-semibold cursor-pointer hover:underline">
+          <a href="/login" className="text-purple-600 font-semibold hover:underline">
             Inicia sesión
-          </span>
+          </a>
         </p>
 
       </div>
