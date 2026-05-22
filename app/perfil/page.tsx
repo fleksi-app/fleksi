@@ -12,6 +12,17 @@ const habilidades = [
   '🚗 Chofer ejecutivo', '🗣️ Intérprete / Traductor',
 ];
 
+const todosLosBadges = [
+  { tipo: 'nuevo', nombre: 'Nuevo', emoji: '🆕', desc: 'Recién unido a Fleksi' },
+  { tipo: 'primer_trabajo', nombre: 'Primer trabajo', emoji: '🎯', desc: 'Completó su primer trabajo' },
+  { tipo: 'cinco_trabajos', nombre: '5 trabajos', emoji: '🔥', desc: 'Completó 5 trabajos' },
+  { tipo: 'diez_trabajos', nombre: '10 trabajos', emoji: '💎', desc: 'Completó 10 trabajos' },
+  { tipo: 'top_rated', nombre: 'Top Rated', emoji: '⭐', desc: 'Calificación 4.8 o más' },
+  { tipo: 'perfecto', nombre: 'Perfección', emoji: '✨', desc: 'Calificación perfecta 5.0' },
+  { tipo: 'verificado', nombre: 'Verificado', emoji: '✅', desc: 'Identidad verificada' },
+  { tipo: 'viajero', nombre: 'Viajero', emoji: '✈️', desc: 'Trabajó en 2+ ciudades' },
+];
+
 export default function Perfil() {
   const [usuario, setUsuario] = useState<any>(null);
   const [editando, setEditando] = useState(false);
@@ -24,23 +35,55 @@ export default function Perfil() {
   const [habilidadesSeleccionadas, setHabilidadesSeleccionadas] = useState<string[]>([]);
   const [habilidadCustom, setHabilidadCustom] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
+  const [badges, setBadges] = useState<any[]>([]);
+  const [reseñas, setReseñas] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
 
   const cargarPerfil = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.href = '/login'; return; }
-    const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-    if (data) {
-      setUsuario({ ...data, id: user.id });
-      setNombre(data.nombre || '');
-      setTelefono(data.telefono || '');
-      setDescripcion(data.descripcion || '');
-      setHabilidadesSeleccionadas(data.habilidades || []);
-      setFotoUrl(data.foto_url || '');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = '/login'; return; }
+
+      const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+      if (data) {
+        setUsuario({ ...data, id: user.id });
+        setNombre(data.nombre || '');
+        setTelefono(data.telefono || '');
+        setDescripcion(data.descripcion || '');
+        setHabilidadesSeleccionadas(data.habilidades || []);
+        setFotoUrl(data.foto_url || '');
+      }
+
+      // Cargar badges
+      const { data: badgesData } = await supabase
+        .from('badges').select('*').eq('usuario_id', user.id);
+      setBadges(badgesData || []);
+
+      // Cargar reseñas
+      const { data: reseñasData } = await supabase
+        .from('reseñas')
+        .select('*, usuarios!reseñas_cliente_id_fkey(nombre, foto_url)')
+        .eq('prestador_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      setReseñas(reseñasData || []);
+
+      // Asignar badges automáticos
+      try {
+        await supabase.rpc('asignar_badges', { user_id: user.id });
+        // Recargar badges después de asignar
+        const { data: newBadges } = await supabase
+          .from('badges').select('*').eq('usuario_id', user.id);
+        setBadges(newBadges || []);
+      } catch (e) {}
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCargando(false);
     }
-    setCargando(false);
   };
 
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,8 +94,7 @@ export default function Perfil() {
       const ext = file.name.split('.').pop();
       const path = `${usuario.id}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage
-        .from('avatares')
-        .upload(path, file, { upsert: true });
+        .from('avatares').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('avatares').getPublicUrl(path);
       const url = urlData.publicUrl + '?t=' + Date.now();
@@ -95,6 +137,8 @@ export default function Perfil() {
     window.location.href = '/';
   };
 
+  const tieneBadge = (tipo: string) => badges.some(b => b.tipo === tipo);
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -123,8 +167,6 @@ export default function Perfil() {
         {/* Tarjeta principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
-
-            {/* Foto de perfil */}
             <div className="relative flex-shrink-0">
               <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
                 {fotoUrl ? (
@@ -136,9 +178,7 @@ export default function Perfil() {
                 )}
               </div>
               {editando && (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={subiendoFoto}
+                <button onClick={() => fileInputRef.current?.click()} disabled={subiendoFoto}
                   className="absolute -bottom-1 -right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs shadow-lg">
                   {subiendoFoto ? '⏳' : '📷'}
                 </button>
@@ -158,20 +198,19 @@ export default function Perfil() {
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   {usuario?.rol || 'prestador'}
                 </span>
-                {usuario?.verificado && (
+                {tieneBadge('verificado') && (
                   <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
                     ✅ Verificado
+                  </span>
+                )}
+                {tieneBadge('top_rated') && (
+                  <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">
+                    ⭐ Top Rated
                   </span>
                 )}
               </div>
             </div>
           </div>
-
-          {editando && (
-            <p className="text-xs text-gray-400 text-center mb-3">
-              📷 Toca el ícono de cámara para cambiar tu foto
-            </p>
-          )}
 
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
@@ -183,7 +222,7 @@ export default function Perfil() {
               <p className="text-xs text-gray-400">Trabajos</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-extrabold text-gray-900">0</p>
+              <p className="text-2xl font-extrabold text-gray-900">{reseñas.length}</p>
               <p className="text-xs text-gray-400">Reseñas</p>
             </div>
           </div>
@@ -231,6 +270,56 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* Badges */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+          <h3 className="font-extrabold text-gray-900 mb-4">🏅 Insignias</h3>
+          <div className="grid grid-cols-4 gap-3">
+            {todosLosBadges.map((badge) => {
+              const activo = tieneBadge(badge.tipo);
+              return (
+                <div key={badge.tipo} className={`text-center transition ${!activo ? 'opacity-30' : ''}`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-1 mx-auto ${
+                    activo ? 'bg-gradient-to-r from-blue-50 to-purple-50 shadow-sm' : 'bg-gray-100'
+                  }`}>
+                    {badge.emoji}
+                  </div>
+                  <p className="text-xs text-gray-500 font-semibold leading-tight">{badge.nombre}</p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-400 text-center mt-3">
+            {badges.length} de {todosLosBadges.length} insignias desbloqueadas
+          </p>
+        </div>
+
+        {/* Reseñas */}
+        {reseñas.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas recientes</h3>
+            <div className="flex flex-col gap-3">
+              {reseñas.map((r) => (
+                <div key={r.id} className="bg-gray-50 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">
+                        {r.usuarios?.nombre?.charAt(0) || '?'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-900">{r.usuarios?.nombre || 'Cliente'}</p>
+                      <p className="text-xs text-yellow-500">{'⭐'.repeat(r.estrellas)}</p>
+                    </div>
+                  </div>
+                  {r.comentario && (
+                    <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Habilidades */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
@@ -269,29 +358,6 @@ export default function Perfil() {
           {!editando && habilidadesSeleccionadas.length === 0 && (
             <p className="text-gray-400 text-sm">Edita tu perfil para agregar habilidades</p>
           )}
-        </div>
-
-        {/* Insignias */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-          <h3 className="font-extrabold text-gray-900 mb-3">🏅 Insignias</h3>
-          <div className="flex gap-3">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl mb-1">🆕</div>
-              <p className="text-xs text-gray-400">Nuevo</p>
-            </div>
-            <div className="text-center opacity-40">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl mb-1">⭐</div>
-              <p className="text-xs text-gray-400">Top rated</p>
-            </div>
-            <div className="text-center opacity-40">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl mb-1">🔥</div>
-              <p className="text-xs text-gray-400">10 trabajos</p>
-            </div>
-            <div className="text-center opacity-40">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl mb-1">✈️</div>
-              <p className="text-xs text-gray-400">Viajero</p>
-            </div>
-          </div>
         </div>
 
       </div>

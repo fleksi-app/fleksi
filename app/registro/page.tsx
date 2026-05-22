@@ -42,6 +42,18 @@ export default function Registro() {
             rol,
           });
         if (dbError) throw dbError;
+
+        // Email de bienvenida
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'bienvenida',
+            destinatario: email,
+            datos: { nombre, rol },
+          }),
+        });
+
         setPaso(4);
       }
     } catch (err: any) {

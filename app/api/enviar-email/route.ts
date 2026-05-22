@@ -10,6 +10,62 @@ export async function POST(request: NextRequest) {
     let asunto = '';
     let html = '';
 
+    if (tipo === 'bienvenida') {
+      const esCliente = datos.rol === 'cliente' || datos.rol === 'empresa';
+      const emoji = datos.rol === 'prestador' ? '👷' : datos.rol === 'empresa' ? '🏢' : datos.rol === 'viajero' ? '✈️' : '🙋';
+      const cta_url = esCliente ? 'https://fleksi.vercel.app/home-cliente' : 'https://fleksi.vercel.app/home';
+      const cta_texto = esCliente ? 'Buscar prestadores →' : 'Ver trabajos disponibles →';
+      const mensaje = esCliente
+        ? 'Ya puedes publicar servicios y encontrar al profesional perfecto para lo que necesitas.'
+        : 'Ya puedes ver trabajos disponibles, aplicar y empezar a ganar dinero.';
+
+      asunto = `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`;
+      html = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 32px 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 900;">fleksi</h1>
+            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px;">Tu trabajo, tus reglas.</p>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="font-size: 56px; margin-bottom: 12px;">${emoji}</div>
+            <h2 style="color: #0D0D1A; margin: 0; font-size: 22px;">¡Hola, ${datos.nombre}! 👋</h2>
+            <p style="color: #64748B; margin-top: 8px;">Tu cuenta fue creada exitosamente.</p>
+          </div>
+
+          <div style="background: #F8F9FC; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <p style="color: #0D0D1A; font-weight: bold; margin: 0 0 8px;">¿Qué sigue?</p>
+            <p style="color: #64748B; margin: 0; font-size: 15px;">${mensaje}</p>
+          </div>
+
+          <div style="margin-bottom: 24px;">
+            <p style="color: #0D0D1A; font-weight: bold; margin-bottom: 12px;">Con Fleksi puedes:</p>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <span style="font-size: 20px;">⚡</span>
+              <span style="color: #64748B;">Conectarte en minutos con quien necesitas</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <span style="font-size: 20px;">🛡️</span>
+              <span style="color: #64748B;">Pagos seguros con Fleksi Protege</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">⭐</span>
+              <span style="color: #64748B;">Sistema de reputación y badges</span>
+            </div>
+          </div>
+
+          <a href="${cta_url}"
+             style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
+            ${cta_texto}
+          </a>
+
+          <p style="color: #64748B; font-size: 12px; text-align: center; margin-top: 20px;">
+            Fleksi — Conectando talento con oportunidades en México y LATAM
+          </p>
+        </div>
+      `;
+    }
+
     if (tipo === 'nueva_aplicacion') {
       asunto = `Nueva aplicación recibida — ${datos.trabajo}`;
       html = `
@@ -25,7 +81,7 @@ export async function POST(request: NextRequest) {
             <p style="margin: 0; font-weight: bold; color: #0D0D1A;">${datos.trabajo}</p>
             <p style="margin: 8px 0 0; color: #7C3AED; font-weight: bold;">Precio ofrecido: $${datos.precio} MXN</p>
           </div>
-          <a href="https://fleksi.vercel.app/aplicaciones" 
+          <a href="https://fleksi.vercel.app/aplicaciones"
              style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; margin-top: 20px;">
             Ver aplicación →
           </a>
