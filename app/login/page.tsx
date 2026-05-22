@@ -16,20 +16,16 @@ export default function Login() {
     setCargando(true);
     setError('');
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
       if (data.user) {
         const { data: usuario } = await supabase
-          .from('usuarios')
-          .select('rol')
-          .eq('id', data.user.id)
-          .single();
-        const rol = usuario?.rol || 'prestador';
-        if (rol === 'cliente' || rol === 'empresa') {
-          window.location.href = '/home-cliente';
+          .from('usuarios').select('rol').eq('id', data.user.id).single();
+        const rol = usuario?.rol || 'flekser';
+        if (rol === 'empresa') {
+          window.location.href = '/home-empresa';
+        } else if (rol === 'viajero') {
+          window.location.href = '/home-viajero';
         } else {
           window.location.href = '/home';
         }
@@ -45,7 +41,6 @@ export default function Login() {
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full">
 
-        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
             <defs>
@@ -76,43 +71,27 @@ export default function Login() {
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Correo electrónico</label>
-            <input
-              type="email"
-              placeholder="tu@correo.com"
-              value={email}
+            <input type="email" placeholder="tu@correo.com" value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"
-            />
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
           </div>
-
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Contraseña</label>
-            <input
-              type="password"
-              placeholder="Tu contraseña"
-              value={password}
+            <input type="password" placeholder="Tu contraseña" value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"
-            />
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
           </div>
-
-          <button
-            onClick={handleLogin}
-            disabled={cargando}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50"
-          >
+          <button onClick={handleLogin} disabled={cargando}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
             {cargando ? 'Entrando...' : 'Iniciar sesión →'}
           </button>
         </div>
 
         <p className="mt-6 text-center text-gray-400 text-sm">
           ¿No tienes cuenta?{" "}
-          <a href="/registro" className="text-purple-600 font-semibold hover:underline">
-            Regístrate gratis
-          </a>
+          <a href="/registro" className="text-purple-600 font-semibold hover:underline">Regístrate gratis</a>
         </p>
-
         <p className="mt-3 text-center">
           <span className="text-purple-600 text-sm font-semibold cursor-pointer hover:underline">
             ¿Olvidaste tu contraseña?

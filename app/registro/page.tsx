@@ -1,8 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function Registro() {
+  const searchParams = useSearchParams();
   const [paso, setPaso] = useState(1);
   const [rol, setRol] = useState('');
   const [nombre, setNombre] = useState('');
@@ -13,11 +15,18 @@ export default function Registro() {
   const [error, setError] = useState('');
 
   const roles = [
-    { id: 'prestador', emoji: '👷', titulo: 'Prestador de servicios', desc: 'Ofrece tus habilidades y gana dinero' },
-    { id: 'cliente', emoji: '🙋', titulo: 'Necesito un servicio', desc: 'Encuentra a alguien que te ayude' },
-    { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales' },
-    { id: 'viajero', emoji: '✈️', titulo: 'Soy viajero', desc: 'Trabaja mientras viajas' },
+    { id: 'flekser', emoji: '⚡', titulo: 'Soy Flekser', desc: 'Ofrece servicios y contrata cuando lo necesites' },
+    { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
+    { id: 'viajero', emoji: '✈️', titulo: 'Soy viajero', desc: 'Trabaja mientras viajas por el mundo' },
   ];
+
+  useEffect(() => {
+    const rolParam = searchParams.get('rol');
+    if (rolParam && ['flekser', 'empresa', 'viajero'].includes(rolParam)) {
+      setRol(rolParam);
+      setPaso(2);
+    }
+  }, [searchParams]);
 
   const handleRegistro = async () => {
     if (!nombre || !email || !password) {
@@ -27,23 +36,17 @@ export default function Registro() {
     setCargando(true);
     setError('');
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { data, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) throw authError;
       if (data.user) {
-        const { error: dbError } = await supabase
-          .from('usuarios')
-          .insert({
-            id: data.user.id,
-            nombre,
-            telefono,
-            rol,
-          });
+        const { error: dbError } = await supabase.from('usuarios').insert({
+          id: data.user.id,
+          nombre,
+          telefono,
+          rol,
+        });
         if (dbError) throw dbError;
 
-        // Email de bienvenida
         await fetch('/api/enviar-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -61,6 +64,12 @@ export default function Registro() {
     } finally {
       setCargando(false);
     }
+  };
+
+  const destino = () => {
+    if (rol === 'empresa') return '/home-empresa';
+    if (rol === 'viajero') return '/home-viajero';
+    return '/home';
   };
 
   return (
@@ -92,11 +101,8 @@ export default function Registro() {
             <p className="text-gray-400 text-center mb-8 font-light">Elige tu perfil para continuar</p>
             <div className="flex flex-col gap-3">
               {roles.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => { setRol(r.id); setPaso(2); }}
-                  className="w-full p-4 rounded-2xl border-2 border-gray-200 hover:border-purple-400 flex items-center gap-4 transition text-left"
-                >
+                <button key={r.id} onClick={() => { setRol(r.id); setPaso(2); }}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 hover:border-purple-400 flex items-center gap-4 transition text-left">
                   <span className="text-3xl">{r.emoji}</span>
                   <div>
                     <div className="font-bold text-gray-900">{r.titulo}</div>
@@ -115,11 +121,14 @@ export default function Registro() {
         {/* PASO 2 */}
         {paso === 2 && (
           <div>
-            <button onClick={() => setPaso(1)} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
+            <button onClick={() => { setPaso(1); setRol(''); }}
+              className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
               ← Regresar
             </button>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Crea tu cuenta</h1>
-            <p className="text-gray-400 mb-8 font-light">Ingresa tus datos para comenzar</p>
+            <p className="text-gray-400 mb-8 font-light">
+              Registrándote como <span className="font-semibold text-purple-600">{roles.find(r => r.id === rol)?.titulo}</span>
+            </p>
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
@@ -129,9 +138,12 @@ export default function Registro() {
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Nombre completo</label>
-                <input type="text" placeholder="Ej. María López" value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                  {rol === 'empresa' ? 'Nombre de la empresa' : 'Nombre completo'}
+                </label>
+                <input type="text"
+                  placeholder={rol === 'empresa' ? 'Ej. Servicios Limpios SA' : 'Ej. María López'}
+                  value={nombre} onChange={(e) => setNombre(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
               <div>
@@ -177,9 +189,9 @@ export default function Registro() {
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Bienvenido a Fleksi!</h1>
             <p className="text-gray-400 mb-8 font-light">Tu cuenta fue creada exitosamente.<br/>Estás listo para empezar.</p>
-            <a href={rol === 'cliente' || rol === 'empresa' ? '/home-cliente' : '/home'}
+            <a href={destino()}
               className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition">
-              Ir a mi perfil →
+              Ir a mi inicio →
             </a>
           </div>
         )}

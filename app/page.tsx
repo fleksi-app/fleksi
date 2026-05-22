@@ -3,7 +3,6 @@ export default function Home() {
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
 
-        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
             <defs>
@@ -34,21 +33,27 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col gap-4">
-          <a href="/registro" className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:opacity-90 transition text-center">
-            👷 Soy prestador de servicios
+          <a href="/registro?rol=flekser"
+            className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:opacity-90 transition text-center">
+            ⚡ Soy Flekser
           </a>
-          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
-            🙋 Necesito un servicio
-          </a>
-          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
+          <a href="/registro?rol=empresa"
+            className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
             🏢 Soy empresa
           </a>
-          <a href="/registro" className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
+          <a href="/registro?rol=viajero"
+            className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
             ✈️ Soy viajero
           </a>
         </div>
 
-        <p className="mt-8 text-gray-400 text-sm">
+        <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4">
+          <p className="text-sm text-gray-600 font-medium">
+            ⚡ <span className="font-bold text-purple-600">Flekser</span> — ofrece tus servicios <span className="text-gray-400">y</span> contrata cuando lo necesites
+          </p>
+        </div>
+
+        <p className="mt-6 text-gray-400 text-sm">
           ¿Ya tienes cuenta?{" "}
           <a href="/login" className="text-purple-600 font-semibold hover:underline">
             Inicia sesión
