@@ -29,6 +29,7 @@ export default function Perfil() {
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [ciudad, setCiudad] = useState('');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -39,6 +40,10 @@ export default function Perfil() {
   const [reseñas, setReseñas] = useState<any[]>([]);
   const [portafolio, setPortafolio] = useState<{ foto: string; titulo: string }[]>([]);
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
+  const [modoViajero, setModoViajero] = useState(false);
+  const [ciudadActual, setCiudadActual] = useState('');
+  const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
+  const [activandoViajero, setActivandoViajero] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -54,16 +59,18 @@ export default function Perfil() {
         setNombre(data.nombre || '');
         setTelefono(data.telefono || '');
         setDescripcion(data.descripcion || '');
+        setCiudad(data.ciudad || '');
         setHabilidadesSeleccionadas(data.habilidades || []);
         setFotoUrl(data.foto_url || '');
+        setModoViajero(data.modo_viajero || false);
+        setCiudadActual(data.ciudad || '');
+        setCiudadesVisitadas(data.ciudades_visitadas || []);
       }
 
-      // Cargar badges
       const { data: badgesData } = await supabase
         .from('badges').select('*').eq('usuario_id', user.id);
       setBadges(badgesData || []);
 
-      // Cargar reseñas
       const { data: reseñasData } = await supabase
         .from('reseñas')
         .select('*, usuarios!reseñas_cliente_id_fkey(nombre, foto_url)')
@@ -72,7 +79,6 @@ export default function Perfil() {
         .limit(3);
       setReseñas(reseñasData || []);
 
-      // Cargar portafolio — fotos_despues de trabajos completados
       const { data: appsData } = await supabase
         .from('aplicaciones')
         .select('fotos_despues, servicios(titulo)')
@@ -91,7 +97,6 @@ export default function Perfil() {
       });
       setPortafolio(fotosPortafolio);
 
-      // Asignar badges automáticos
       try {
         await supabase.rpc('asignar_badges', { user_id: user.id });
         const { data: newBadges } = await supabase
@@ -103,6 +108,49 @@ export default function Perfil() {
       console.error(err);
     } finally {
       setCargando(false);
+    }
+  };
+
+  const toggleModoViajero = async () => {
+    if (!usuario) return;
+    setActivandoViajero(true);
+    try {
+      const nuevoModo = !modoViajero;
+
+      // Si activa modo viajero y tiene ciudad, agregarla al historial
+      let nuevasCiudades = ciudadesVisitadas;
+      if (nuevoModo && ciudadActual && !ciudadesVisitadas.includes(ciudadActual)) {
+        nuevasCiudades = [...ciudadesVisitadas, ciudadActual];
+        setCiudadesVisitadas(nuevasCiudades);
+      }
+
+      await supabase.from('usuarios').update({
+        modo_viajero: nuevoModo,
+        ciudades_visitadas: nuevasCiudades,
+      }).eq('id', usuario.id);
+
+      setModoViajero(nuevoModo);
+    } finally {
+      setActivandoViajero(false);
+    }
+  };
+
+  const actualizarCiudadViajero = async () => {
+    if (!usuario || !ciudadActual.trim()) return;
+    setActivandoViajero(true);
+    try {
+      let nuevasCiudades = ciudadesVisitadas;
+      if (!ciudadesVisitadas.includes(ciudadActual.trim())) {
+        nuevasCiudades = [...ciudadesVisitadas, ciudadActual.trim()];
+        setCiudadesVisitadas(nuevasCiudades);
+      }
+      await supabase.from('usuarios').update({
+        ciudad: ciudadActual.trim(),
+        ciudades_visitadas: nuevasCiudades,
+      }).eq('id', usuario.id);
+      alert('✅ Ciudad actualizada');
+    } finally {
+      setActivandoViajero(false);
     }
   };
 
@@ -130,7 +178,7 @@ export default function Perfil() {
   const guardarPerfil = async () => {
     setGuardando(true);
     await supabase.from('usuarios').update({
-      nombre, telefono, descripcion,
+      nombre, telefono, descripcion, ciudad,
       habilidades: habilidadesSeleccionadas,
     }).eq('id', usuario.id);
     setGuardando(false);
@@ -216,8 +264,13 @@ export default function Perfil() {
               )}
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
-                  {usuario?.rol || 'prestador'}
+                  ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : 'Flekser'}
                 </span>
+                {modoViajero && (
+                  <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">
+                    ✈️ Modo viajero ON
+                  </span>
+                )}
                 {tieneBadge('verificado') && (
                   <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
                     ✅ Verificado
@@ -242,8 +295,8 @@ export default function Perfil() {
               <p className="text-xs text-gray-400">Trabajos</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-extrabold text-gray-900">{reseñas.length}</p>
-              <p className="text-xs text-gray-400">Reseñas</p>
+              <p className="text-2xl font-extrabold text-gray-900">{ciudadesVisitadas.length}</p>
+              <p className="text-xs text-gray-400">Ciudades</p>
             </div>
           </div>
 
@@ -266,6 +319,71 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* Modo Viajero */}
+        <div className={`rounded-2xl p-5 shadow-sm border mb-4 transition ${
+          modoViajero
+            ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-transparent'
+            : 'bg-white border-gray-100'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className={`font-extrabold text-lg ${modoViajero ? 'text-white' : 'text-gray-900'}`}>
+                ✈️ Modo Viajero
+              </h3>
+              <p className={`text-xs mt-0.5 ${modoViajero ? 'text-white/70' : 'text-gray-400'}`}>
+                {modoViajero ? 'Activo — apareces en búsquedas de tu ciudad actual' : 'Actívalo cuando estés de viaje'}
+              </p>
+            </div>
+            <button
+              onClick={toggleModoViajero}
+              disabled={activandoViajero}
+              className={`w-14 h-7 rounded-full transition-all duration-300 relative ${
+                modoViajero ? 'bg-white' : 'bg-gray-200'
+              }`}>
+              <div className={`w-6 h-6 rounded-full absolute top-0.5 transition-all duration-300 shadow-sm ${
+                modoViajero ? 'left-7 bg-purple-600' : 'left-0.5 bg-white'
+              }`}/>
+            </button>
+          </div>
+
+          {modoViajero && (
+            <div className="mt-3">
+              <p className="text-white/80 text-xs font-semibold mb-2">📍 ¿Dónde estás ahora?</p>
+              <div className="flex gap-2">
+                <input
+                  value={ciudadActual}
+                  onChange={(e) => setCiudadActual(e.target.value)}
+                  placeholder="Ej. Monterrey, Guadalajara..."
+                  className="flex-1 p-3 rounded-xl bg-white/20 text-white placeholder-white/50 outline-none border border-white/30 text-sm font-semibold"/>
+                <button
+                  onClick={actualizarCiudadViajero}
+                  disabled={activandoViajero}
+                  className="px-4 py-3 bg-white text-purple-600 rounded-xl font-bold text-sm hover:bg-white/90 transition disabled:opacity-50">
+                  ✓
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Ciudades visitadas */}
+          {ciudadesVisitadas.length > 0 && (
+            <div className="mt-3">
+              <p className={`text-xs font-semibold mb-2 ${modoViajero ? 'text-white/80' : 'text-gray-500'}`}>
+                🗺️ Ciudades donde has trabajado
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ciudadesVisitadas.map((c, i) => (
+                  <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                    modoViajero ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
+                  }`}>
+                    📍 {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Teléfono */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📱 Teléfono</h3>
@@ -275,6 +393,18 @@ export default function Perfil() {
               placeholder="55 1234 5678"/>
           ) : (
             <p className="text-gray-600">{telefono || 'Sin teléfono registrado'}</p>
+          )}
+        </div>
+
+        {/* Ciudad base */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+          <h3 className="font-extrabold text-gray-900 mb-3">📍 Ciudad base</h3>
+          {editando ? (
+            <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"
+              placeholder="Ej. Ciudad de México"/>
+          ) : (
+            <p className="text-gray-600">{ciudad || 'Sin ciudad registrada'}</p>
           )}
         </div>
 
@@ -349,13 +479,9 @@ export default function Perfil() {
             </div>
             <div className="grid grid-cols-3 gap-2">
               {portafolio.map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => setFotoAmpliada(item.foto)}
+                <button key={i} onClick={() => setFotoAmpliada(item.foto)}
                   className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
-                  <img
-                    src={item.foto}
-                    alt={item.titulo}
+                  <img src={item.foto} alt={item.titulo}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-200 rounded-xl"/>
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
@@ -411,13 +537,11 @@ export default function Perfil() {
 
       {/* Modal foto ampliada */}
       {fotoAmpliada && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
           onClick={() => setFotoAmpliada(null)}>
           <div className="relative max-w-sm w-full">
             <img src={fotoAmpliada} className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]"/>
-            <button
-              onClick={() => setFotoAmpliada(null)}
+            <button onClick={() => setFotoAmpliada(null)}
               className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">
               ✕
             </button>
@@ -440,10 +564,10 @@ export default function Perfil() {
             <span className="text-xl">📋</span>
             <span className="text-xs text-gray-400">Mis trabajos</span>
           </button>
-          <button className="flex flex-col items-center gap-1">
+          <a href="/chat" className="flex flex-col items-center gap-1">
             <span className="text-xl">💬</span>
             <span className="text-xs text-gray-400">Mensajes</span>
-          </button>
+          </a>
           <a href="/perfil" className="flex flex-col items-center gap-1">
             <span className="text-xl">👤</span>
             <span className="text-xs font-bold text-purple-600">Perfil</span>

@@ -44,6 +44,9 @@ export default function PerfilEmpresa() {
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [reseñas, setReseñas] = useState<any[]>([]);
   const [totalServicios, setTotalServicios] = useState(0);
+  const [ciudadesCobertura, setCiudadesCobertura] = useState<string[]>([]);
+  const [nuevaCiudad, setNuevaCiudad] = useState('');
+  const [guardandoCiudad, setGuardandoCiudad] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -64,16 +67,15 @@ export default function PerfilEmpresa() {
       setTamañoEmpresa(data.tamaño_empresa || '');
       setCiudad(data.ciudad || '');
       setFotoUrl(data.foto_url || '');
+      setCiudadesCobertura(data.ciudades_cobertura || []);
     }
 
-    // Total servicios publicados
     const { count } = await supabase
       .from('servicios')
       .select('id', { count: 'exact' })
       .eq('cliente_id', user.id);
     setTotalServicios(count || 0);
 
-    // Reseñas recibidas
     const { data: reseñasData } = await supabase
       .from('reseñas')
       .select('*, usuarios!reseñas_prestador_id_fkey(nombre, foto_url)')
@@ -83,6 +85,30 @@ export default function PerfilEmpresa() {
     setReseñas(reseñasData || []);
 
     setCargando(false);
+  };
+
+  const agregarCiudad = async () => {
+    const val = nuevaCiudad.trim();
+    if (!val || ciudadesCobertura.includes(val)) return;
+    setGuardandoCiudad(true);
+    try {
+      const nuevas = [...ciudadesCobertura, val];
+      await supabase.from('usuarios')
+        .update({ ciudades_cobertura: nuevas })
+        .eq('id', usuario.id);
+      setCiudadesCobertura(nuevas);
+      setNuevaCiudad('');
+    } finally {
+      setGuardandoCiudad(false);
+    }
+  };
+
+  const quitarCiudad = async (c: string) => {
+    const nuevas = ciudadesCobertura.filter(x => x !== c);
+    await supabase.from('usuarios')
+      .update({ ciudades_cobertura: nuevas })
+      .eq('id', usuario.id);
+    setCiudadesCobertura(nuevas);
   };
 
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,6 +207,11 @@ export default function PerfilEmpresa() {
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   🏢 Empresa
                 </span>
+                {ciudadesCobertura.length > 1 && (
+                  <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">
+                    🗺️ Multi-ciudad
+                  </span>
+                )}
                 {usuario?.verificado && (
                   <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
                     ✅ Verificada
@@ -190,7 +221,6 @@ export default function PerfilEmpresa() {
             </div>
           </div>
 
-          {/* Stats empresa */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-2xl font-extrabold text-purple-600">{totalServicios}</p>
@@ -201,8 +231,8 @@ export default function PerfilEmpresa() {
               <p className="text-xs text-gray-400">Completados</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-extrabold text-gray-900">{reseñas.length}</p>
-              <p className="text-xs text-gray-400">Reseñas</p>
+              <p className="text-2xl font-extrabold text-blue-600">{ciudadesCobertura.length}</p>
+              <p className="text-xs text-gray-400">Ciudades</p>
             </div>
           </div>
 
@@ -225,12 +255,63 @@ export default function PerfilEmpresa() {
           )}
         </div>
 
+        {/* Cobertura multi-ciudad */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-extrabold text-gray-900">🗺️ Cobertura multi-ciudad</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Ciudades donde tu empresa opera y publica servicios</p>
+            </div>
+            {ciudadesCobertura.length > 0 && (
+              <span className="text-xs bg-blue-100 text-blue-600 font-bold px-2 py-1 rounded-full">
+                {ciudadesCobertura.length} ciudad{ciudadesCobertura.length !== 1 ? 'es' : ''}
+              </span>
+            )}
+          </div>
+
+          {/* Ciudades agregadas */}
+          {ciudadesCobertura.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {ciudadesCobertura.map((c, i) => (
+                <div key={i} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
+                  <span className="text-sm font-semibold">📍 {c}</span>
+                  <button onClick={() => quitarCiudad(c)}
+                    className="ml-1 text-blue-400 hover:text-blue-700 font-bold text-xs">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Agregar ciudad */}
+          <div className="flex gap-2">
+            <input
+              value={nuevaCiudad}
+              onChange={(e) => setNuevaCiudad(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && agregarCiudad()}
+              placeholder="Ej. Monterrey, Guadalajara..."
+              className="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+            <button
+              onClick={agregarCiudad}
+              disabled={guardandoCiudad || !nuevaCiudad.trim()}
+              className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 transition">
+              {guardandoCiudad ? '...' : '+ Agregar'}
+            </button>
+          </div>
+
+          {ciudadesCobertura.length === 0 && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Agrega las ciudades donde tu empresa busca talento
+            </p>
+          )}
+        </div>
+
         {/* Información de la empresa */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">📋 Información</h3>
           <div className="flex flex-col gap-4">
 
-            {/* Giro */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Giro empresarial</label>
               {editando ? (
@@ -244,7 +325,6 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* Tamaño */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Tamaño de la empresa</label>
               {editando ? (
@@ -267,9 +347,8 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* Ciudad */}
             <div>
-              <label className="text-sm font-semibold text-gray-500 mb-1 block">Ciudad</label>
+              <label className="text-sm font-semibold text-gray-500 mb-1 block">Ciudad principal</label>
               {editando ? (
                 <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
                   placeholder="Ej. Ciudad de México"
@@ -279,7 +358,6 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* Teléfono */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Teléfono</label>
               {editando ? (
@@ -291,7 +369,6 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* RFC */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">RFC</label>
               {editando ? (
@@ -303,7 +380,6 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* Sitio web */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Sitio web</label>
               {editando ? (
@@ -321,7 +397,6 @@ export default function PerfilEmpresa() {
               )}
             </div>
 
-            {/* Descripción */}
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Descripción</label>
               {editando ? (
