@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function CheckIn() {
@@ -7,6 +7,13 @@ export default function CheckIn() {
   const [cargando, setCargando] = useState(true);
   const [procesando, setProcesando] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
+  const [fotosAntes, setFotosAntes] = useState<{ [key: string]: File[] }>({});
+  const [fotosDespues, setFotosDespues] = useState<{ [key: string]: File[] }>({});
+  const [previasAntes, setPreviasAntes] = useState<{ [key: string]: string[] }>({});
+  const [previasDespues, setPreviasDespues] = useState<{ [key: string]: string[] }>({});
+  const [subiendoFotos, setSubiendoFotos] = useState(false);
+  const inputAntesRef = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const inputDespuesRef = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -29,11 +36,54 @@ export default function CheckIn() {
     setCargando(false);
   };
 
+  const seleccionarFotos = (appId: string, tipo: 'antes' | 'despues', archivos: FileList | null) => {
+    if (!archivos) return;
+    const lista = Array.from(archivos).slice(0, 3);
+    const previews = lista.map(f => URL.createObjectURL(f));
+
+    if (tipo === 'antes') {
+      setFotosAntes(prev => ({ ...prev, [appId]: lista }));
+      setPreviasAntes(prev => ({ ...prev, [appId]: previews }));
+    } else {
+      setFotosDespues(prev => ({ ...prev, [appId]: lista }));
+      setPreviasDespues(prev => ({ ...prev, [appId]: previews }));
+    }
+  };
+
+  const subirFotos = async (appId: string, tipo: 'antes' | 'despues'): Promise<string[]> => {
+    const fotos = tipo === 'antes' ? fotosAntes[appId] : fotosDespues[appId];
+    if (!fotos || fotos.length === 0) return [];
+
+    const urls: string[] = [];
+    for (const foto of fotos) {
+      const ext = foto.name.split('.').pop();
+      const nombre = `${appId}/${tipo}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from('fotos-trabajo')
+        .upload(nombre, foto, { contentType: foto.type });
+
+      if (error) { console.error('Error subiendo foto:', error); continue; }
+
+      const { data: urlData } = supabase.storage
+        .from('fotos-trabajo')
+        .getPublicUrl(nombre);
+
+      urls.push(urlData.publicUrl);
+    }
+    return urls;
+  };
+
   const handleCheckin = async (aplicacionId: string, servicioId: string) => {
     setProcesando(aplicacionId);
+    setSubiendoFotos(true);
     try {
+      const urlsAntes = await subirFotos(aplicacionId, 'antes');
+
       const { error: e1 } = await supabase.from('aplicaciones')
-        .update({ checkin_at: new Date().toISOString() })
+        .update({
+          checkin_at: new Date().toISOString(),
+          ...(urlsAntes.length > 0 && { fotos_antes: urlsAntes })
+        })
         .eq('id', aplicacionId);
 
       if (e1) { alert('Error check-in: ' + e1.message); return; }
@@ -44,19 +94,26 @@ export default function CheckIn() {
 
       if (e2) { alert('Error servicio: ' + e2.message); return; }
 
+      setFotosAntes(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
+      setPreviasAntes(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
       await cargarDatos();
     } finally {
       setProcesando('');
+      setSubiendoFotos(false);
     }
   };
 
   const handleCheckout = async (aplicacionId: string, servicioId: string) => {
     setProcesando(aplicacionId);
+    setSubiendoFotos(true);
     try {
+      const urlsDespues = await subirFotos(aplicacionId, 'despues');
+
       const { error: e1 } = await supabase.from('aplicaciones')
         .update({
           checkout_at: new Date().toISOString(),
-          estado: 'completado'
+          estado: 'completado',
+          ...(urlsDespues.length > 0 && { fotos_despues: urlsDespues })
         })
         .eq('id', aplicacionId);
 
@@ -68,9 +125,12 @@ export default function CheckIn() {
 
       if (e2) { alert('Error checkout servicio: ' + e2.message); return; }
 
+      setFotosDespues(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
+      setPreviasDespues(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
       await cargarDatos();
     } finally {
       setProcesando('');
+      setSubiendoFotos(false);
     }
   };
 
@@ -127,11 +187,43 @@ export default function CheckIn() {
                     <div className="bg-yellow-50 rounded-xl p-3 mb-3 text-center">
                       <p className="text-yellow-700 font-semibold text-sm">⏳ Esperando que inicies el trabajo</p>
                     </div>
+
+                    {/* Fotos antes */}
+                    <div className="mb-4">
+                      <p className="text-sm font-bold text-gray-700 mb-2">📸 Foto antes de empezar <span className="text-gray-400 font-normal">(opcional, máx 3)</span></p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        ref={el => { inputAntesRef.current[app.id] = el; }}
+                        onChange={(e) => seleccionarFotos(app.id, 'antes', e.target.files)}
+                      />
+                      {previasAntes[app.id]?.length > 0 ? (
+                        <div className="flex gap-2 mb-2">
+                          {previasAntes[app.id].map((url, i) => (
+                            <img key={i} src={url} className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                          ))}
+                          <button
+                            onClick={() => { setPreviasAntes(p => ({...p, [app.id]: []})); setFotosAntes(p => ({...p, [app.id]: []})); }}
+                            className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
+                            ✕ Quitar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => inputAntesRef.current[app.id]?.click()}
+                          className="w-full py-3 border-2 border-dashed border-blue-200 rounded-xl text-blue-500 font-semibold text-sm hover:bg-blue-50 transition">
+                          + Agregar fotos del estado inicial
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => handleCheckin(app.id, app.servicios?.id)}
                       disabled={procesando === app.id}
                       className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                      {procesando === app.id ? 'Registrando...' : '📍 Check-in — Llegué'}
+                      {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '📍 Check-in — Llegué'}
                     </button>
                   </div>
                 )}
@@ -145,29 +237,102 @@ export default function CheckIn() {
                         Entrada: {new Date(app.checkin_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
                       </p>
                     </div>
+
+                    {/* Mostrar fotos antes si existen */}
+                    {app.fotos_antes?.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-bold text-gray-500 mb-2">📸 Fotos al llegar</p>
+                        <div className="flex gap-2">
+                          {app.fotos_antes.map((url: string, i: number) => (
+                            <img key={i} src={url} className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-blue-50 rounded-xl p-3 mb-3 text-center">
                       <p className="text-blue-700 font-semibold text-sm">🔄 Trabajo en curso</p>
                       <p className="text-blue-600 text-xs mt-1">Presiona Check-out cuando termines</p>
                     </div>
+
+                    {/* Fotos después */}
+                    <div className="mb-4">
+                      <p className="text-sm font-bold text-gray-700 mb-2">📸 Foto del resultado final <span className="text-gray-400 font-normal">(opcional, máx 3)</span></p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        ref={el => { inputDespuesRef.current[app.id] = el; }}
+                        onChange={(e) => seleccionarFotos(app.id, 'despues', e.target.files)}
+                      />
+                      {previasDespues[app.id]?.length > 0 ? (
+                        <div className="flex gap-2 mb-2">
+                          {previasDespues[app.id].map((url, i) => (
+                            <img key={i} src={url} className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                          ))}
+                          <button
+                            onClick={() => { setPreviasDespues(p => ({...p, [app.id]: []})); setFotosDespues(p => ({...p, [app.id]: []})); }}
+                            className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
+                            ✕ Quitar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => inputDespuesRef.current[app.id]?.click()}
+                          className="w-full py-3 border-2 border-dashed border-purple-200 rounded-xl text-purple-500 font-semibold text-sm hover:bg-purple-50 transition">
+                          + Agregar fotos del trabajo terminado
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => handleCheckout(app.id, app.servicios?.id)}
                       disabled={procesando === app.id}
                       className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                      {procesando === app.id ? 'Registrando...' : '✅ Check-out — Terminé'}
+                      {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '✅ Check-out — Terminé'}
                     </button>
                   </div>
                 )}
 
                 {/* Completado */}
                 {app.estado === 'completado' && app.checkout_at && (
-                  <div className="bg-green-50 rounded-xl p-4 text-center">
-                    <p className="text-2xl mb-2">🎉</p>
-                    <p className="text-green-700 font-extrabold">¡Trabajo completado!</p>
-                    <p className="text-green-600 text-sm mt-1">Tu pago será procesado pronto</p>
-                    <div className="flex justify-between mt-3 text-xs text-green-600">
-                      <span>Entrada: {new Date(app.checkin_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}</span>
-                      <span>Salida: {new Date(app.checkout_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}</span>
+                  <div>
+                    <div className="bg-green-50 rounded-xl p-4 text-center mb-3">
+                      <p className="text-2xl mb-2">🎉</p>
+                      <p className="text-green-700 font-extrabold">¡Trabajo completado!</p>
+                      <p className="text-green-600 text-sm mt-1">Tu pago será procesado pronto</p>
+                      <div className="flex justify-between mt-3 text-xs text-green-600">
+                        <span>Entrada: {new Date(app.checkin_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}</span>
+                        <span>Salida: {new Date(app.checkout_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}</span>
+                      </div>
                     </div>
+
+                    {/* Mostrar fotos antes/después si existen */}
+                    {(app.fotos_antes?.length > 0 || app.fotos_despues?.length > 0) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {app.fotos_antes?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-gray-500 mb-2">Antes</p>
+                            <div className="flex flex-col gap-1">
+                              {app.fotos_antes.map((url: string, i: number) => (
+                                <img key={i} src={url} className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {app.fotos_despues?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-gray-500 mb-2">Después</p>
+                            <div className="flex flex-col gap-1">
+                              {app.fotos_despues.map((url: string, i: number) => (
+                                <img key={i} src={url} className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

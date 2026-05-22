@@ -37,6 +37,8 @@ export default function Perfil() {
   const [fotoUrl, setFotoUrl] = useState('');
   const [badges, setBadges] = useState<any[]>([]);
   const [reseñas, setReseñas] = useState<any[]>([]);
+  const [portafolio, setPortafolio] = useState<{ foto: string; titulo: string }[]>([]);
+  const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -70,10 +72,28 @@ export default function Perfil() {
         .limit(3);
       setReseñas(reseñasData || []);
 
+      // Cargar portafolio — fotos_despues de trabajos completados
+      const { data: appsData } = await supabase
+        .from('aplicaciones')
+        .select('fotos_despues, servicios(titulo)')
+        .eq('prestador_id', user.id)
+        .eq('estado', 'completado')
+        .not('fotos_despues', 'eq', '{}');
+
+      const fotosPortafolio: { foto: string; titulo: string }[] = [];
+      (appsData || []).forEach((app: any) => {
+        (app.fotos_despues || []).forEach((url: string) => {
+          fotosPortafolio.push({
+            foto: url,
+            titulo: app.servicios?.titulo || 'Trabajo completado',
+          });
+        });
+      });
+      setPortafolio(fotosPortafolio);
+
       // Asignar badges automáticos
       try {
         await supabase.rpc('asignar_badges', { user_id: user.id });
-        // Recargar badges después de asignar
         const { data: newBadges } = await supabase
           .from('badges').select('*').eq('usuario_id', user.id);
         setBadges(newBadges || []);
@@ -320,6 +340,33 @@ export default function Perfil() {
           </div>
         )}
 
+        {/* Portafolio */}
+        {portafolio.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-gray-900">📸 Mi portafolio</h3>
+              <span className="text-xs text-gray-400">{portafolio.length} foto{portafolio.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {portafolio.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => setFotoAmpliada(item.foto)}
+                  className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
+                  <img
+                    src={item.foto}
+                    alt={item.titulo}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-200 rounded-xl"/>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
+                    <p className="text-white text-xs font-semibold truncate">{item.titulo}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Habilidades */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
@@ -361,6 +408,22 @@ export default function Perfil() {
         </div>
 
       </div>
+
+      {/* Modal foto ampliada */}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+          onClick={() => setFotoAmpliada(null)}>
+          <div className="relative max-w-sm w-full">
+            <img src={fotoAmpliada} className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]"/>
+            <button
+              onClick={() => setFotoAmpliada(null)}
+              className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
