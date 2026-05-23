@@ -1,4 +1,130 @@
+'use client';
+import { useState, useEffect } from 'react';
+
 export default function Home() {
+  const [plataforma, setPlataforma] = useState<'ios' | 'android' | 'windows' | 'mac' | 'otro'>('otro');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [instalada, setInstalada] = useState(false);
+  const [mostrarInstruccionesIOS, setMostrarInstruccionesIOS] = useState(false);
+
+  useEffect(() => {
+    // Detectar plataforma
+    const ua = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(ua);
+    const isAndroid = /android/.test(ua);
+    const isWindows = /windows/.test(ua);
+    const isMac = /macintosh|mac os x/.test(ua) && !isIOS;
+
+    if (isIOS) setPlataforma('ios');
+    else if (isAndroid) setPlataforma('android');
+    else if (isWindows) setPlataforma('windows');
+    else if (isMac) setPlataforma('mac');
+
+    // Detectar si ya está instalada
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setInstalada(true);
+    }
+
+    // Capturar evento de instalación (Android/Windows/Mac con Chrome)
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const instalarApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setInstalada(true);
+      setDeferredPrompt(null);
+    }
+  };
+
+  const botonInstalar = () => {
+    if (instalada) return null;
+
+    // iOS — Safari
+    if (plataforma === 'ios') {
+      return (
+        <div className="mt-4">
+          <button
+            onClick={() => setMostrarInstruccionesIOS(!mostrarInstruccionesIOS)}
+            className="w-full py-3 px-6 bg-black text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+            🍎 Instalar en iPhone / iPad
+          </button>
+          {mostrarInstruccionesIOS && (
+            <div className="mt-3 bg-gray-50 rounded-2xl p-4 text-left border border-gray-200">
+              <p className="text-sm font-bold text-gray-900 mb-2">Para instalar en tu iPhone:</p>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p className="text-sm text-gray-600">Abre esta página en <span className="font-bold">Safari</span></p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p className="text-sm text-gray-600">Toca el ícono de compartir <span className="font-bold">⬆️</span> abajo</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <p className="text-sm text-gray-600">Selecciona <span className="font-bold">"Añadir a pantalla de inicio"</span></p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Android con Chrome — banner automático
+    if (plataforma === 'android' && deferredPrompt) {
+      return (
+        <button
+          onClick={instalarApp}
+          className="mt-4 w-full py-3 px-6 bg-green-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          🤖 Instalar en Android
+        </button>
+      );
+    }
+
+    // Windows con Chrome/Edge
+    if (plataforma === 'windows' && deferredPrompt) {
+      return (
+        <button
+          onClick={instalarApp}
+          className="mt-4 w-full py-3 px-6 bg-blue-700 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          🪟 Instalar en Windows
+        </button>
+      );
+    }
+
+    // Mac con Chrome
+    if (plataforma === 'mac' && deferredPrompt) {
+      return (
+        <button
+          onClick={instalarApp}
+          className="mt-4 w-full py-3 px-6 bg-gray-800 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          🍎 Instalar en Mac
+        </button>
+      );
+    }
+
+    // Fallback — instrucciones generales
+    if (!deferredPrompt && plataforma !== 'ios') {
+      return (
+        <div className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
+          <p className="text-sm text-gray-500 text-center">
+            📲 Para instalar Fleksi, abre esta página en <span className="font-bold">Chrome</span> y busca la opción "Instalar app" en el menú
+          </p>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
@@ -52,6 +178,15 @@ export default function Home() {
             ⚡ <span className="font-bold text-purple-600">Flekser</span> — ofrece tus servicios <span className="text-gray-400">y</span> contrata cuando lo necesites
           </p>
         </div>
+
+        {/* Botón de instalación inteligente */}
+        {instalada ? (
+          <div className="mt-4 bg-green-50 rounded-2xl p-3 border border-green-200">
+            <p className="text-sm text-green-700 font-semibold">✅ Fleksi ya está instalada en tu dispositivo</p>
+          </div>
+        ) : (
+          botonInstalar()
+        )}
 
         <p className="mt-6 text-gray-400 text-sm">
           ¿Ya tienes cuenta?{" "}
