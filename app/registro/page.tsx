@@ -1,9 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function Registro() {
+const roles = [
+  { id: 'flekser', emoji: '⚡', titulo: 'Soy Flekser', desc: 'Ofrece servicios y contrata cuando lo necesites' },
+  { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
+  { id: 'viajero', emoji: '✈️', titulo: 'Soy viajero', desc: 'Trabaja mientras viajas por el mundo' },
+];
+
+function RegistroForm() {
   const searchParams = useSearchParams();
   const [paso, setPaso] = useState(1);
   const [rol, setRol] = useState('');
@@ -13,12 +19,6 @@ export default function Registro() {
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-
-  const roles = [
-    { id: 'flekser', emoji: '⚡', titulo: 'Soy Flekser', desc: 'Ofrece servicios y contrata cuando lo necesites' },
-    { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
-    { id: 'viajero', emoji: '✈️', titulo: 'Soy viajero', desc: 'Trabaja mientras viajas por el mundo' },
-  ];
 
   useEffect(() => {
     const rolParam = searchParams.get('rol');
@@ -198,5 +198,17 @@ export default function Registro() {
 
       </div>
     </main>
+  );
+}
+
+export default function Registro() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <RegistroForm />
+    </Suspense>
   );
 }
