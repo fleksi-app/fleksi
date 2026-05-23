@@ -44,6 +44,7 @@ function RegistroForm() {
           nombre,
           telefono,
           rol,
+          email,
         });
         if (dbError) throw dbError;
 
