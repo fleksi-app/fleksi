@@ -56,7 +56,7 @@ export default function Perfil() {
 
       const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
       if (data) {
-        setUsuario({ ...data, id: user.id });
+        setUsuario({ ...data, id: user.id, email: user.email });
         setNombre(data.nombre || '');
         setTelefono(data.telefono || '');
         setDescripcion(data.descripcion || '');
@@ -98,7 +98,6 @@ export default function Perfil() {
       });
       setPortafolio(fotosPortafolio);
 
-      // Cargar verificacion
       const { data: verifData } = await supabase
         .from('verificaciones')
         .select('*')
@@ -264,9 +263,17 @@ export default function Perfil() {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20">
         <div className="max-w-md mx-auto flex justify-between items-center">
           <h1 className="text-white font-extrabold text-xl">Mi Perfil</h1>
-          <button onClick={cerrarSesion} className="text-white/70 text-sm hover:text-white transition">
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-3">
+            {usuario?.email === 'fernando.najera.nm@gmail.com' && (
+              <a href="/admin"
+                className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition">
+                ⚙️ Admin
+              </a>
+            )}
+            <button onClick={cerrarSesion} className="text-white/70 text-sm hover:text-white transition">
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </div>
 
