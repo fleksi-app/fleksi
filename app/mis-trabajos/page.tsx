@@ -44,6 +44,7 @@ export default function MisTrabajos() {
     completado: 'bg-gray-100 text-gray-600',
     cancelado: 'bg-red-100 text-red-600',
     en_proceso: 'bg-purple-100 text-purple-600',
+    pagado: 'bg-green-100 text-green-600',
   };
 
   const estadoLabel: any = {
@@ -54,6 +55,7 @@ export default function MisTrabajos() {
     completado: '✅ Completado',
     cancelado: '❌ Cancelado',
     en_proceso: '🔄 En proceso',
+    pagado: '💰 Pagado',
   };
 
   if (cargando) {
@@ -92,7 +94,6 @@ export default function MisTrabajos() {
 
       <div className="max-w-md mx-auto px-6 py-4">
 
-        {/* MIS APLICACIONES */}
         {tab === 'aplicaciones' && (
           <div>
             {aplicaciones.length === 0 ? (
@@ -100,8 +101,7 @@ export default function MisTrabajos() {
                 <p className="text-4xl mb-4">✋</p>
                 <p className="font-bold text-gray-900 mb-2">Sin aplicaciones todavía</p>
                 <p className="text-gray-400 text-sm mb-6">Explora trabajos disponibles y aplica</p>
-                <a href="/home"
-                  className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+                <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
                   Ver trabajos disponibles
                 </a>
               </div>
@@ -123,14 +123,9 @@ export default function MisTrabajos() {
                       Cliente: {app.servicios?.usuarios?.nombre || 'Cliente'}
                     </p>
                     <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-xs text-gray-400">
-                          📅 {app.servicios?.fecha} {app.servicios?.hora?.slice(0,5)}
-                        </p>
-                        {app.mensaje && (
-                          <p className="text-xs text-gray-500 mt-1 italic">"{app.mensaje}"</p>
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-400">
+                        📅 {app.servicios?.fecha} {app.servicios?.hora?.slice(0,5)}
+                      </p>
                       <p className="font-extrabold text-purple-600 text-sm">
                         ${app.precio_ofrecido || app.servicios?.presupuesto} MXN
                       </p>
@@ -147,7 +142,6 @@ export default function MisTrabajos() {
           </div>
         )}
 
-        {/* MIS SOLICITUDES */}
         {tab === 'publicaciones' && (
           <div>
             <a href="/publicar"
@@ -165,38 +159,43 @@ export default function MisTrabajos() {
               <div className="flex flex-col gap-3">
                 {publicaciones.map((pub) => {
                   const numApps = pub.aplicaciones?.[0]?.count || 0;
+                  const necesitaPago = pub.estado === 'completado';
                   return (
-                    <a key={pub.id}
-                      href={`/aplicaciones?servicio=${pub.id}`}
-                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 block active:scale-95 transition">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
-                          {pub.titulo}
-                        </h3>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[pub.estado]}`}>
-                          {estadoLabel[pub.estado]}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <div>
-                          <p className="text-xs text-gray-400">📅 {pub.fecha}</p>
-                          <p className={`text-xs mt-0.5 font-semibold ${numApps > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
-                            👥 {numApps} aplicacion{numApps !== 1 ? 'es' : ''} recibida{numApps !== 1 ? 's' : ''}
-                          </p>
+                    <div key={pub.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <button onClick={() => window.location.href = `/aplicaciones?servicio=${pub.id}`}
+                        className="w-full text-left">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
+                            {pub.titulo}
+                          </h3>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[pub.estado]}`}>
+                            {estadoLabel[pub.estado]}
+                          </span>
                         </div>
-                        <div className="text-right">
+                        <div className="flex justify-between items-center mt-2">
+                          <div>
+                            <p className="text-xs text-gray-400">📅 {pub.fecha}</p>
+                            <p className={`text-xs mt-0.5 font-semibold ${numApps > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
+                              👥 {numApps} aplicacion{numApps !== 1 ? 'es' : ''} recibida{numApps !== 1 ? 's' : ''}
+                            </p>
+                          </div>
                           <p className="font-extrabold text-purple-600 text-sm">${pub.presupuesto} MXN</p>
-                          {pub.urgente && (
-                            <span className="text-xs text-red-600 font-bold">🔴 Urgente</span>
-                          )}
                         </div>
-                      </div>
-                      {numApps > 0 && (
-                        <div className="mt-3 bg-purple-50 rounded-xl p-2 text-center">
-                          <p className="text-purple-600 text-xs font-bold">Toca para ver y aceptar aplicaciones →</p>
+                        {numApps > 0 && pub.estado === 'activo' && (
+                          <div className="mt-3 bg-purple-50 rounded-xl p-2 text-center">
+                            <p className="text-purple-600 text-xs font-bold">Toca para ver y aceptar aplicaciones →</p>
+                          </div>
+                        )}
+                      </button>
+                      {necesitaPago && (
+                        <div className="mt-3">
+                          <a href={`/pago?id=${pub.id}`}
+                            className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm text-center shadow-sm hover:opacity-90 transition">
+                            💳 Pagar ahora — ${pub.presupuesto + (pub.seguro ? 45 : 0)} MXN
+                          </a>
                         </div>
                       )}
-                    </a>
+                    </div>
                   );
                 })}
               </div>
@@ -206,7 +205,6 @@ export default function MisTrabajos() {
 
       </div>
 
-      {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
         <div className="max-w-md mx-auto flex justify-around">
           <a href="/home" className="flex flex-col items-center gap-1">

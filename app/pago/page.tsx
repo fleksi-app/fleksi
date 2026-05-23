@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/lib/supabase';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-export default function Pago() {
+function PagoContent() {
+  const searchParams = useSearchParams();
   const [cargando, setCargando] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
@@ -25,18 +27,33 @@ export default function Pago() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Cargar el último servicio completado del usuario como cliente
-    const { data: svcs } = await supabase
-      .from('servicios')
-      .select('*, aplicaciones(*, usuarios(nombre))')
-      .eq('cliente_id', user.id)
-      .eq('estado', 'completado')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    const servicioId = searchParams.get('id');
 
-    if (svcs && svcs.length > 0) {
-      setServicio(svcs[0]);
-      const appAceptada = svcs[0].aplicaciones?.find((a: any) => a.estado === 'completado');
+    let svc = null;
+
+    if (servicioId) {
+      const { data } = await supabase
+        .from('servicios')
+        .select('*, aplicaciones(*, usuarios(nombre, email))')
+        .eq('id', servicioId)
+        .single();
+      svc = data;
+    } else {
+      const { data } = await supabase
+        .from('servicios')
+        .select('*, aplicaciones(*, usuarios(nombre, email))')
+        .eq('cliente_id', user.id)
+        .eq('estado', 'completado')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      svc = data?.[0] || null;
+    }
+
+    if (svc) {
+      setServicio(svc);
+      const appAceptada = svc.aplicaciones?.find(
+        (a: any) => a.estado === 'completado' || a.estado === 'aceptado'
+      );
       setAplicacion(appAceptada);
     }
     setCargando(false);
@@ -48,7 +65,6 @@ export default function Pago() {
     setError('');
 
     try {
-      const comision = Math.round(servicio.presupuesto * 0.12);
       const seguro = servicio.seguro ? 45 : 0;
       const total = servicio.presupuesto + seguro;
 
@@ -59,7 +75,7 @@ export default function Pago() {
           monto: total,
           descripcion: servicio.titulo,
           servicioId: servicio.id,
-          clienteEmail: usuario.email,
+          clienteEmail: usuario.email || '',
         }),
       });
 
@@ -69,21 +85,35 @@ export default function Pago() {
       const stripe = await stripePromise;
       if (!stripe) throw new Error('Stripe no disponible');
 
-      // Por ahora confirmamos el pago directamente en modo test
       const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
-          card: {
-            token: 'tok_visa', // Token de prueba de Stripe
-          },
+          card: { token: 'tok_visa' },
         },
       });
 
       if (stripeError) throw new Error(stripeError.message);
 
-      // Actualizar estado del servicio en Supabase
       await supabase.from('servicios')
         .update({ estado: 'pagado' })
         .eq('id', servicio.id);
+
+      // Email de pago completado
+      try {
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'pago_completado',
+            destinatario: aplicacion?.usuarios?.email || usuario.email,
+            datos: {
+              nombre: aplicacion?.usuarios?.nombre || 'Prestador',
+              trabajo: servicio.titulo,
+              presupuesto: servicio.presupuesto,
+              monto: total,
+            },
+          }),
+        });
+      } catch (e) {}
 
       setExito(true);
     } catch (err: any) {
@@ -122,7 +152,7 @@ export default function Pago() {
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Trabajador</span>
-              <span className="font-semibold text-sm text-gray-900">{aplicacion?.usuarios?.nombre}</span>
+              <span className="font-semibold text-sm text-gray-900">{aplicacion?.usuarios?.nombre || 'Prestador'}</span>
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Subtotal</span>
@@ -141,7 +171,10 @@ export default function Pago() {
               </span>
             </div>
           </div>
-          <a href="/home-cliente" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition">
+          <a href="/calificar" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
+            ⭐ Calificar al trabajador
+          </a>
+          <a href="/home" className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
             Volver al inicio
           </a>
         </div>
@@ -156,7 +189,7 @@ export default function Pago() {
           <p className="text-4xl mb-4">💳</p>
           <p className="font-bold text-gray-900 mb-2">No hay pagos pendientes</p>
           <p className="text-gray-400 text-sm mb-6">Los pagos aparecerán aquí cuando un servicio sea completado</p>
-          <a href="/home-cliente" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">
+          <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">
             Volver al inicio
           </a>
         </div>
@@ -173,7 +206,7 @@ export default function Pago() {
 
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto flex items-center gap-4">
-          <a href="/home-cliente" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
+          <a href="/mis-trabajos" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
             ←
           </a>
           <h1 className="font-extrabold text-gray-900 text-lg">Confirmar pago</h1>
@@ -182,7 +215,6 @@ export default function Pago() {
 
       <div className="max-w-md mx-auto px-6 py-4">
 
-        {/* Resumen del servicio */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen del servicio</h3>
           <p className="font-bold text-gray-900 mb-1">{servicio.titulo}</p>
@@ -207,7 +239,6 @@ export default function Pago() {
           </div>
         </div>
 
-        {/* Desglose para el trabajador */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 border border-purple-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">💸 Desglose del pago</h3>
           <div className="flex flex-col gap-2">
@@ -228,7 +259,6 @@ export default function Pago() {
           </div>
         </div>
 
-        {/* Método de pago test */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">💳 Método de pago</h3>
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border-2 border-purple-400">
@@ -265,5 +295,17 @@ export default function Pago() {
       </div>
 
     </main>
+  );
+}
+
+export default function Pago() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <PagoContent />
+    </Suspense>
   );
 }
