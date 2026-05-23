@@ -1,7 +1,10 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/lib/supabase';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 function AplicacionesContent() {
   const searchParams = useSearchParams();
@@ -30,7 +33,6 @@ function AplicacionesContent() {
 
     setServicios(svcs || []);
 
-    // Si viene con ?servicio=ID abrir directamente
     const servicioId = searchParams.get('servicio');
     if (servicioId && svcs) {
       const svc = svcs.find(s => s.id === servicioId);
@@ -50,48 +52,91 @@ function AplicacionesContent() {
     setAplicaciones(data || []);
   };
 
-  const handleDecision = async (aplicacionId: string, decision: 'aceptado' | 'rechazado') => {
+  const handleRechazar = async (aplicacionId: string) => {
     setProcesando(aplicacionId);
     try {
       await supabase.from('aplicaciones')
-        .update({ estado: decision })
+        .update({ estado: 'rechazado' })
         .eq('id', aplicacionId);
-
-      if (decision === 'aceptado') {
-        await supabase.from('servicios')
-          .update({ estado: 'en_proceso' })
-          .eq('id', servicioActivo.id);
-
-        await supabase.from('aplicaciones')
-          .update({ estado: 'rechazado' })
-          .eq('servicio_id', servicioActivo.id)
-          .neq('id', aplicacionId);
-
-        const appAceptada = aplicaciones.find(a => a.id === aplicacionId);
-        try {
-          await fetch('/api/enviar-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tipo: 'aplicacion_aceptada',
-              destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
-              datos: {
-                prestador: appAceptada?.usuarios?.nombre || 'Prestador',
-                cliente: usuario?.nombre || 'Cliente',
-                trabajo: servicioActivo.titulo,
-                precio: appAceptada?.precio_ofrecido || servicioActivo.presupuesto,
-                fecha: servicioActivo.fecha,
-              },
-            }),
-          });
-        } catch (emailErr) {
-          console.log('Email no enviado pero aplicación aceptada');
-        }
-      }
-
       await verAplicaciones(servicioActivo);
-    } catch (err) {
-      console.error(err);
+    } finally {
+      setProcesando('');
+    }
+  };
+
+  const handleAceptarYPagar = async (aplicacionId: string) => {
+    setProcesando(aplicacionId);
+    try {
+      const appAceptada = aplicaciones.find(a => a.id === aplicacionId);
+      const monto = appAceptada?.precio_ofrecido || servicioActivo.presupuesto;
+      const seguro = servicioActivo.seguro ? 45 : 0;
+      const total = monto + seguro;
+
+      // Crear PaymentIntent retenido en Stripe
+      const response = await fetch('/api/crear-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monto: total,
+          descripcion: servicioActivo.titulo,
+          servicioId: servicioActivo.id,
+          clienteEmail: usuario?.email || '',
+        }),
+      });
+
+      const { clientSecret, paymentIntentId, error: apiError } = await response.json();
+      if (apiError) throw new Error(apiError);
+
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe no disponible');
+
+      // Confirmar pago con tarjeta de prueba
+      const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: { token: 'tok_visa' } },
+      });
+
+      if (stripeError) throw new Error(stripeError.message);
+
+      // Actualizar aplicacion y servicio
+      await supabase.from('aplicaciones').update({
+        estado: 'aceptado',
+        payment_intent_id: paymentIntentId,
+        pago_retenido: true,
+      }).eq('id', aplicacionId);
+
+      await supabase.from('servicios').update({
+        estado: 'en_proceso',
+        pago_retenido: true,
+      }).eq('id', servicioActivo.id);
+
+      // Rechazar otras aplicaciones
+      await supabase.from('aplicaciones')
+        .update({ estado: 'rechazado' })
+        .eq('servicio_id', servicioActivo.id)
+        .neq('id', aplicacionId);
+
+      // Email al prestador
+      try {
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'aplicacion_aceptada',
+            destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
+            datos: {
+              prestador: appAceptada?.usuarios?.nombre || 'Prestador',
+              cliente: usuario?.nombre || 'Cliente',
+              trabajo: servicioActivo.titulo,
+              precio: monto,
+              fecha: servicioActivo.fecha,
+            },
+          }),
+        });
+      } catch (e) {}
+
+      await verAplicaciones({ ...servicioActivo, estado: 'en_proceso', pago_retenido: true });
+    } catch (err: any) {
+      alert('Error al procesar: ' + err.message);
     } finally {
       setProcesando('');
     }
@@ -139,6 +184,18 @@ function AplicacionesContent() {
         </div>
 
         <div className="max-w-md mx-auto px-6 py-4">
+
+          {/* Banner pago retenido */}
+          {servicioActivo.pago_retenido && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
+              <span className="text-2xl">🔒</span>
+              <div>
+                <p className="font-bold text-green-700 text-sm">Pago retenido por Fleksi</p>
+                <p className="text-green-600 text-xs mt-0.5">El dinero se liberará cuando confirmes que el trabajo quedó bien</p>
+              </div>
+            </div>
+          )}
+
           {aplicaciones.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-4xl mb-4">⏳</p>
@@ -182,36 +239,62 @@ function AplicacionesContent() {
                   <div className="bg-gray-50 rounded-xl p-3 mb-4">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-gray-500">Precio ofrecido</span>
-                      <span className="font-extrabold text-purple-600">${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
+                      <span className="font-extrabold text-purple-600">
+                        ${app.precio_ofrecido || servicioActivo.presupuesto} MXN
+                      </span>
                     </div>
+                    {servicioActivo.seguro && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-400">+ Fleksi Protege</span>
+                        <span className="text-xs text-gray-500">$45 MXN</span>
+                      </div>
+                    )}
                     {app.mensaje && (
                       <p className="text-sm text-gray-600 italic mt-2">"{app.mensaje}"</p>
                     )}
                   </div>
 
                   {app.estado === 'pendiente' && (
-                    <div className="flex gap-3">
-                      <button onClick={() => handleDecision(app.id, 'rechazado')}
-                        disabled={procesando === app.id}
-                        className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
-                        ❌ Rechazar
-                      </button>
-                      <button onClick={() => handleDecision(app.id, 'aceptado')}
-                        disabled={procesando === app.id}
-                        className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                        {procesando === app.id ? 'Procesando...' : '✅ Aceptar'}
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      <div className="bg-blue-50 rounded-xl p-3 mb-1">
+                        <p className="text-blue-700 text-xs font-semibold">
+                          🔒 Al aceptar se retendrá el pago. Se liberará cuando confirmes que el trabajo quedó bien.
+                        </p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => handleRechazar(app.id)}
+                          disabled={procesando === app.id}
+                          className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
+                          ❌ Rechazar
+                        </button>
+                        <button onClick={() => handleAceptarYPagar(app.id)}
+                          disabled={procesando === app.id}
+                          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                          {procesando === app.id ? '⏳ Procesando...' : '✅ Aceptar y pagar'}
+                        </button>
+                      </div>
                     </div>
                   )}
 
                   {app.estado === 'aceptado' && (
-                    <div className="bg-green-50 rounded-xl p-3 text-center">
-                      <p className="text-green-600 font-bold text-sm">✅ Trabajador confirmado</p>
-                      <p className="text-green-500 text-xs mt-1">El servicio está en proceso</p>
+                    <div className="bg-green-50 rounded-xl p-3">
+                      <p className="text-green-600 font-bold text-sm text-center">✅ Trabajador confirmado</p>
+                      <p className="text-green-500 text-xs text-center mt-1">
+                        {app.pago_retenido ? '🔒 Pago retenido — se liberará al confirmar el trabajo' : 'El servicio está en proceso'}
+                      </p>
                     </div>
                   )}
+
                 </div>
               ))}
+
+              {/* Botón confirmar trabajo si ya está completado */}
+              {servicioActivo.pago_retenido && servicioActivo.estado === 'completado' && (
+                <a href={`/confirmar?id=${servicioActivo.id}`}
+                  className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition">
+                  🎉 Confirmar trabajo y liberar pago
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -275,21 +358,25 @@ function AplicacionesContent() {
                   <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
                     svc.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
                     svc.estado === 'en_proceso' ? 'bg-purple-100 text-purple-600' :
-                    svc.estado === 'completado' ? 'bg-green-100 text-green-600' :
+                    svc.estado === 'completado' ? 'bg-orange-100 text-orange-600' :
+                    svc.estado === 'pagado' ? 'bg-green-100 text-green-600' :
                     'bg-gray-100 text-gray-600'
                   }`}>
                     {svc.estado === 'activo' ? '🟢 Activo' :
                      svc.estado === 'en_proceso' ? '🔄 En proceso' :
-                     svc.estado === 'completado' ? '✅ Completado' : svc.estado}
+                     svc.estado === 'completado' ? '⏳ Por confirmar' :
+                     svc.estado === 'pagado' ? '💰 Pagado' : svc.estado}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-extrabold text-purple-600 text-sm">${svc.presupuesto} MXN</p>
-                    <span className="text-xs text-gray-400">Ver aplicaciones →</span>
-                  </div>
+                  <p className="font-extrabold text-purple-600 text-sm">${svc.presupuesto} MXN</p>
                 </div>
+                {svc.estado === 'completado' && svc.pago_retenido && (
+                  <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
+                    <p className="text-orange-600 text-xs font-bold">⏳ Toca para confirmar y liberar el pago</p>
+                  </div>
+                )}
               </button>
             ))}
           </div>
