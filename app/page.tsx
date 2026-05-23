@@ -1,14 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+type Plataforma = 'ios' | 'android' | 'windows' | 'mac' | 'otro';
+
 export default function Home() {
-  const [plataforma, setPlataforma] = useState<'ios' | 'android' | 'windows' | 'mac' | 'otro'>('otro');
+  const [plataforma, setPlataforma] = useState<Plataforma>('otro');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [instalada, setInstalada] = useState(false);
   const [mostrarInstruccionesIOS, setMostrarInstruccionesIOS] = useState(false);
 
   useEffect(() => {
-    // Detectar plataforma
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const isAndroid = /android/.test(ua);
@@ -19,13 +20,12 @@ export default function Home() {
     else if (isAndroid) setPlataforma('android');
     else if (isWindows) setPlataforma('windows');
     else if (isMac) setPlataforma('mac');
+    else setPlataforma('otro');
 
-    // Detectar si ya está instalada
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalada(true);
     }
 
-    // Capturar evento de instalación (Android/Windows/Mac con Chrome)
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -46,7 +46,6 @@ export default function Home() {
   const botonInstalar = () => {
     if (instalada) return null;
 
-    // iOS — Safari
     if (plataforma === 'ios') {
       return (
         <div className="mt-4">
@@ -78,51 +77,49 @@ export default function Home() {
       );
     }
 
-    // Android con Chrome — banner automático
-    if (plataforma === 'android' && deferredPrompt) {
+    if (deferredPrompt && plataforma === 'android') {
       return (
-        <button
-          onClick={instalarApp}
+        <button onClick={instalarApp}
           className="mt-4 w-full py-3 px-6 bg-green-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🤖 Instalar en Android
         </button>
       );
     }
 
-    // Windows con Chrome/Edge
-    if (plataforma === 'windows' && deferredPrompt) {
+    if (deferredPrompt && plataforma === 'windows') {
       return (
-        <button
-          onClick={instalarApp}
+        <button onClick={instalarApp}
           className="mt-4 w-full py-3 px-6 bg-blue-700 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🪟 Instalar en Windows
         </button>
       );
     }
 
-    // Mac con Chrome
-    if (plataforma === 'mac' && deferredPrompt) {
+    if (deferredPrompt && plataforma === 'mac') {
       return (
-        <button
-          onClick={instalarApp}
+        <button onClick={instalarApp}
           className="mt-4 w-full py-3 px-6 bg-gray-800 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🍎 Instalar en Mac
         </button>
       );
     }
 
-    // Fallback — instrucciones generales
-    if (!deferredPrompt && plataforma !== 'ios') {
+    if (deferredPrompt) {
       return (
-        <div className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
-          <p className="text-sm text-gray-500 text-center">
-            📲 Para instalar Fleksi, abre esta página en <span className="font-bold">Chrome</span> y busca la opción "Instalar app" en el menú
-          </p>
-        </div>
+        <button onClick={instalarApp}
+          className="mt-4 w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          📲 Instalar Fleksi
+        </button>
       );
     }
 
-    return null;
+    return (
+      <div className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
+        <p className="text-sm text-gray-500 text-center">
+          📲 Para instalar Fleksi, abre esta página en <span className="font-bold">Chrome</span> y busca la opción "Instalar app" en el menú
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -179,7 +176,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Botón de instalación inteligente */}
         {instalada ? (
           <div className="mt-4 bg-green-50 rounded-2xl p-3 border border-green-200">
             <p className="text-sm text-green-700 font-semibold">✅ Fleksi ya está instalada en tu dispositivo</p>
