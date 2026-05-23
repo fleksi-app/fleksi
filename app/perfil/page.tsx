@@ -44,6 +44,7 @@ export default function Perfil() {
   const [ciudadActual, setCiudadActual] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
   const [activandoViajero, setActivandoViajero] = useState(false);
+  const [verificacion, setVerificacion] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -97,6 +98,14 @@ export default function Perfil() {
       });
       setPortafolio(fotosPortafolio);
 
+      // Cargar verificacion
+      const { data: verifData } = await supabase
+        .from('verificaciones')
+        .select('*')
+        .eq('usuario_id', user.id)
+        .single();
+      setVerificacion(verifData || null);
+
       try {
         await supabase.rpc('asignar_badges', { user_id: user.id });
         const { data: newBadges } = await supabase
@@ -116,19 +125,15 @@ export default function Perfil() {
     setActivandoViajero(true);
     try {
       const nuevoModo = !modoViajero;
-
-      // Si activa modo viajero y tiene ciudad, agregarla al historial
       let nuevasCiudades = ciudadesVisitadas;
       if (nuevoModo && ciudadActual && !ciudadesVisitadas.includes(ciudadActual)) {
         nuevasCiudades = [...ciudadesVisitadas, ciudadActual];
         setCiudadesVisitadas(nuevasCiudades);
       }
-
       await supabase.from('usuarios').update({
         modo_viajero: nuevoModo,
         ciudades_visitadas: nuevasCiudades,
       }).eq('id', usuario.id);
-
       setModoViajero(nuevoModo);
     } finally {
       setActivandoViajero(false);
@@ -207,6 +212,39 @@ export default function Perfil() {
 
   const tieneBadge = (tipo: string) => badges.some(b => b.tipo === tipo);
 
+  const verificacionInfo = () => {
+    if (!verificacion) return {
+      bg: 'bg-gradient-to-r from-blue-50 to-purple-50',
+      border: 'border-blue-100',
+      emoji: '🪪',
+      titulo: 'Verifica tu identidad',
+      texto: 'Genera más confianza y aparece primero en búsquedas',
+      boton: 'Verificarme ahora',
+      botonColor: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white',
+    };
+    const estados: { [key: string]: any } = {
+      en_revision: {
+        bg: 'bg-yellow-50', border: 'border-yellow-200',
+        emoji: '🔍', titulo: 'Verificación en revisión',
+        texto: 'Estamos revisando tus documentos. Te notificaremos pronto.',
+        boton: 'Ver estado', botonColor: 'bg-yellow-100 text-yellow-700',
+      },
+      aprobado: {
+        bg: 'bg-green-50', border: 'border-green-200',
+        emoji: '✅', titulo: '¡Identidad verificada!',
+        texto: 'Tu perfil muestra el badge de confianza.',
+        boton: 'Ver documentos', botonColor: 'bg-green-100 text-green-700',
+      },
+      rechazado: {
+        bg: 'bg-red-50', border: 'border-red-200',
+        emoji: '❌', titulo: 'Verificación rechazada',
+        texto: verificacion.motivo_rechazo || 'Revisa tus documentos y vuelve a intentarlo.',
+        boton: 'Reintentar', botonColor: 'bg-red-100 text-red-700',
+      },
+    };
+    return estados[verificacion.estado] || estados['en_revision'];
+  };
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -217,6 +255,8 @@ export default function Perfil() {
       </main>
     );
   }
+
+  const verif = verificacionInfo();
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
@@ -319,6 +359,23 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* Tarjeta verificación */}
+        <a href="/verificacion"
+          className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">{verif.emoji}</span>
+                <h3 className="font-extrabold text-gray-900">{verif.titulo}</h3>
+              </div>
+              <p className="text-xs text-gray-500 ml-7">{verif.texto}</p>
+            </div>
+            <span className={`flex-shrink-0 ml-3 px-3 py-2 rounded-xl text-xs font-bold ${verif.botonColor}`}>
+              {verif.boton} →
+            </span>
+          </div>
+        </a>
+
         {/* Modo Viajero */}
         <div className={`rounded-2xl p-5 shadow-sm border mb-4 transition ${
           modoViajero
@@ -365,7 +422,6 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Ciudades visitadas */}
           {ciudadesVisitadas.length > 0 && (
             <div className="mt-3">
               <p className={`text-xs font-semibold mb-2 ${modoViajero ? 'text-white/80' : 'text-gray-500'}`}>
