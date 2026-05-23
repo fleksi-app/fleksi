@@ -43,7 +43,15 @@ function AplicacionesContent() {
   };
 
   const verAplicaciones = async (servicio: any) => {
-    setServicioActivo(servicio);
+    // Recargar el servicio fresco de la BD para tener estado actualizado
+    const { data: svcFresco } = await supabase
+      .from('servicios')
+      .select('*')
+      .eq('id', servicio.id)
+      .single();
+
+    setServicioActivo(svcFresco || servicio);
+
     const { data } = await supabase
       .from('aplicaciones')
       .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url, email)')
@@ -72,7 +80,6 @@ function AplicacionesContent() {
       const seguro = servicioActivo.seguro ? 45 : 0;
       const total = monto + seguro;
 
-      // Crear PaymentIntent retenido en Stripe
       const response = await fetch('/api/crear-pago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -90,14 +97,12 @@ function AplicacionesContent() {
       const stripe = await stripePromise;
       if (!stripe) throw new Error('Stripe no disponible');
 
-      // Confirmar pago con tarjeta de prueba
       const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: { token: 'tok_visa' } },
       });
 
       if (stripeError) throw new Error(stripeError.message);
 
-      // Actualizar aplicacion y servicio
       await supabase.from('aplicaciones').update({
         estado: 'aceptado',
         payment_intent_id: paymentIntentId,
@@ -109,13 +114,11 @@ function AplicacionesContent() {
         pago_retenido: true,
       }).eq('id', servicioActivo.id);
 
-      // Rechazar otras aplicaciones
       await supabase.from('aplicaciones')
         .update({ estado: 'rechazado' })
         .eq('servicio_id', servicioActivo.id)
         .neq('id', aplicacionId);
 
-      // Email al prestador
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -134,7 +137,7 @@ function AplicacionesContent() {
         });
       } catch (e) {}
 
-      await verAplicaciones({ ...servicioActivo, estado: 'en_proceso', pago_retenido: true });
+      await verAplicaciones(servicioActivo);
     } catch (err: any) {
       alert('Error al procesar: ' + err.message);
     } finally {
@@ -166,6 +169,10 @@ function AplicacionesContent() {
   }
 
   if (servicioActivo) {
+    // El prestador hizo checkout si alguna aplicación tiene checkout_at
+    const prestadorTermino = aplicaciones.some(a => a.checkout_at);
+    const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
+
     return (
       <main className="min-h-screen bg-gray-50 pb-32">
         <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
@@ -191,9 +198,21 @@ function AplicacionesContent() {
               <span className="text-2xl">🔒</span>
               <div>
                 <p className="font-bold text-green-700 text-sm">Pago retenido por Fleksi</p>
-                <p className="text-green-600 text-xs mt-0.5">El dinero se liberará cuando confirmes que el trabajo quedó bien</p>
+                <p className="text-green-600 text-xs mt-0.5">
+                  {prestadorTermino
+                    ? 'El prestador terminó — confirma el trabajo para liberar el pago'
+                    : 'El dinero se liberará cuando confirmes que el trabajo quedó bien'}
+                </p>
               </div>
             </div>
+          )}
+
+          {/* Botón confirmar trabajo */}
+          {puedeConfirmar && (
+            <a href={`/confirmar?id=${servicioActivo.id}`}
+              className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4">
+              🎉 Confirmar trabajo y liberar pago
+            </a>
           )}
 
           {aplicaciones.length === 0 ? (
@@ -254,6 +273,14 @@ function AplicacionesContent() {
                     )}
                   </div>
 
+                  {app.checkout_at && (
+                    <div className="bg-blue-50 rounded-xl p-3 mb-3 text-center">
+                      <p className="text-blue-700 text-xs font-bold">
+                        ✅ Trabajo terminado — Salida: {new Date(app.checkout_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
+                      </p>
+                    </div>
+                  )}
+
                   {app.estado === 'pendiente' && (
                     <div className="flex flex-col gap-2">
                       <div className="bg-blue-50 rounded-xl p-3 mb-1">
@@ -284,17 +311,8 @@ function AplicacionesContent() {
                       </p>
                     </div>
                   )}
-
                 </div>
               ))}
-
-              {/* Botón confirmar trabajo si ya está completado */}
-              {servicioActivo.pago_retenido && servicioActivo.estado === 'completado' && (
-                <a href={`/confirmar?id=${servicioActivo.id}`}
-                  className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition">
-                  🎉 Confirmar trabajo y liberar pago
-                </a>
-              )}
             </div>
           )}
         </div>
@@ -372,9 +390,9 @@ function AplicacionesContent() {
                   <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
                   <p className="font-extrabold text-purple-600 text-sm">${svc.presupuesto} MXN</p>
                 </div>
-                {svc.estado === 'completado' && svc.pago_retenido && (
+                {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
                   <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
-                    <p className="text-orange-600 text-xs font-bold">⏳ Toca para confirmar y liberar el pago</p>
+                    <p className="text-orange-600 text-xs font-bold">⏳ Toca para ver y confirmar el trabajo</p>
                   </div>
                 )}
               </button>
