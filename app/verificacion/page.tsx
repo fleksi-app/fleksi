@@ -9,14 +9,25 @@ export default function Verificacion() {
   const [subiendo, setSubiendo] = useState<string | null>(null);
   const [docs, setDocs] = useState<{ [key: string]: string }>({});
 
-  const refs: { [key: string]: React.RefObject<HTMLInputElement> } = {
-    ine_frente: useRef<HTMLInputElement>(null),
-    ine_reverso: useRef<HTMLInputElement>(null),
-    antecedentes: useRef<HTMLInputElement>(null),
-    comprobante_antecedentes: useRef<HTMLInputElement>(null),
-    ine_representante: useRef<HTMLInputElement>(null),
-    acta_constitutiva: useRef<HTMLInputElement>(null),
-    constancia_fiscal: useRef<HTMLInputElement>(null),
+  const ineFrenteRef = useRef<HTMLInputElement>(null);
+  const ineReversoRef = useRef<HTMLInputElement>(null);
+  const antecedentesRef = useRef<HTMLInputElement>(null);
+  const comprobanteRef = useRef<HTMLInputElement>(null);
+  const ineRepresentanteRef = useRef<HTMLInputElement>(null);
+  const actaRef = useRef<HTMLInputElement>(null);
+  const constanciaRef = useRef<HTMLInputElement>(null);
+
+  const getRefs = (campo: string) => {
+    const map: { [key: string]: React.RefObject<HTMLInputElement | null> } = {
+      ine_frente: ineFrenteRef,
+      ine_reverso: ineReversoRef,
+      antecedentes: antecedentesRef,
+      comprobante_antecedentes: comprobanteRef,
+      ine_representante: ineRepresentanteRef,
+      acta_constitutiva: actaRef,
+      constancia_fiscal: constanciaRef,
+    };
+    return map[campo];
   };
 
   useEffect(() => { cargarDatos(); }, []);
@@ -69,9 +80,8 @@ export default function Verificacion() {
         .getPublicUrl(path);
 
       const url = urlData.publicUrl;
-
-      // Actualizar o crear registro de verificacion
       const campoDb = `${campo}_url`;
+
       if (verificacion) {
         await supabase.from('verificaciones')
           .update({ [campoDb]: url, estado: 'en_revision', updated_at: new Date().toISOString() })
@@ -109,7 +119,8 @@ export default function Verificacion() {
     campo: string; titulo: string; descripcion: string; acepta: string;
   }) => {
     const subido = !!docs[campo];
-    const estaSublendo = subiendo === campo;
+    const estáSubiendo = subiendo === campo;
+    const ref = getRefs(campo);
 
     return (
       <div className={`rounded-xl p-4 border-2 transition ${
@@ -124,18 +135,18 @@ export default function Verificacion() {
             <p className="text-xs text-gray-400 ml-7">{descripcion}</p>
           </div>
           <button
-            onClick={() => refs[campo]?.current?.click()}
-            disabled={estaSublendo || verificacion?.estado === 'aprobado'}
+            onClick={() => ref?.current?.click()}
+            disabled={estáSubiendo || verificacion?.estado === 'aprobado'}
             className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 ${
               subido
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
             }`}>
-            {estaSublendo ? '⏳' : subido ? 'Cambiar' : 'Subir'}
+            {estáSubiendo ? '⏳' : subido ? 'Cambiar' : 'Subir'}
           </button>
         </div>
         <input
-          ref={refs[campo]}
+          ref={ref}
           type="file"
           accept={acepta}
           className="hidden"
@@ -178,7 +189,6 @@ export default function Verificacion() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Estado actual */}
         {estado && (
           <div className={`rounded-2xl p-4 mb-4 ${estado.bg}`}>
             <p className={`font-bold text-sm ${estado.color}`}>
@@ -192,7 +202,6 @@ export default function Verificacion() {
           </div>
         )}
 
-        {/* Beneficios */}
         {!verificacion || verificacion.estado === 'pendiente' ? (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">¿Por qué verificarte?</h3>
@@ -212,7 +221,6 @@ export default function Verificacion() {
           </div>
         ) : null}
 
-        {/* Documentos Flekser */}
         {!esEmpresa && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">🪪 Identificación oficial</h3>
@@ -233,7 +241,6 @@ export default function Verificacion() {
           </div>
         )}
 
-        {/* Antecedentes no penales — solo Fleksers */}
         {!esEmpresa && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <div className="flex items-start justify-between mb-3">
@@ -265,7 +272,6 @@ export default function Verificacion() {
           </div>
         )}
 
-        {/* Documentos Empresa */}
         {esEmpresa && (
           <>
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
@@ -298,7 +304,6 @@ export default function Verificacion() {
           </>
         )}
 
-        {/* Aviso de privacidad */}
         <div className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             🔒 Tus documentos se almacenan de forma segura y encriptada. Solo el equipo de Fleksi tiene acceso para revisión. Nunca compartimos tu información con terceros.
@@ -307,7 +312,6 @@ export default function Verificacion() {
 
       </div>
 
-      {/* Bottom nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
         <div className="max-w-md mx-auto flex justify-around">
           <a href={esEmpresa ? '/home-empresa' : '/home'} className="flex flex-col items-center gap-1">
