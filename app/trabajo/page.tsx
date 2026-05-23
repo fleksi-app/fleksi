@@ -1,13 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function DetalleTrabafo() {
+function DetalleTrabajoContent() {
+  const searchParams = useSearchParams();
   const [aplicado, setAplicado] = useState(false);
+  const [yaAplico, setYaAplico] = useState(false);
   const [mostrarOferta, setMostrarOferta] = useState(false);
   const [miPrecio, setMiPrecio] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [cargandoPagina, setCargandoPagina] = useState(true);
   const [error, setError] = useState('');
   const [trabajo, setTrabajo] = useState<any>(null);
   const [usuario, setUsuario] = useState<any>(null);
@@ -22,22 +26,52 @@ export default function DetalleTrabafo() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    const { data: servicios } = await supabase
-      .from('servicios')
-      .select('*, usuarios(nombre, calificacion, foto_url)')
-      .eq('estado', 'activo')
-      .neq('cliente_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
+    const servicioId = searchParams.get('id');
 
-    if (servicios && servicios.length > 0) {
-      setTrabajo(servicios[0]);
-      setMiPrecio(servicios[0].presupuesto?.toString() || '');
+    let servicio = null;
+
+    if (servicioId) {
+      const { data } = await supabase
+        .from('servicios')
+        .select('*, usuarios(nombre, calificacion, foto_url, email)')
+        .eq('id', servicioId)
+        .single();
+      servicio = data;
+    } else {
+      const { data } = await supabase
+        .from('servicios')
+        .select('*, usuarios(nombre, calificacion, foto_url, email)')
+        .eq('estado', 'activo')
+        .neq('cliente_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      servicio = data?.[0] || null;
     }
+
+    if (servicio) {
+      setTrabajo(servicio);
+      setMiPrecio(servicio.presupuesto?.toString() || '');
+
+      // Verificar si ya aplicó
+      const { data: appExistente } = await supabase
+        .from('aplicaciones')
+        .select('id')
+        .eq('servicio_id', servicio.id)
+        .eq('prestador_id', user.id)
+        .single();
+
+      if (appExistente) setYaAplico(true);
+    }
+
+    setCargandoPagina(false);
   };
 
   const handleAplicar = async () => {
     if (!trabajo || !usuario) return;
+    if (yaAplico) {
+      setError('Ya aplicaste a este trabajo.');
+      return;
+    }
     setCargando(true);
     setError('');
     try {
@@ -50,23 +84,16 @@ export default function DetalleTrabafo() {
       });
       if (dbError) throw dbError;
 
-      // Obtener email del cliente
-      const { data: clienteData } = await supabase
-        .from('usuarios')
-        .select('nombre')
-        .eq('id', trabajo.cliente_id)
-        .single();
-
-      // Enviar email de notificación
+      // Enviar email al cliente
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tipo: 'nueva_aplicacion',
-            destinatario: 'fernando.najera.nm@gmail.com', // temporal hasta tener emails reales
+            destinatario: trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com',
             datos: {
-              cliente: clienteData?.nombre || 'Cliente',
+              cliente: trabajo.usuarios?.nombre || 'Cliente',
               prestador: usuario.nombre,
               trabajo: trabajo.titulo,
               precio: miPrecio || trabajo.presupuesto,
@@ -78,8 +105,9 @@ export default function DetalleTrabafo() {
       }
 
       setAplicado(true);
+      setYaAplico(true);
     } catch (err: any) {
-      setError('Ya aplicaste a este trabajo o hubo un error.');
+      setError('Hubo un error al enviar tu aplicación. Intenta de nuevo.');
     } finally {
       setCargando(false);
     }
@@ -91,6 +119,17 @@ export default function DetalleTrabafo() {
     cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
     cerrajeria: '🔑', estetica: '💅', otro: '✨'
   };
+
+  if (cargandoPagina) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Cargando trabajo...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!trabajo) {
     return (
@@ -162,7 +201,7 @@ export default function DetalleTrabafo() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-14 h-14 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
-              {categoriaEmoji[trabajo.categoria] || '✨'}
+              {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
             </div>
             <div className="flex-1">
               <div className="flex items-start justify-between gap-2">
@@ -226,13 +265,20 @@ export default function DetalleTrabafo() {
           </div>
         </div>
 
+        {yaAplico && !aplicado && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4 text-center">
+            <p className="text-green-700 font-bold">✅ Ya aplicaste a este trabajo</p>
+            <p className="text-green-600 text-sm mt-1">Espera la respuesta del cliente</p>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
             {error}
           </div>
         )}
 
-        {mostrarOferta && (
+        {!yaAplico && mostrarOferta && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">💬 Tu propuesta</h3>
             <div className="mb-3">
@@ -254,17 +300,38 @@ export default function DetalleTrabafo() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
         <div className="max-w-md mx-auto flex gap-3">
-          <button onClick={() => setMostrarOferta(!mostrarOferta)}
-            className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
-            💬 Contraoferta
-          </button>
-          <button onClick={handleAplicar} disabled={cargando}
-            className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-            {cargando ? 'Enviando...' : `✋ Aplicar — $${miPrecio || trabajo.presupuesto}`}
-          </button>
+          {!yaAplico ? (
+            <>
+              <button onClick={() => setMostrarOferta(!mostrarOferta)}
+                className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
+                💬 Contraoferta
+              </button>
+              <button onClick={handleAplicar} disabled={cargando}
+                className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                {cargando ? 'Enviando...' : `✋ Aplicar — $${miPrecio || trabajo.presupuesto}`}
+              </button>
+            </>
+          ) : (
+            <a href="/mis-trabajos"
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+              Ver mis aplicaciones →
+            </a>
+          )}
         </div>
       </div>
 
     </main>
+  );
+}
+
+export default function DetalleTrabajo() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <DetalleTrabajoContent />
+    </Suspense>
   );
 }

@@ -34,7 +34,7 @@ export default function Aplicaciones() {
     setServicioActivo(servicio);
     const { data } = await supabase
       .from('aplicaciones')
-      .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url)')
+      .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url, email)')
       .eq('servicio_id', servicio.id)
       .order('created_at', { ascending: false });
     setAplicaciones(data || []);
@@ -57,7 +57,6 @@ export default function Aplicaciones() {
           .eq('servicio_id', servicioActivo.id)
           .neq('id', aplicacionId);
 
-        // Email al prestador aceptado
         const appAceptada = aplicaciones.find(a => a.id === aplicacionId);
         try {
           await fetch('/api/enviar-email', {
@@ -65,7 +64,7 @@ export default function Aplicaciones() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               tipo: 'aplicacion_aceptada',
-              destinatario: 'fernando.najera.nm@gmail.com',
+              destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
               datos: {
                 prestador: appAceptada?.usuarios?.nombre || 'Prestador',
                 cliente: usuario?.nombre || 'Cliente',
@@ -140,7 +139,6 @@ export default function Aplicaciones() {
             <div className="flex flex-col gap-4">
               {aplicaciones.map((app) => (
                 <div key={app.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
                       {app.usuarios?.foto_url ? (
@@ -183,14 +181,12 @@ export default function Aplicaciones() {
 
                   {app.estado === 'pendiente' && (
                     <div className="flex gap-3">
-                      <button
-                        onClick={() => handleDecision(app.id, 'rechazado')}
+                      <button onClick={() => handleDecision(app.id, 'rechazado')}
                         disabled={procesando === app.id}
                         className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
                         ❌ Rechazar
                       </button>
-                      <button
-                        onClick={() => handleDecision(app.id, 'aceptado')}
+                      <button onClick={() => handleDecision(app.id, 'aceptado')}
                         disabled={procesando === app.id}
                         className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
                         {procesando === app.id ? 'Procesando...' : '✅ Aceptar'}
@@ -204,7 +200,6 @@ export default function Aplicaciones() {
                       <p className="text-green-500 text-xs mt-1">El servicio está en proceso</p>
                     </div>
                   )}
-
                 </div>
               ))}
             </div>
@@ -213,7 +208,7 @@ export default function Aplicaciones() {
 
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
           <div className="max-w-md mx-auto flex justify-around">
-            <a href="/home-cliente" className="flex flex-col items-center gap-1">
+            <a href="/home" className="flex flex-col items-center gap-1">
               <span className="text-xl">🏠</span>
               <span className="text-xs text-gray-400">Inicio</span>
             </a>
@@ -235,7 +230,6 @@ export default function Aplicaciones() {
             </a>
           </div>
         </div>
-
       </main>
     );
   }
@@ -294,7 +288,7 @@ export default function Aplicaciones() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
         <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home-cliente" className="flex flex-col items-center gap-1">
+          <a href="/home" className="flex flex-col items-center gap-1">
             <span className="text-xl">🏠</span>
             <span className="text-xs text-gray-400">Inicio</span>
           </a>
@@ -316,7 +310,6 @@ export default function Aplicaciones() {
           </a>
         </div>
       </div>
-
     </main>
   );
 }

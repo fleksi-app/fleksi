@@ -10,29 +10,34 @@ export default function HomeWorker() {
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
+  const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
 
     const { data: perfil } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
     const { data: servicios } = await supabase
       .from('servicios')
       .select('*, usuarios(nombre, calificacion)')
       .eq('estado', 'activo')
+      .neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
 
     setTrabajos(servicios || []);
+
+    // Cargar servicios donde ya aplicó
+    const { data: apps } = await supabase
+      .from('aplicaciones')
+      .select('servicio_id')
+      .eq('prestador_id', user.id);
+    setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
+
     setCargando(false);
   };
 
@@ -62,7 +67,7 @@ export default function HomeWorker() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 pb-32">
 
       <div className="bg-white px-6 pt-12 pb-6 shadow-sm">
         <div className="max-w-md mx-auto">
@@ -121,40 +126,45 @@ export default function HomeWorker() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {trabajosFiltrados.map((trabajo) => (
-              <a href="/trabajo" key={trabajo.id}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
-                <div className="flex gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                    {categoriaEmoji[trabajo.categoria] || '✨'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-gray-900 text-sm leading-tight">{trabajo.titulo}</h3>
-                      {trabajo.urgente && (
-                        <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-                          🔴 Urgente
-                        </span>
-                      )}
+            {trabajosFiltrados.map((trabajo) => {
+              const yaAplico = aplicacionesUsuario.includes(trabajo.id);
+              return (
+                <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
+                  <div className="flex gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                      {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {trabajo.usuarios?.nombre || 'Cliente verificado'}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{trabajo.titulo}</h3>
+                        {trabajo.urgente && (
+                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                            🔴 Urgente
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {trabajo.usuarios?.nombre || 'Cliente verificado'}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-extrabold text-purple-600 text-sm">${trabajo.presupuesto} MXN</p>
-                        <span className="mt-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full inline-block">
-                          Aplicar
-                        </span>
+                        <div className="text-right">
+                          <p className="font-extrabold text-purple-600 text-sm">${trabajo.presupuesto} MXN</p>
+                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${
+                            yaAplico
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                          }`}>
+                            {yaAplico ? '✅ Aplicado' : 'Aplicar'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </a>
-            ))}
+                </a>
+              );
+            })}
           </div>
         )}
 
@@ -162,22 +172,22 @@ export default function HomeWorker() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
         <div className="max-w-md mx-auto flex justify-around">
-          <button className="flex flex-col items-center gap-1">
+          <a href="/home" className="flex flex-col items-center gap-1">
             <span className="text-xl">🏠</span>
             <span className="text-xs font-bold text-purple-600">Inicio</span>
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <span className="text-xl">🔍</span>
-            <span className="text-xs text-gray-400">Buscar</span>
-          </button>
-          <button className="flex flex-col items-center gap-1">
+          </a>
+          <a href="/publicar" className="flex flex-col items-center gap-1">
+            <span className="text-xl">➕</span>
+            <span className="text-xs text-gray-400">Publicar</span>
+          </a>
+          <a href="/mis-trabajos" className="flex flex-col items-center gap-1">
             <span className="text-xl">📋</span>
             <span className="text-xs text-gray-400">Mis trabajos</span>
-          </button>
-          <button className="flex flex-col items-center gap-1">
+          </a>
+          <a href="/chat" className="flex flex-col items-center gap-1">
             <span className="text-xl">💬</span>
             <span className="text-xs text-gray-400">Mensajes</span>
-          </button>
+          </a>
           <a href="/perfil" className="flex flex-col items-center gap-1">
             <span className="text-xl">👤</span>
             <span className="text-xs text-gray-400">Perfil</span>
