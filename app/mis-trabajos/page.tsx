@@ -19,15 +19,13 @@ export default function MisTrabajos() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Mis aplicaciones como trabajador
     const { data: apps } = await supabase
       .from('aplicaciones')
-      .select('*, servicios(titulo, fecha, hora, presupuesto, urgente, usuarios(nombre))')
+      .select('*, servicios(id, titulo, fecha, hora, presupuesto, urgente, usuarios(nombre))')
       .eq('prestador_id', user.id)
       .order('created_at', { ascending: false });
     setAplicaciones(apps || []);
 
-    // Mis publicaciones como cliente
     const { data: pubs } = await supabase
       .from('servicios')
       .select('*, aplicaciones(count)')
@@ -72,26 +70,19 @@ export default function MisTrabajos() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* HEADER */}
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <h1 className="font-extrabold text-gray-900 text-xl mb-4">Mis Trabajos</h1>
-
-          {/* Tabs */}
           <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl">
             <button onClick={() => setTab('aplicaciones')}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${
-                tab === 'aplicaciones'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500'
+                tab === 'aplicaciones' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
               }`}>
               ✋ Mis aplicaciones
             </button>
             <button onClick={() => setTab('publicaciones')}
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${
-                tab === 'publicaciones'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500'
+                tab === 'publicaciones' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
               }`}>
               📋 Mis solicitudes
             </button>
@@ -117,7 +108,9 @@ export default function MisTrabajos() {
             ) : (
               <div className="flex flex-col gap-3">
                 {aplicaciones.map((app) => (
-                  <div key={app.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <a key={app.id}
+                    href={app.estado === 'aceptado' ? '/checkin' : `/trabajo?id=${app.servicios?.id}`}
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 block active:scale-95 transition">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
                         {app.servicios?.titulo || 'Trabajo'}
@@ -142,14 +135,19 @@ export default function MisTrabajos() {
                         ${app.precio_ofrecido || app.servicios?.presupuesto} MXN
                       </p>
                     </div>
-                  </div>
+                    {app.estado === 'aceptado' && (
+                      <div className="mt-3 bg-green-50 rounded-xl p-2 text-center">
+                        <p className="text-green-600 text-xs font-bold">✅ Aceptado — Toca para hacer Check-in</p>
+                      </div>
+                    )}
+                  </a>
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* MIS PUBLICACIONES */}
+        {/* MIS SOLICITUDES */}
         {tab === 'publicaciones' && (
           <div>
             <a href="/publicar"
@@ -165,32 +163,42 @@ export default function MisTrabajos() {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {publicaciones.map((pub) => (
-                  <div key={pub.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
-                        {pub.titulo}
-                      </h3>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[pub.estado]}`}>
-                        {estadoLabel[pub.estado]}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <div>
-                        <p className="text-xs text-gray-400">📅 {pub.fecha}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          👥 {pub.aplicaciones?.[0]?.count || 0} aplicaciones recibidas
-                        </p>
+                {publicaciones.map((pub) => {
+                  const numApps = pub.aplicaciones?.[0]?.count || 0;
+                  return (
+                    <a key={pub.id}
+                      href={`/aplicaciones?servicio=${pub.id}`}
+                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 block active:scale-95 transition">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
+                          {pub.titulo}
+                        </h3>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[pub.estado]}`}>
+                          {estadoLabel[pub.estado]}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <p className="font-extrabold text-purple-600 text-sm">${pub.presupuesto} MXN</p>
-                        {pub.urgente && (
-                          <span className="text-xs text-red-600 font-bold">🔴 Urgente</span>
-                        )}
+                      <div className="flex justify-between items-center mt-2">
+                        <div>
+                          <p className="text-xs text-gray-400">📅 {pub.fecha}</p>
+                          <p className={`text-xs mt-0.5 font-semibold ${numApps > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
+                            👥 {numApps} aplicacion{numApps !== 1 ? 'es' : ''} recibida{numApps !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-extrabold text-purple-600 text-sm">${pub.presupuesto} MXN</p>
+                          {pub.urgente && (
+                            <span className="text-xs text-red-600 font-bold">🔴 Urgente</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                      {numApps > 0 && (
+                        <div className="mt-3 bg-purple-50 rounded-xl p-2 text-center">
+                          <p className="text-purple-600 text-xs font-bold">Toca para ver y aceptar aplicaciones →</p>
+                        </div>
+                      )}
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -205,18 +213,18 @@ export default function MisTrabajos() {
             <span className="text-xl">🏠</span>
             <span className="text-xs text-gray-400">Inicio</span>
           </a>
-          <button className="flex flex-col items-center gap-1">
-            <span className="text-xl">🔍</span>
-            <span className="text-xs text-gray-400">Buscar</span>
-          </button>
+          <a href="/publicar" className="flex flex-col items-center gap-1">
+            <span className="text-xl">➕</span>
+            <span className="text-xs text-gray-400">Publicar</span>
+          </a>
           <a href="/mis-trabajos" className="flex flex-col items-center gap-1">
             <span className="text-xl">📋</span>
             <span className="text-xs font-bold text-purple-600">Mis trabajos</span>
           </a>
-          <button className="flex flex-col items-center gap-1">
+          <a href="/chat" className="flex flex-col items-center gap-1">
             <span className="text-xl">💬</span>
             <span className="text-xs text-gray-400">Mensajes</span>
-          </button>
+          </a>
           <a href="/perfil" className="flex flex-col items-center gap-1">
             <span className="text-xl">👤</span>
             <span className="text-xs text-gray-400">Perfil</span>

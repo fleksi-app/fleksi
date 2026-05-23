@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function Aplicaciones() {
+function AplicacionesContent() {
+  const searchParams = useSearchParams();
   const [servicios, setServicios] = useState<any[]>([]);
   const [servicioActivo, setServicioActivo] = useState<any>(null);
   const [aplicaciones, setAplicaciones] = useState<any[]>([]);
@@ -27,6 +29,14 @@ export default function Aplicaciones() {
       .order('created_at', { ascending: false });
 
     setServicios(svcs || []);
+
+    // Si viene con ?servicio=ID abrir directamente
+    const servicioId = searchParams.get('servicio');
+    if (servicioId && svcs) {
+      const svc = svcs.find(s => s.id === servicioId);
+      if (svc) await verAplicaciones(svc);
+    }
+
     setCargando(false);
   };
 
@@ -311,5 +321,17 @@ export default function Aplicaciones() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Aplicaciones() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <AplicacionesContent />
+    </Suspense>
   );
 }

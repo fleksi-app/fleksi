@@ -32,6 +32,10 @@ export default function Publicar() {
   const [error, setError] = useState('');
 
   const handlePublicar = async () => {
+    if (!titulo || !fecha || !presupuesto) {
+      setError('Por favor completa título, fecha y presupuesto');
+      return;
+    }
     setCargando(true);
     setError('');
     try {
@@ -54,7 +58,7 @@ export default function Publicar() {
       if (dbError) throw dbError;
       setPublicado(true);
     } catch (err: any) {
-      setError('Ocurrió un error. Intenta de nuevo.');
+      setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
     } finally {
       setCargando(false);
     }
@@ -89,10 +93,10 @@ export default function Publicar() {
               <span className="font-semibold text-sm text-green-600">✅ Activo</span>
             </div>
           </div>
-          <a href="/home-cliente" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
+          <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis solicitudes
           </a>
-          <a href="/" className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
+          <a href="/home" className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
             Volver al inicio
           </a>
         </div>
@@ -106,7 +110,7 @@ export default function Publicar() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href="/" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
+            <a href="/home" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
               ←
             </a>
             <div>
@@ -207,6 +211,12 @@ export default function Publicar() {
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Confirma tu solicitud</h2>
             <p className="text-gray-400 mb-6 font-light">Revisa los detalles antes de publicar</p>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
+                {error}
+              </div>
+            )}
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <div className="flex flex-col gap-3">
