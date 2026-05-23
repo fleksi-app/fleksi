@@ -17,6 +17,12 @@ const categorias = [
   { id: 'otro', emoji: '✨', nombre: 'Otro' },
 ];
 
+const horas = [
+  '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
+  '19:00', '20:00', '21:00',
+];
+
 export default function Publicar() {
   const [paso, setPaso] = useState(1);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
@@ -48,7 +54,7 @@ export default function Publicar() {
         descripcion,
         categoria: categoriaSeleccionada,
         fecha,
-        hora,
+        hora: hora || null,
         presupuesto: Number(presupuesto),
         urgente,
         seguro,
@@ -172,24 +178,38 @@ export default function Publicar() {
                   value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
                   rows={4} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
-                  <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
-                    className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-1 block">🕐 Hora</label>
-                  <input type="time" value={hora} onChange={(e) => setHora(e.target.value)}
-                    className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+
+              {/* Fecha */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
+                <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+              </div>
+
+              {/* Hora — selector amigable */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <div className="grid grid-cols-4 gap-2">
+                  {horas.map((h) => (
+                    <button key={h} onClick={() => setHora(hora === h ? '' : h)}
+                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${
+                        hora === h
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
+                      }`}>
+                      {h}
+                    </button>
+                  ))}
                 </div>
               </div>
+
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">💰 Tu presupuesto (MXN)</label>
                 <input type="number" placeholder="Ej. 500" value={presupuesto}
                   onChange={(e) => setPresupuesto(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
+
               <div onClick={() => setUrgente(!urgente)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}>
                 <div className="flex items-center gap-3">
@@ -231,8 +251,8 @@ export default function Publicar() {
                   <span className="font-semibold text-sm text-gray-900 text-right max-w-48">{titulo}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm">Fecha y hora</span>
-                  <span className="font-semibold text-sm text-gray-900">{fecha} {hora}</span>
+                  <span className="text-gray-400 text-sm">Fecha</span>
+                  <span className="font-semibold text-sm text-gray-900">{fecha} {hora || 'Sin hora'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Presupuesto</span>
@@ -291,7 +311,7 @@ export default function Publicar() {
             </button>
           )}
           {paso < 3 ? (
-            <button onClick={() => setPaso(paso + 1)}
+            <button onClick={() => { setError(''); setPaso(paso + 1); }}
               disabled={paso === 1 && !categoriaSeleccionada}
               className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
               Continuar →
