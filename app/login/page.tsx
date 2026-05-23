@@ -24,8 +24,6 @@ export default function Login() {
         const rol = usuario?.rol || 'flekser';
         if (rol === 'empresa') {
           window.location.href = '/home-empresa';
-        } else if (rol === 'viajero') {
-          window.location.href = '/home-viajero';
         } else {
           window.location.href = '/home';
         }

@@ -69,7 +69,6 @@ function RegistroForm() {
 
   const destino = () => {
     if (rol === 'empresa') return '/home-empresa';
-    if (rol === 'viajero') return '/home-viajero';
     return '/home';
   };
 
