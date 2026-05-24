@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { usePush } from '@/lib/usePush';
 
 const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo'];
 
@@ -12,6 +13,8 @@ export default function HomeWorker() {
   const [busqueda, setBusqueda] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
+
+  usePush();
 
   useEffect(() => { cargarDatos(); }, []);
 

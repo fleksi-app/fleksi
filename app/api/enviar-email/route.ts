@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import webpush from 'web-push';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL!,
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!
 );
 
 async function crearNotificacion(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
@@ -16,6 +23,36 @@ async function crearNotificacion(usuario_id: string, tipo: string, titulo: strin
     });
   } catch (e) {
     console.error('Error creando notificacion:', e);
+  }
+}
+
+async function enviarPush(usuario_id: string, titulo: string, mensaje: string, link: string) {
+  try {
+    const { data: suscripciones } = await supabaseAdmin
+      .from('push_suscripciones')
+      .select('*')
+      .eq('usuario_id', usuario_id);
+
+    if (!suscripciones || suscripciones.length === 0) return;
+
+    const payload = JSON.stringify({ titulo, mensaje, link });
+
+    await Promise.allSettled(
+      suscripciones.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload
+          );
+        } catch (err: any) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await supabaseAdmin.from('push_suscripciones').delete().eq('id', sub.id);
+          }
+        }
+      })
+    );
+  } catch (e) {
+    console.log('Push no enviado:', e);
   }
 }
 
@@ -61,13 +98,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(
-          datos.usuario_id,
-          'nuevo_trabajo',
-          `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`,
-          'Tu cuenta fue creada exitosamente. ¡Empieza a explorar!',
-          '/home'
-        );
+        await crearNotificacion(datos.usuario_id, 'nuevo_trabajo', `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`, 'Tu cuenta fue creada exitosamente. ¡Empieza a explorar!', '/home');
+        await enviarPush(datos.usuario_id, `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`, 'Tu cuenta fue creada exitosamente.', '/home');
       }
     }
 
@@ -96,13 +128,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.cliente_id) {
-        await crearNotificacion(
-          datos.cliente_id,
-          'nueva_aplicacion',
-          `Nueva aplicación de ${datos.prestador}`,
-          `Aplicó a tu solicitud: ${datos.trabajo} — $${datos.precio} MXN`,
-          `/aplicaciones?servicio=${datos.servicio_id}`
-        );
+        await crearNotificacion(datos.cliente_id, 'nueva_aplicacion', `Nueva aplicación de ${datos.prestador}`, `Aplicó a tu solicitud: ${datos.trabajo} — $${datos.precio} MXN`, `/aplicaciones?servicio=${datos.servicio_id}`);
+        await enviarPush(datos.cliente_id, `✋ Nueva aplicación de ${datos.prestador}`, `${datos.trabajo} — $${datos.precio} MXN`, `/aplicaciones?servicio=${datos.servicio_id}`);
       }
     }
 
@@ -132,13 +159,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.prestador_id) {
-        await crearNotificacion(
-          datos.prestador_id,
-          'aplicacion_aceptada',
-          `¡Tu aplicación fue aceptada! 🎉`,
-          `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`,
-          '/checkin'
-        );
+        await crearNotificacion(datos.prestador_id, 'aplicacion_aceptada', `¡Tu aplicación fue aceptada! 🎉`, `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`, '/checkin');
+        await enviarPush(datos.prestador_id, `✅ ¡Aplicación aceptada!`, `${datos.cliente} te contrató para: ${datos.trabajo}`, '/checkin');
       }
     }
 
@@ -173,13 +195,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.cliente_id) {
-        await crearNotificacion(
-          datos.cliente_id,
-          'trabajo_completado',
-          `${datos.prestador} terminó el trabajo 🎉`,
-          `Confirma que quedó bien para liberar el pago: ${datos.trabajo}`,
-          `/aplicaciones?servicio=${datos.servicio_id}`
-        );
+        await crearNotificacion(datos.cliente_id, 'trabajo_completado', `${datos.prestador} terminó el trabajo 🎉`, `Confirma que quedó bien para liberar el pago: ${datos.trabajo}`, `/aplicaciones?servicio=${datos.servicio_id}`);
+        await enviarPush(datos.cliente_id, `🎉 ${datos.prestador} terminó el trabajo`, `Confirma para liberar el pago: ${datos.trabajo}`, `/aplicaciones?servicio=${datos.servicio_id}`);
       }
     }
 
@@ -214,13 +231,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.prestador_id) {
-        await crearNotificacion(
-          datos.prestador_id,
-          'pago_liberado',
-          `¡Pago liberado! 💰`,
-          `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`,
-          '/mis-trabajos'
-        );
+        await crearNotificacion(datos.prestador_id, 'pago_liberado', `¡Pago liberado! 💰`, `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`, '/mis-trabajos');
+        await enviarPush(datos.prestador_id, `💰 ¡Pago liberado!`, `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`, '/mis-trabajos');
       }
     }
 
@@ -246,13 +258,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(
-          datos.usuario_id,
-          'aplicacion_aceptada',
-          '¡Identidad verificada! ✅',
-          'Tu perfil ahora muestra el badge de confianza',
-          '/perfil'
-        );
+        await crearNotificacion(datos.usuario_id, 'aplicacion_aceptada', '¡Identidad verificada! ✅', 'Tu perfil ahora muestra el badge de confianza', '/perfil');
+        await enviarPush(datos.usuario_id, '✅ ¡Identidad verificada!', 'Tu perfil ahora muestra el badge de confianza', '/perfil');
       }
     }
 
@@ -282,13 +289,8 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(
-          datos.usuario_id,
-          'aplicacion_rechazada',
-          'Verificación rechazada',
-          `Motivo: ${datos.motivo}`,
-          '/verificacion'
-        );
+        await crearNotificacion(datos.usuario_id, 'aplicacion_rechazada', 'Verificación rechazada', `Motivo: ${datos.motivo}`, '/verificacion');
+        await enviarPush(datos.usuario_id, '❌ Verificación rechazada', `Motivo: ${datos.motivo}`, '/verificacion');
       }
     }
 
