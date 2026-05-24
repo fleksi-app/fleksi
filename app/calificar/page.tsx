@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 export default function Calificar() {
-  const [servicios, setServicios] = useState<any[]>([]);
+  const [pendientes, setPendientes] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [calificando, setCalificando] = useState<any>(null);
   const [estrellas, setEstrellas] = useState(5);
@@ -20,17 +21,72 @@ export default function Calificar() {
 
     const { data: perfil } = await supabase
       .from('usuarios').select('*').eq('id', user.id).single();
-    setUsuario(perfil);
+    setUsuario({ ...perfil, authId: user.id });
 
-    // Servicios completados donde soy cliente y no he calificado
-    const { data: svcs } = await supabase
+    const items: any[] = [];
+
+    // Como cliente — calificar al prestador
+    const { data: svcsCliente } = await supabase
       .from('servicios')
-      .select('*, aplicaciones(*, usuarios(nombre, calificacion, trabajos_completados))')
+      .select('*, aplicaciones(*, usuarios(id, nombre, calificacion, trabajos_completados, foto_url))')
       .eq('cliente_id', user.id)
       .in('estado', ['completado', 'pagado'])
       .order('created_at', { ascending: false });
 
-    setServicios(svcs || []);
+    for (const svc of svcsCliente || []) {
+      const appAceptada = svc.aplicaciones?.find(
+        (a: any) => a.estado === 'completado' || a.estado === 'aceptado'
+      );
+      if (!appAceptada) continue;
+
+      // Verificar si ya calificó
+      const { data: reseñaExistente } = await supabase
+        .from('reseñas')
+        .select('id')
+        .eq('servicio_id', svc.id)
+        .eq('cliente_id', user.id)
+        .single();
+
+      if (!reseñaExistente) {
+        items.push({
+          tipo: 'cliente_a_prestador',
+          servicio: svc,
+          aplicacion: appAceptada,
+          calificarA: appAceptada.usuarios,
+          label: 'Califica al prestador',
+        });
+      }
+    }
+
+    // Como prestador — calificar al cliente
+    const { data: appsP } = await supabase
+      .from('aplicaciones')
+      .select('*, servicios(*, usuarios(id, nombre, calificacion, foto_url))')
+      .eq('prestador_id', user.id)
+      .eq('estado', 'completado')
+      .order('created_at', { ascending: false });
+
+    for (const app of appsP || []) {
+      // Verificar si ya calificó al cliente
+      const { data: reseñaExistente } = await supabase
+        .from('reseñas')
+        .select('id')
+        .eq('servicio_id', app.servicio_id)
+        .eq('prestador_id', user.id)
+        .single();
+
+      if (!reseñaExistente) {
+        items.push({
+          tipo: 'prestador_a_cliente',
+          servicio: app.servicios,
+          aplicacion: app,
+          calificarA: app.servicios?.usuarios,
+          label: 'Califica al cliente',
+        });
+      }
+    }
+
+    setPendientes(items);
     setCargando(false);
   };
 
@@ -39,33 +95,54 @@ export default function Calificar() {
     setGuardando(true);
 
     try {
-      const appAceptada = calificando.aplicaciones?.find(
-        (a: any) => a.estado === 'completado' || a.estado === 'aceptado'
-      );
-      if (!appAceptada) throw new Error('No se encontró la aplicación');
+      if (calificando.tipo === 'cliente_a_prestador') {
+        // Cliente califica al prestador
+        const { error } = await supabase.from('reseñas').insert({
+          servicio_id: calificando.servicio.id,
+          cliente_id: usuario.authId,
+          prestador_id: calificando.aplicacion.prestador_id,
+          estrellas,
+          comentario,
+        });
+        if (error) throw error;
 
-      // Guardar reseña
-      const { error: reseñaError } = await supabase.from('reseñas').insert({
-        servicio_id: calificando.id,
-        cliente_id: usuario.id,
-        prestador_id: appAceptada.prestador_id,
-        estrellas,
-        comentario,
-      });
+        // Actualizar calificación promedio del prestador
+        const { data: reseñas } = await supabase
+          .from('reseñas')
+          .select('estrellas')
+          .eq('prestador_id', calificando.aplicacion.prestador_id);
 
-      if (reseñaError) throw reseñaError;
+        if (reseñas) {
+          const promedio = reseñas.reduce((acc, r) => acc + r.estrellas, 0) / reseñas.length;
+          await supabase.from('usuarios')
+            .update({ calificacion: Math.round(promedio * 10) / 10 })
+            .eq('id', calificando.aplicacion.prestador_id);
+        }
+      } else {
+        // Prestador califica al cliente
+        const { error } = await supabase.from('reseñas').insert({
+          servicio_id: calificando.servicio.id,
+          cliente_id: calificando.servicio.cliente_id,
+          prestador_id: usuario.authId,
+          estrellas,
+          comentario,
+          es_del_prestador: true,
+        });
+        if (error) throw error;
 
-      // Actualizar calificación promedio del prestador
-      const { data: reseñas } = await supabase
-        .from('reseñas')
-        .select('estrellas')
-        .eq('prestador_id', appAceptada.prestador_id);
+        // Actualizar calificación del cliente
+        const { data: reseñas } = await supabase
+          .from('reseñas')
+          .select('estrellas')
+          .eq('cliente_id', calificando.servicio.cliente_id)
+          .eq('es_del_prestador', true);
 
-      if (reseñas) {
-        const promedio = reseñas.reduce((acc, r) => acc + r.estrellas, 0) / reseñas.length;
-        await supabase.from('usuarios')
-          .update({ calificacion: Math.round(promedio * 10) / 10 })
-          .eq('id', appAceptada.prestador_id);
+        if (reseñas && reseñas.length > 0) {
+          const promedio = reseñas.reduce((acc, r) => acc + r.estrellas, 0) / reseñas.length;
+          await supabase.from('usuarios')
+            .update({ calificacion: Math.round(promedio * 10) / 10 })
+            .eq('id', calificando.servicio.cliente_id);
+        }
       }
 
       setExito(true);
@@ -100,19 +177,19 @@ export default function Calificar() {
           <p className="text-gray-400 mb-8 font-light">
             Tu reseña ayuda a otros usuarios a encontrar los mejores prestadores.
           </p>
-          <a href="/home-cliente" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition">
+          <a href="/home" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Volver al inicio
           </a>
+          <button onClick={() => setExito(false)}
+            className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
+            Ver más por calificar
+          </button>
         </div>
       </main>
     );
   }
 
   if (calificando) {
-    const appAceptada = calificando.aplicaciones?.find(
-      (a: any) => a.estado === 'completado' || a.estado === 'aceptado'
-    );
-
     return (
       <main className="min-h-screen bg-gray-50 pb-32">
         <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
@@ -127,20 +204,23 @@ export default function Calificar() {
 
         <div className="max-w-md mx-auto px-6 py-4">
 
-          {/* Info del trabajador */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-extrabold text-xl">
-                {appAceptada?.usuarios?.nombre?.charAt(0) || '?'}
+              <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-extrabold text-xl overflow-hidden">
+                {calificando.calificarA?.foto_url ? (
+                  <img src={calificando.calificarA.foto_url} className="w-full h-full object-cover"/>
+                ) : (
+                  calificando.calificarA?.nombre?.charAt(0) || '?'
+                )}
               </div>
               <div>
-                <p className="font-extrabold text-gray-900">{appAceptada?.usuarios?.nombre}</p>
-                <p className="text-sm text-gray-400">{calificando.titulo}</p>
+                <p className="font-extrabold text-gray-900">{calificando.calificarA?.nombre}</p>
+                <p className="text-sm text-gray-400">{calificando.servicio?.titulo}</p>
+                <p className="text-xs text-purple-600 font-semibold mt-0.5">{calificando.label}</p>
               </div>
             </div>
           </div>
 
-          {/* Estrellas */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4 text-center">¿Cómo calificarías el servicio?</h3>
             <div className="flex justify-center gap-3 mb-4">
@@ -159,7 +239,6 @@ export default function Calificar() {
             </p>
           </div>
 
-          {/* Comentario */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">💬 Cuéntanos tu experiencia</h3>
             <textarea
@@ -167,11 +246,9 @@ export default function Calificar() {
               onChange={(e) => setComentario(e.target.value)}
               rows={4}
               placeholder="¿Cómo fue el servicio? ¿Lo recomendarías?"
-              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"
-            />
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
           </div>
 
-          {/* Tags rápidos */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🏷️ ¿Qué destacarías?</h3>
             <div className="flex flex-wrap gap-2">
@@ -195,7 +272,6 @@ export default function Calificar() {
             </button>
           </div>
         </div>
-
       </main>
     );
   }
@@ -210,59 +286,47 @@ export default function Calificar() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
-        {servicios.length === 0 ? (
+        {pendientes.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-4">⭐</p>
             <p className="font-bold text-gray-900 mb-2">Sin servicios por calificar</p>
             <p className="text-gray-400 text-sm mb-6">Cuando completes un servicio podrás dejar tu reseña</p>
-            <a href="/home-cliente" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+            <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
               Buscar servicios
             </a>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {servicios.map((svc) => (
-              <button key={svc.id} onClick={() => { setCalificando(svc); setEstrellas(5); setComentario(''); }}
+            {pendientes.map((item, i) => (
+              <button key={i}
+                onClick={() => { setCalificando(item); setEstrellas(5); setComentario(''); }}
                 className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left w-full active:scale-95 transition">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
-                  <span className="text-xs bg-yellow-100 text-yellow-600 font-bold px-2 py-1 rounded-full flex-shrink-0">
-                    ⭐ Calificar
-                  </span>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
+                    {item.calificarA?.foto_url ? (
+                      <img src={item.calificarA.foto_url} className="w-full h-full object-cover"/>
+                    ) : (
+                      item.calificarA?.nombre?.charAt(0) || '?'
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <p className="font-bold text-gray-900 text-sm">{item.calificarA?.nombre}</p>
+                      <span className="text-xs bg-yellow-100 text-yellow-600 font-bold px-2 py-1 rounded-full">
+                        ⭐ Calificar
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{item.servicio?.titulo}</p>
+                    <p className="text-xs text-purple-600 font-semibold mt-0.5">{item.label}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                <p className="text-xs text-purple-600 font-bold mt-1">${svc.presupuesto} MXN</p>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home-cliente" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <a href="/publicar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">➕</span>
-            <span className="text-xs text-gray-400">Publicar</span>
-          </a>
-          <a href="/aplicaciones" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs text-gray-400">Solicitudes</span>
-          </a>
-          <a href="/calificar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">⭐</span>
-            <span className="text-xs font-bold text-purple-600">Calificar</span>
-          </a>
-          <a href="/perfil" className="flex flex-col items-center gap-1">
-            <span className="text-xl">👤</span>
-            <span className="text-xs text-gray-400">Perfil</span>
-          </a>
-        </div>
-      </div>
-
+      <Nav activo="perfil" />
     </main>
   );
 }
