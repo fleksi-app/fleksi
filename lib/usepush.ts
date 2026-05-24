@@ -8,20 +8,16 @@ export function usePush() {
 
   const registrarPush = async () => {
     try {
-      // Verificar soporte
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Pedir permiso
       const permiso = await Notification.requestPermission();
       if (permiso !== 'granted') return;
 
-      // Registrar service worker
       const registration = await navigator.serviceWorker.ready;
 
-      // Suscribirse a push
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
@@ -29,7 +25,6 @@ export function usePush() {
         ),
       });
 
-      // Guardar suscripción en Supabase
       await fetch('/api/push', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
