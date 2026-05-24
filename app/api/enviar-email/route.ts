@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+async function crearNotificacion(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
+  try {
+    await supabaseAdmin.from('notificaciones').insert({
+      usuario_id, tipo, titulo, mensaje, link,
+    });
+  } catch (e) {
+    console.error('Error creando notificacion:', e);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (tipo === 'bienvenida') {
       const esCliente = datos.rol === 'cliente' || datos.rol === 'empresa';
       const emoji = datos.rol === 'prestador' ? '👷' : datos.rol === 'empresa' ? '🏢' : datos.rol === 'viajero' ? '✈️' : '🙋';
-      const cta_url = esCliente ? 'https://fleksi.vercel.app/home-cliente' : 'https://fleksi.vercel.app/home';
+      const cta_url = esCliente ? 'https://fleksi.vercel.app/home-empresa' : 'https://fleksi.vercel.app/home';
       const cta_texto = esCliente ? 'Buscar prestadores →' : 'Ver trabajos disponibles →';
       const mensaje = esCliente
         ? 'Ya puedes publicar servicios y encontrar al profesional perfecto para lo que necesitas.'
@@ -35,21 +51,6 @@ export async function POST(request: NextRequest) {
             <p style="color: #0D0D1A; font-weight: bold; margin: 0 0 8px;">¿Qué sigue?</p>
             <p style="color: #64748B; margin: 0; font-size: 15px;">${mensaje}</p>
           </div>
-          <div style="margin-bottom: 24px;">
-            <p style="color: #0D0D1A; font-weight: bold; margin-bottom: 12px;">Con Fleksi puedes:</p>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-              <span style="font-size: 20px;">⚡</span>
-              <span style="color: #64748B;">Conectarte en minutos con quien necesitas</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-              <span style="font-size: 20px;">🛡️</span>
-              <span style="color: #64748B;">Pagos seguros con Fleksi Protege</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 20px;">⭐</span>
-              <span style="color: #64748B;">Sistema de reputación y badges</span>
-            </div>
-          </div>
           <a href="${cta_url}" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
             ${cta_texto}
           </a>
@@ -58,6 +59,17 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      // Notificación de bienvenida
+      if (datos.usuario_id) {
+        await crearNotificacion(
+          datos.usuario_id,
+          'nuevo_trabajo',
+          `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`,
+          'Tu cuenta fue creada exitosamente. ¡Empieza a explorar!',
+          '/home'
+        );
+      }
     }
 
     if (tipo === 'nueva_aplicacion') {
@@ -83,6 +95,17 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      // Notificación al cliente
+      if (datos.cliente_id) {
+        await crearNotificacion(
+          datos.cliente_id,
+          'nueva_aplicacion',
+          `Nueva aplicación de ${datos.prestador}`,
+          `Aplicó a tu solicitud: ${datos.trabajo} — $${datos.precio} MXN`,
+          `/aplicaciones?servicio=${datos.servicio_id}`
+        );
+      }
     }
 
     if (tipo === 'aplicacion_aceptada') {
@@ -109,6 +132,17 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      // Notificación al prestador
+      if (datos.prestador_id) {
+        await crearNotificacion(
+          datos.prestador_id,
+          'aplicacion_aceptada',
+          `¡Tu aplicación fue aceptada! 🎉`,
+          `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`,
+          '/checkin'
+        );
+      }
     }
 
     if (tipo === 'pago_completado') {
@@ -127,10 +161,6 @@ export async function POST(request: NextRequest) {
               <span style="color: #64748B;">Servicio</span>
               <span style="font-weight: bold;">$${datos.presupuesto} MXN</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span style="color: #64748B;">Fleksi Protege</span>
-              <span style="font-weight: bold;">$45 MXN</span>
-            </div>
             <div style="border-top: 1px solid #E2E8F0; padding-top: 8px; display: flex; justify-content: space-between;">
               <span style="font-weight: bold;">Total</span>
               <span style="font-weight: bold; color: #7C3AED;">$${datos.monto} MXN</span>
@@ -144,6 +174,17 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      // Notificación al prestador
+      if (datos.prestador_id) {
+        await crearNotificacion(
+          datos.prestador_id,
+          'pago_liberado',
+          `¡Pago liberado! 💰`,
+          `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`,
+          '/mis-trabajos'
+        );
+      }
     }
 
     if (tipo === 'verificacion_aprobada') {
@@ -152,19 +193,11 @@ export async function POST(request: NextRequest) {
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
             <h1 style="color: white; margin: 0; font-size: 24px;">fleksi</h1>
-            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Tu trabajo, tus reglas.</p>
           </div>
           <div style="text-align: center; margin-bottom: 24px;">
             <div style="font-size: 56px; margin-bottom: 12px;">✅</div>
             <h2 style="color: #0D0D1A; margin: 0;">¡Felicidades, ${datos.nombre}!</h2>
             <p style="color: #64748B; margin-top: 8px;">Tu identidad ha sido verificada exitosamente.</p>
-          </div>
-          <div style="background: #F0FFF4; border: 2px solid #86EFAC; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-            <p style="color: #16A34A; font-weight: bold; margin: 0 0 12px;">🎉 Ahora tienes acceso a:</p>
-            <div style="margin-bottom: 8px; color: #64748B;">✅ Badge de verificado en tu perfil</div>
-            <div style="margin-bottom: 8px; color: #64748B;">🔝 Apareces primero en búsquedas</div>
-            <div style="margin-bottom: 8px; color: #64748B;">💰 Más confianza = más contrataciones</div>
-            <div style="color: #64748B;">🛡️ Plataforma más segura para todos</div>
           </div>
           <a href="https://fleksi.vercel.app/perfil" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
             Ver mi perfil verificado →
@@ -174,6 +207,16 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      if (datos.usuario_id) {
+        await crearNotificacion(
+          datos.usuario_id,
+          'aplicacion_aceptada',
+          '¡Identidad verificada! ✅',
+          'Tu perfil ahora muestra el badge de confianza',
+          '/perfil'
+        );
+      }
     }
 
     if (tipo === 'verificacion_rechazada') {
@@ -182,20 +225,15 @@ export async function POST(request: NextRequest) {
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
             <h1 style="color: white; margin: 0; font-size: 24px;">fleksi</h1>
-            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Tu trabajo, tus reglas.</p>
           </div>
           <div style="text-align: center; margin-bottom: 24px;">
             <div style="font-size: 56px; margin-bottom: 12px;">📋</div>
             <h2 style="color: #0D0D1A; margin: 0;">Hola, ${datos.nombre}</h2>
-            <p style="color: #64748B; margin-top: 8px;">Revisamos tus documentos y necesitamos que los actualices.</p>
+            <p style="color: #64748B; margin-top: 8px;">Necesitamos que actualices tus documentos.</p>
           </div>
           <div style="background: #FEF2F2; border: 2px solid #FECACA; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
             <p style="color: #DC2626; font-weight: bold; margin: 0 0 8px;">📝 Motivo:</p>
             <p style="color: #64748B; margin: 0;">${datos.motivo}</p>
-          </div>
-          <div style="background: #F8F9FC; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-            <p style="color: #0D0D1A; font-weight: bold; margin: 0 0 8px;">¿Qué hacer?</p>
-            <p style="color: #64748B; margin: 0;">Sube nuevamente tus documentos asegurándote de que sean legibles, estén vigentes y muestren claramente tu información.</p>
           </div>
           <a href="https://fleksi.vercel.app/verificacion" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
             Actualizar documentos →
@@ -205,6 +243,16 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `;
+
+      if (datos.usuario_id) {
+        await crearNotificacion(
+          datos.usuario_id,
+          'aplicacion_rechazada',
+          'Verificación rechazada',
+          `Motivo: ${datos.motivo}`,
+          '/verificacion'
+        );
+      }
     }
 
     const { data, error } = await resend.emails.send({

@@ -87,8 +87,11 @@ function DetalleTrabajoContent() {
             destinatario: trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com',
             datos: {
               cliente: trabajo.usuarios?.nombre || 'Cliente',
+              cliente_id: trabajo.cliente_id,
               prestador: usuario.nombre,
+              prestador_id: usuario.id,
               trabajo: trabajo.titulo,
+              servicio_id: trabajo.id,
               precio: miPrecio || trabajo.presupuesto,
             },
           }),
@@ -287,7 +290,6 @@ function DetalleTrabajoContent() {
 
       </div>
 
-      {/* Botones aplicar encima del nav */}
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 z-20">
         <div className="max-w-md mx-auto flex gap-3">
           {!yaAplico ? (

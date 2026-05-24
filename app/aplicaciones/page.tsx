@@ -117,7 +117,9 @@ function AplicacionesContent() {
             destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
             datos: {
               prestador: appAceptada?.usuarios?.nombre || 'Prestador',
+              prestador_id: appAceptada?.prestador_id,
               cliente: usuario?.nombre || 'Cliente',
+              cliente_id: usuario?.id,
               trabajo: servicioActivo.titulo,
               precio: monto,
               fecha: servicioActivo.fecha,

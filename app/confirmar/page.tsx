@@ -50,7 +50,6 @@ function ConfirmarContent() {
     setProcesando(true);
     setError('');
     try {
-      // Marcar pago como liberado
       await supabase.from('aplicaciones').update({
         pago_liberado: true,
         estado: 'completado',
@@ -60,12 +59,12 @@ function ConfirmarContent() {
         estado: 'pagado',
       }).eq('id', servicio.id);
 
-      // Incrementar trabajos completados del prestador
       try {
         await supabase.rpc('incrementar_trabajos', { user_id: aplicacion.prestador_id });
       } catch (e) {}
 
-      // Email de pago completado al prestador
+      const total = servicio.presupuesto + (servicio.seguro ? 45 : 0);
+
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -75,9 +74,10 @@ function ConfirmarContent() {
             destinatario: aplicacion?.usuarios?.email || 'fernando.najera.nm@gmail.com',
             datos: {
               nombre: aplicacion?.usuarios?.nombre || 'Prestador',
+              prestador_id: aplicacion?.prestador_id,
               trabajo: servicio.titulo,
               presupuesto: servicio.presupuesto,
-              monto: servicio.presupuesto + (servicio.seguro ? 45 : 0),
+              monto: total,
             },
           }),
         });
@@ -172,7 +172,6 @@ function ConfirmarContent() {
 
       <div className="max-w-md mx-auto px-6 py-4">
 
-        {/* Info del trabajo */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen del trabajo</h3>
           <p className="font-bold text-gray-900 mb-1">{servicio.titulo}</p>
@@ -183,9 +182,7 @@ function ConfirmarContent() {
                 {aplicacion.usuarios?.foto_url ? (
                   <img src={aplicacion.usuarios.foto_url} className="w-full h-full object-cover rounded-full"/>
                 ) : (
-                  <span className="text-white font-bold">
-                    {aplicacion.usuarios?.nombre?.charAt(0) || '?'}
-                  </span>
+                  <span className="text-white font-bold">{aplicacion.usuarios?.nombre?.charAt(0) || '?'}</span>
                 )}
               </div>
               <div>
@@ -213,7 +210,6 @@ function ConfirmarContent() {
           </div>
         </div>
 
-        {/* Fotos del trabajo */}
         {aplicacion?.fotos_despues?.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">📸 Fotos del resultado</h3>
@@ -225,13 +221,12 @@ function ConfirmarContent() {
           </div>
         )}
 
-        {/* Pregunta de conformidad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-2">¿El trabajo quedó como esperabas?</h3>
           <p className="text-gray-400 text-sm mb-4">Al confirmar, el pago se liberará al prestador.</p>
 
           <div className="flex gap-3 mb-3">
-            <button onClick={() => { setProblema(false); }}
+            <button onClick={() => setProblema(false)}
               className={`flex-1 py-3 rounded-2xl font-bold text-sm transition border-2 ${
                 !problema ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500'
               }`}>
@@ -247,8 +242,7 @@ function ConfirmarContent() {
 
           {problema && (
             <div>
-              <textarea
-                value={descripcionProblema}
+              <textarea value={descripcionProblema}
                 onChange={(e) => setDescripcionProblema(e.target.value)}
                 placeholder="Describe el problema para que podamos ayudarte..."
                 rows={3}
@@ -278,8 +272,7 @@ function ConfirmarContent() {
               {procesando ? 'Liberando pago...' : `🎉 Confirmar y liberar $${total} MXN`}
             </button>
           ) : (
-            <button
-              disabled={!descripcionProblema.trim()}
+            <button disabled={!descripcionProblema.trim()}
               className="w-full py-4 bg-red-500 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50"
               onClick={async () => {
                 if (!descripcionProblema.trim()) return;

@@ -5,16 +5,75 @@ import { supabase } from '@/lib/supabase';
 export default function Nav({ activo }: { activo: string }) {
   const [rol, setRol] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarNotifs, setMostrarNotifs] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const [usuarioId, setUsuarioId] = useState('');
 
   useEffect(() => {
-    const obtenerRol = async () => {
+    const obtenerDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUsuarioId(user.id);
       const { data } = await supabase.from('usuarios').select('rol').eq('id', user.id).single();
       setRol(data?.rol || 'flekser');
+      cargarNotificaciones(user.id);
     };
-    obtenerRol();
+    obtenerDatos();
   }, []);
+
+  // Suscripción en tiempo real
+  useEffect(() => {
+    if (!usuarioId) return;
+    const canal = supabase
+      .channel('notificaciones')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notificaciones',
+        filter: `usuario_id=eq.${usuarioId}`,
+      }, () => {
+        cargarNotificaciones(usuarioId);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [usuarioId]);
+
+  const cargarNotificaciones = async (uid: string) => {
+    const { data } = await supabase
+      .from('notificaciones')
+      .select('*')
+      .eq('usuario_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setNotificaciones(data || []);
+    setNoLeidas((data || []).filter(n => !n.leida).length);
+  };
+
+  const marcarLeidas = async () => {
+    if (!usuarioId) return;
+    await supabase.from('notificaciones')
+      .update({ leida: true })
+      .eq('usuario_id', usuarioId)
+      .eq('leida', false);
+    setNoLeidas(0);
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  const abrirNotifs = () => {
+    setMostrarNotifs(true);
+    marcarLeidas();
+  };
+
+  const notifEmoji: any = {
+    nueva_aplicacion: '✋',
+    aplicacion_aceptada: '✅',
+    aplicacion_rechazada: '❌',
+    trabajo_completado: '🎉',
+    nuevo_trabajo: '🔔',
+    pago_liberado: '💰',
+    mensaje_nuevo: '💬',
+  };
 
   const esEmpresa = rol === 'empresa';
   const inicio = esEmpresa ? '/home-empresa' : '/home';
@@ -24,7 +83,7 @@ export default function Nav({ activo }: { activo: string }) {
   const items = [
     { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio' },
     { href: trabajos, emoji: '📋', label: 'Trabajos', id: 'trabajos' },
-    { href: null, emoji: '➕', label: 'Nuevo', id: 'nuevo' }, // modal
+    { href: null, emoji: '➕', label: 'Nuevo', id: 'nuevo' },
     { href: '/checkin', emoji: '📍', label: 'Check-in', id: 'checkin' },
     { href: '/chat', emoji: '💬', label: 'Mensajes', id: 'chat' },
     { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil' },
@@ -32,6 +91,60 @@ export default function Nav({ activo }: { activo: string }) {
 
   return (
     <>
+      {/* Panel notificaciones */}
+      {mostrarNotifs && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
+          onClick={() => setMostrarNotifs(false)}>
+          <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
+              <h3 className="font-extrabold text-gray-900 text-lg">Notificaciones</h3>
+              <button onClick={() => setMostrarNotifs(false)}
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-3">
+              {notificaciones.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-4xl mb-3">🔔</p>
+                  <p className="font-bold text-gray-900 mb-1">Sin notificaciones</p>
+                  <p className="text-gray-400 text-sm">Aquí verás tus actualizaciones</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {notificaciones.map((n) => (
+                    <a key={n.id}
+                      href={n.link || '#'}
+                      onClick={() => setMostrarNotifs(false)}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${
+                        !n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'
+                      }`}>
+                      <span className="text-2xl flex-shrink-0 mt-0.5">
+                        {notifEmoji[n.tipo] || '🔔'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
+                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(n.created_at).toLocaleString('es-MX', {
+                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                      {!n.leida && (
+                        <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="pb-8"/>
+          </div>
+        </div>
+      )}
+
       {/* Modal publicar/buscar */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/50 z-40 flex items-end"
@@ -62,6 +175,18 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
+      {/* Campanita flotante */}
+      <button
+        onClick={abrirNotifs}
+        className="fixed top-12 right-4 z-30 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border border-gray-200">
+        <span className="text-lg">🔔</span>
+        {noLeidas > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
+            {noLeidas > 9 ? '9+' : noLeidas}
+          </span>
+        )}
+      </button>
+
       {/* Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around items-center">
@@ -69,8 +194,7 @@ export default function Nav({ activo }: { activo: string }) {
             const estaActivo = activo === item.id;
             if (item.href === null) {
               return (
-                <button key={item.id}
-                  onClick={() => setMostrarModal(true)}
+                <button key={item.id} onClick={() => setMostrarModal(true)}
                   className="flex flex-col items-center gap-0.5 px-2">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg -mt-5">
                     <span className="text-white text-2xl font-bold">+</span>
@@ -80,8 +204,7 @@ export default function Nav({ activo }: { activo: string }) {
               );
             }
             return (
-              <a key={item.id} href={item.href}
-                className="flex flex-col items-center gap-0.5 px-2">
+              <a key={item.id} href={item.href} className="flex flex-col items-center gap-0.5 px-2">
                 <span className="text-xl">{item.emoji}</span>
                 <span className={`text-xs font-semibold ${estaActivo ? 'text-purple-600' : 'text-gray-400'}`}>
                   {item.label}
