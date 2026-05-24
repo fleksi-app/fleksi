@@ -23,33 +23,9 @@ export default function HomeWorker() {
   const [busqueda, setBusqueda] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
+  const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
 
-  useEffect(() => {
-    cargarDatos();
-    registrarPush();
-  }, []);
-
-  const registrarPush = async () => {
-    try {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const permiso = await Notification.requestPermission();
-      if (permiso !== 'granted') return;
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
-      });
-      await fetch('/api/push', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
-      });
-    } catch (err) {
-      console.log('Push no disponible:', err);
-    }
-  };
+  useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -75,6 +51,42 @@ export default function HomeWorker() {
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
 
     setCargando(false);
+
+    // Mostrar banner si no ha dado permiso
+    if ('Notification' in window && Notification.permission === 'default') {
+      setMostrarBannerPush(true);
+    }
+  };
+
+  const activarNotificaciones = async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const permiso = await Notification.requestPermission();
+      if (permiso !== 'granted') {
+        setMostrarBannerPush(false);
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+      });
+
+      await fetch('/api/push', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
+      });
+
+      setMostrarBannerPush(false);
+    } catch (err) {
+      console.log('Push no disponible:', err);
+      setMostrarBannerPush(false);
+    }
   };
 
   const categoriaEmoji: any = {
@@ -133,6 +145,33 @@ export default function HomeWorker() {
           </div>
         </div>
       </div>
+
+      {/* Banner activar notificaciones */}
+      {mostrarBannerPush && (
+        <div className="max-w-md mx-auto px-6 pt-4">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-gray-900 text-sm">Activa las notificaciones</p>
+              <p className="text-xs text-gray-500 mt-0.5">Recibe avisos de nuevos trabajos y aplicaciones</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setMostrarBannerPush(false)}
+                className="text-xs text-gray-400 font-semibold px-2 py-1">
+                Ahora no
+              </button>
+              <button onClick={activarNotificaciones}
+                className="text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-3 py-1.5 rounded-xl">
+                Activar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-md mx-auto px-6 py-4">
 
