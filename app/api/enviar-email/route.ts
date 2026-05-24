@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
         </div>
       `;
 
-      // Notificación de bienvenida
       if (datos.usuario_id) {
         await crearNotificacion(
           datos.usuario_id,
@@ -96,7 +95,6 @@ export async function POST(request: NextRequest) {
         </div>
       `;
 
-      // Notificación al cliente
       if (datos.cliente_id) {
         await crearNotificacion(
           datos.cliente_id,
@@ -133,7 +131,6 @@ export async function POST(request: NextRequest) {
         </div>
       `;
 
-      // Notificación al prestador
       if (datos.prestador_id) {
         await crearNotificacion(
           datos.prestador_id,
@@ -141,6 +138,47 @@ export async function POST(request: NextRequest) {
           `¡Tu aplicación fue aceptada! 🎉`,
           `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`,
           '/checkin'
+        );
+      }
+    }
+
+    if (tipo === 'trabajo_terminado') {
+      asunto = `${datos.prestador} terminó el trabajo — Confirma para liberar el pago`;
+      html = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">fleksi</h1>
+            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Tu trabajo, tus reglas.</p>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="font-size: 56px; margin-bottom: 12px;">🎉</div>
+            <h2 style="color: #0D0D1A; margin: 0;">¡Trabajo completado!</h2>
+            <p style="color: #64748B; margin-top: 8px;"><strong>${datos.prestador}</strong> terminó el trabajo.</p>
+          </div>
+          <div style="background: #F0FFF4; border: 2px solid #86EFAC; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; font-weight: bold; color: #0D0D1A;">${datos.trabajo}</p>
+            <p style="margin: 8px 0 0; color: #16A34A; font-size: 14px;">El pago está retenido y listo para liberarse.</p>
+          </div>
+          <div style="background: #FFF7ED; border: 2px solid #FED7AA; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="color: #C2410C; font-weight: bold; margin: 0 0 8px;">⏳ Acción requerida</p>
+            <p style="color: #64748B; margin: 0; font-size: 14px;">Confirma que el trabajo quedó bien para liberar el pago al prestador.</p>
+          </div>
+          <a href="https://fleksi.vercel.app/aplicaciones" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px;">
+            🎉 Confirmar y liberar pago →
+          </a>
+          <p style="color: #64748B; font-size: 12px; text-align: center; margin-top: 20px;">
+            Fleksi — Conectando talento con oportunidades
+          </p>
+        </div>
+      `;
+
+      if (datos.cliente_id) {
+        await crearNotificacion(
+          datos.cliente_id,
+          'trabajo_completado',
+          `${datos.prestador} terminó el trabajo 🎉`,
+          `Confirma que quedó bien para liberar el pago: ${datos.trabajo}`,
+          `/aplicaciones?servicio=${datos.servicio_id}`
         );
       }
     }
@@ -175,7 +213,6 @@ export async function POST(request: NextRequest) {
         </div>
       `;
 
-      // Notificación al prestador
       if (datos.prestador_id) {
         await crearNotificacion(
           datos.prestador_id,

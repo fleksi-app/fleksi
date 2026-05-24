@@ -28,7 +28,7 @@ export default function CheckIn() {
 
     const { data: apps } = await supabase
       .from('aplicaciones')
-      .select('*, servicios(*, usuarios(nombre, telefono))')
+      .select('*, servicios(*, usuarios(id, nombre, telefono, email))')
       .eq('prestador_id', user.id)
       .in('estado', ['aceptado', 'completado'])
       .order('created_at', { ascending: false });
@@ -98,6 +98,32 @@ export default function CheckIn() {
       if (e1) { alert('Error checkout aplicacion: ' + e1.message); return; }
       const { error: e2 } = await supabase.from('servicios').update({ estado: 'completado' }).eq('id', servicioId);
       if (e2) { alert('Error checkout servicio: ' + e2.message); return; }
+
+      // Notificar al cliente que el trabajo terminó
+      const trabajo = trabajos.find(t => t.id === aplicacionId);
+      const clienteId = trabajo?.servicios?.usuarios?.id;
+      const clienteEmail = trabajo?.servicios?.usuarios?.email;
+      const tituloTrabajo = trabajo?.servicios?.titulo;
+
+      if (clienteId) {
+        try {
+          await fetch('/api/enviar-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'trabajo_terminado',
+              destinatario: clienteEmail || 'fernando.najera.nm@gmail.com',
+              datos: {
+                cliente_id: clienteId,
+                prestador: usuario?.nombre || 'Prestador',
+                trabajo: tituloTrabajo,
+                servicio_id: servicioId,
+              },
+            }),
+          });
+        } catch (e) {}
+      }
+
       setFotosDespues(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
       setPreviasDespues(prev => { const n = {...prev}; delete n[aplicacionId]; return n; });
       await cargarDatos();
