@@ -1,23 +1,14 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 const giros = [
-  '🧹 Limpieza y mantenimiento',
-  '🍽️ Restaurante y hostelería',
-  '🏨 Hotel y hospedaje',
-  '🏗️ Construcción y remodelación',
-  '📦 Logística y mensajería',
-  '🎪 Eventos y entretenimiento',
-  '🏥 Salud y cuidado personal',
-  '📚 Educación y capacitación',
-  '💻 Tecnología y sistemas',
-  '🔧 Servicios industriales',
-  '🛒 Comercio y retail',
-  '🌿 Jardinería y paisajismo',
-  '🚗 Transporte y movilidad',
-  '💼 Servicios profesionales',
-  '🎨 Diseño y creatividad',
+  '🧹 Limpieza y mantenimiento', '🍽️ Restaurante y hostelería', '🏨 Hotel y hospedaje',
+  '🏗️ Construcción y remodelación', '📦 Logística y mensajería', '🎪 Eventos y entretenimiento',
+  '🏥 Salud y cuidado personal', '📚 Educación y capacitación', '💻 Tecnología y sistemas',
+  '🔧 Servicios industriales', '🛒 Comercio y retail', '🌿 Jardinería y paisajismo',
+  '🚗 Transporte y movilidad', '💼 Servicios profesionales', '🎨 Diseño y creatividad',
 ];
 
 const tamaños = [
@@ -70,10 +61,7 @@ export default function PerfilEmpresa() {
       setCiudadesCobertura(data.ciudades_cobertura || []);
     }
 
-    const { count } = await supabase
-      .from('servicios')
-      .select('id', { count: 'exact' })
-      .eq('cliente_id', user.id);
+    const { count } = await supabase.from('servicios').select('id', { count: 'exact' }).eq('cliente_id', user.id);
     setTotalServicios(count || 0);
 
     const { data: reseñasData } = await supabase
@@ -83,7 +71,6 @@ export default function PerfilEmpresa() {
       .order('created_at', { ascending: false })
       .limit(5);
     setReseñas(reseñasData || []);
-
     setCargando(false);
   };
 
@@ -93,9 +80,7 @@ export default function PerfilEmpresa() {
     setGuardandoCiudad(true);
     try {
       const nuevas = [...ciudadesCobertura, val];
-      await supabase.from('usuarios')
-        .update({ ciudades_cobertura: nuevas })
-        .eq('id', usuario.id);
+      await supabase.from('usuarios').update({ ciudades_cobertura: nuevas }).eq('id', usuario.id);
       setCiudadesCobertura(nuevas);
       setNuevaCiudad('');
     } finally {
@@ -105,9 +90,7 @@ export default function PerfilEmpresa() {
 
   const quitarCiudad = async (c: string) => {
     const nuevas = ciudadesCobertura.filter(x => x !== c);
-    await supabase.from('usuarios')
-      .update({ ciudades_cobertura: nuevas })
-      .eq('id', usuario.id);
+    await supabase.from('usuarios').update({ ciudades_cobertura: nuevas }).eq('id', usuario.id);
     setCiudadesCobertura(nuevas);
   };
 
@@ -118,8 +101,7 @@ export default function PerfilEmpresa() {
     try {
       const ext = file.name.split('.').pop();
       const path = `${usuario.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatares').upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from('avatares').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('avatares').getPublicUrl(path);
       const url = urlData.publicUrl + '?t=' + Date.now();
@@ -173,18 +155,11 @@ export default function PerfilEmpresa() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Tarjeta principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
               <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                {fotoUrl ? (
-                  <img src={fotoUrl} alt="Logo empresa" className="w-full h-full object-cover"/>
-                ) : (
-                  <span className="text-white font-extrabold text-2xl">
-                    {nombre ? nombre.charAt(0).toUpperCase() : '🏢'}
-                  </span>
-                )}
+                {fotoUrl ? <img src={fotoUrl} alt="Logo empresa" className="w-full h-full object-cover"/> : <span className="text-white font-extrabold text-2xl">{nombre ? nombre.charAt(0).toUpperCase() : '🏢'}</span>}
               </div>
               {editando && (
                 <button onClick={() => fileInputRef.current?.click()} disabled={subiendoFoto}
@@ -194,29 +169,17 @@ export default function PerfilEmpresa() {
               )}
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFoto} className="hidden"/>
             </div>
-
             <div className="flex-1">
               {editando ? (
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-                  className="w-full p-2 rounded-xl border-2 border-purple-400 outline-none text-gray-900 font-bold mb-1"
-                  placeholder="Nombre de la empresa"/>
+                  className="w-full p-2 rounded-xl border-2 border-purple-400 outline-none text-gray-900 font-bold mb-1" placeholder="Nombre de la empresa"/>
               ) : (
                 <h2 className="font-extrabold text-gray-900 text-lg">{nombre || 'Sin nombre'}</h2>
               )}
               <div className="flex items-center gap-2 flex-wrap mt-1">
-                <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
-                  🏢 Empresa
-                </span>
-                {ciudadesCobertura.length > 1 && (
-                  <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">
-                    🗺️ Multi-ciudad
-                  </span>
-                )}
-                {usuario?.verificado && (
-                  <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
-                    ✅ Verificada
-                  </span>
-                )}
+                <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏢 Empresa</span>
+                {ciudadesCobertura.length > 1 && <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">🗺️ Multi-ciudad</span>}
+                {usuario?.verificado && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificada</span>}
               </div>
             </div>
           </div>
@@ -237,25 +200,17 @@ export default function PerfilEmpresa() {
           </div>
 
           {!editando ? (
-            <button onClick={() => setEditando(true)}
-              className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
-              ✏️ Editar perfil
-            </button>
+            <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">✏️ Editar perfil</button>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => setEditando(false)}
-                className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold">
-                Cancelar
-              </button>
-              <button onClick={guardarPerfil} disabled={guardando}
-                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold disabled:opacity-50">
+              <button onClick={() => setEditando(false)} className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold">Cancelar</button>
+              <button onClick={guardarPerfil} disabled={guardando} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold disabled:opacity-50">
                 {guardando ? 'Guardando...' : 'Guardar ✓'}
               </button>
             </div>
           )}
         </div>
 
-        {/* Cobertura multi-ciudad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -268,150 +223,77 @@ export default function PerfilEmpresa() {
               </span>
             )}
           </div>
-
-          {/* Ciudades agregadas */}
           {ciudadesCobertura.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {ciudadesCobertura.map((c, i) => (
                 <div key={i} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
                   <span className="text-sm font-semibold">📍 {c}</span>
-                  <button onClick={() => quitarCiudad(c)}
-                    className="ml-1 text-blue-400 hover:text-blue-700 font-bold text-xs">
-                    ✕
-                  </button>
+                  <button onClick={() => quitarCiudad(c)} className="ml-1 text-blue-400 hover:text-blue-700 font-bold text-xs">✕</button>
                 </div>
               ))}
             </div>
           )}
-
-          {/* Agregar ciudad */}
           <div className="flex gap-2">
-            <input
-              value={nuevaCiudad}
-              onChange={(e) => setNuevaCiudad(e.target.value)}
+            <input value={nuevaCiudad} onChange={(e) => setNuevaCiudad(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && agregarCiudad()}
               placeholder="Ej. Monterrey, Guadalajara..."
               className="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
-            <button
-              onClick={agregarCiudad}
-              disabled={guardandoCiudad || !nuevaCiudad.trim()}
+            <button onClick={agregarCiudad} disabled={guardandoCiudad || !nuevaCiudad.trim()}
               className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 transition">
               {guardandoCiudad ? '...' : '+ Agregar'}
             </button>
           </div>
-
-          {ciudadesCobertura.length === 0 && (
-            <p className="text-xs text-gray-400 mt-2 text-center">
-              Agrega las ciudades donde tu empresa busca talento
-            </p>
-          )}
+          {ciudadesCobertura.length === 0 && <p className="text-xs text-gray-400 mt-2 text-center">Agrega las ciudades donde tu empresa busca talento</p>}
         </div>
 
-        {/* Información de la empresa */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">📋 Información</h3>
           <div className="flex flex-col gap-4">
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Giro empresarial</label>
               {editando ? (
-                <select value={giro} onChange={(e) => setGiro(e.target.value)}
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 bg-white">
+                <select value={giro} onChange={(e) => setGiro(e.target.value)} className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 bg-white">
                   <option value="">Selecciona un giro</option>
                   {giros.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
-              ) : (
-                <p className="text-gray-700">{giro || 'Sin giro registrado'}</p>
-              )}
+              ) : <p className="text-gray-700">{giro || 'Sin giro registrado'}</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Tamaño de la empresa</label>
               {editando ? (
                 <div className="grid grid-cols-2 gap-2">
                   {tamaños.map(t => (
                     <button key={t.id} onClick={() => setTamañoEmpresa(t.id)}
-                      className={`p-3 rounded-xl border-2 text-sm font-semibold transition ${
-                        tamañoEmpresa === t.id
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 text-gray-500'
-                      }`}>
+                      className={`p-3 rounded-xl border-2 text-sm font-semibold transition ${tamañoEmpresa === t.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
                       {t.emoji} {t.label}
                     </button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-gray-700">
-                  {tamaños.find(t => t.id === tamañoEmpresa)?.label || 'Sin especificar'}
-                </p>
-              )}
+              ) : <p className="text-gray-700">{tamaños.find(t => t.id === tamañoEmpresa)?.label || 'Sin especificar'}</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Ciudad principal</label>
-              {editando ? (
-                <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
-                  placeholder="Ej. Ciudad de México"
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/>
-              ) : (
-                <p className="text-gray-700">{ciudad || 'Sin ciudad registrada'}</p>
-              )}
+              {editando ? <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ej. Ciudad de México" className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/> : <p className="text-gray-700">{ciudad || 'Sin ciudad registrada'}</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Teléfono</label>
-              {editando ? (
-                <input value={telefono} onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="55 1234 5678"
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/>
-              ) : (
-                <p className="text-gray-700">{telefono || 'Sin teléfono registrado'}</p>
-              )}
+              {editando ? <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="55 1234 5678" className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/> : <p className="text-gray-700">{telefono || 'Sin teléfono registrado'}</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">RFC</label>
-              {editando ? (
-                <input value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())}
-                  placeholder="Ej. ABC123456789"
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 uppercase"/>
-              ) : (
-                <p className="text-gray-700">{rfc || 'Sin RFC registrado'}</p>
-              )}
+              {editando ? <input value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())} placeholder="Ej. ABC123456789" className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 uppercase"/> : <p className="text-gray-700">{rfc || 'Sin RFC registrado'}</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Sitio web</label>
-              {editando ? (
-                <input value={sitioWeb} onChange={(e) => setSitioWeb(e.target.value)}
-                  placeholder="https://tuempresa.com"
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/>
-              ) : (
-                sitioWeb ? (
-                  <a href={sitioWeb} target="_blank" className="text-purple-600 font-semibold hover:underline">
-                    {sitioWeb}
-                  </a>
-                ) : (
-                  <p className="text-gray-700">Sin sitio web</p>
-                )
-              )}
+              {editando ? <input value={sitioWeb} onChange={(e) => setSitioWeb(e.target.value)} placeholder="https://tuempresa.com" className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"/> : sitioWeb ? <a href={sitioWeb} target="_blank" className="text-purple-600 font-semibold hover:underline">{sitioWeb}</a> : <p className="text-gray-700">Sin sitio web</p>}
             </div>
-
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Descripción</label>
-              {editando ? (
-                <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
-                  rows={3} placeholder="Cuéntanos sobre tu empresa..."
-                  className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 resize-none"/>
-              ) : (
-                <p className="text-gray-700">{descripcion || 'Sin descripción'}</p>
-              )}
+              {editando ? <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3} placeholder="Cuéntanos sobre tu empresa..." className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900 resize-none"/> : <p className="text-gray-700">{descripcion || 'Sin descripción'}</p>}
             </div>
-
           </div>
         </div>
 
-        {/* Reseñas */}
         {reseñas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas de prestadores</h3>
@@ -420,18 +302,14 @@ export default function PerfilEmpresa() {
                 <div key={r.id} className="bg-gray-50 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">
-                        {r.usuarios?.nombre?.charAt(0) || '?'}
-                      </span>
+                      <span className="text-white text-xs font-bold">{r.usuarios?.nombre?.charAt(0) || '?'}</span>
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">{r.usuarios?.nombre || 'Prestador'}</p>
                       <p className="text-xs text-yellow-500">{'⭐'.repeat(r.estrellas)}</p>
                     </div>
                   </div>
-                  {r.comentario && (
-                    <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>
-                  )}
+                  {r.comentario && <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>}
                 </div>
               ))}
             </div>
@@ -440,31 +318,7 @@ export default function PerfilEmpresa() {
 
       </div>
 
-      {/* Bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home-empresa" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <a href="/publicar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">➕</span>
-            <span className="text-xs text-gray-400">Publicar</span>
-          </a>
-          <a href="/aplicaciones" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs text-gray-400">Aplicaciones</span>
-          </a>
-          <a href="/chat" className="flex flex-col items-center gap-1">
-            <span className="text-xl">💬</span>
-            <span className="text-xs text-gray-400">Mensajes</span>
-          </a>
-          <a href="/perfil-empresa" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏢</span>
-            <span className="text-xs font-bold text-purple-600">Mi empresa</span>
-          </a>
-        </div>
-      </div>
+      <Nav activo="perfil" />
 
     </main>
   );

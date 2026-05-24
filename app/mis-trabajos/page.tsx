@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 export default function MisTrabajos() {
   const [tab, setTab] = useState<'aplicaciones' | 'publicaciones'>('aplicaciones');
@@ -205,30 +206,7 @@ export default function MisTrabajos() {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <a href="/publicar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">➕</span>
-            <span className="text-xs text-gray-400">Publicar</span>
-          </a>
-          <a href="/mis-trabajos" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs font-bold text-purple-600">Mis trabajos</span>
-          </a>
-          <a href="/chat" className="flex flex-col items-center gap-1">
-            <span className="text-xl">💬</span>
-            <span className="text-xs text-gray-400">Mensajes</span>
-          </a>
-          <a href="/perfil" className="flex flex-col items-center gap-1">
-            <span className="text-xl">👤</span>
-            <span className="text-xs text-gray-400">Perfil</span>
-          </a>
-        </div>
-      </div>
+      <Nav activo="trabajos" />
 
     </main>
   );

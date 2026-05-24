@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 export default function HomeEmpresa() {
   const [usuario, setUsuario] = useState<any>(null);
@@ -20,7 +21,6 @@ export default function HomeEmpresa() {
     if (perfil?.rol !== 'empresa') { window.location.href = '/home'; return; }
     setUsuario(perfil);
 
-    // Cargar servicios de la empresa
     const { data: serviciosData } = await supabase
       .from('servicios')
       .select('*, aplicaciones(id, estado, precio_ofrecido, prestador_id, usuarios!aplicaciones_prestador_id_fkey(nombre, foto_url, calificacion))')
@@ -29,17 +29,16 @@ export default function HomeEmpresa() {
 
     setServicios(serviciosData || []);
 
-    // Calcular stats
     const todos = serviciosData || [];
-    const activos = todos.filter(s => ['publicado', 'en_proceso'].includes(s.estado)).length;
-    const completados = todos.filter(s => s.estado === 'completado').length;
+    const activos = todos.filter(s => ['publicado', 'en_proceso', 'activo'].includes(s.estado)).length;
+    const completados = todos.filter(s => s.estado === 'completado' || s.estado === 'pagado').length;
     const prestadoresSet = new Set(
       todos.flatMap(s => (s.aplicaciones || [])
         .filter((a: any) => a.estado === 'aceptado' || a.estado === 'completado')
         .map((a: any) => a.prestador_id))
     );
     const gasto = todos
-      .filter(s => s.estado === 'completado')
+      .filter(s => s.estado === 'completado' || s.estado === 'pagado')
       .reduce((acc: number, s: any) => acc + (s.presupuesto || 0), 0);
 
     setStats({ activos, completados, prestadores: prestadoresSet.size, gasto });
@@ -48,9 +47,11 @@ export default function HomeEmpresa() {
 
   const estadoColor = (estado: string) => {
     const colores: { [key: string]: string } = {
+      activo: 'bg-blue-100 text-blue-600',
       publicado: 'bg-blue-100 text-blue-600',
       en_proceso: 'bg-yellow-100 text-yellow-600',
       completado: 'bg-green-100 text-green-600',
+      pagado: 'bg-green-100 text-green-600',
       cancelado: 'bg-red-100 text-red-600',
     };
     return colores[estado] || 'bg-gray-100 text-gray-600';
@@ -58,10 +59,12 @@ export default function HomeEmpresa() {
 
   const estadoLabel = (estado: string) => {
     const labels: { [key: string]: string } = {
-      publicado: 'Publicado',
-      en_proceso: 'En proceso',
-      completado: 'Completado',
-      cancelado: 'Cancelado',
+      activo: '🟢 Activo',
+      publicado: '🟢 Publicado',
+      en_proceso: '🔄 En proceso',
+      completado: '✅ Completado',
+      pagado: '💰 Pagado',
+      cancelado: '❌ Cancelado',
     };
     return labels[estado] || estado;
   };
@@ -80,7 +83,6 @@ export default function HomeEmpresa() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20">
         <div className="max-w-md mx-auto">
           <div className="flex justify-between items-start mb-2">
@@ -98,7 +100,6 @@ export default function HomeEmpresa() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <p className="text-3xl font-extrabold text-blue-600">{stats.activos}</p>
@@ -118,7 +119,6 @@ export default function HomeEmpresa() {
           </div>
         </div>
 
-        {/* Botón publicar */}
         <a href="/publicar"
           className="flex items-center justify-between w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl p-5 mb-4 shadow-lg hover:opacity-90 transition">
           <div>
@@ -128,7 +128,6 @@ export default function HomeEmpresa() {
           <span className="text-3xl">+</span>
         </a>
 
-        {/* Lista de servicios */}
         <div className="mb-4">
           <h2 className="font-extrabold text-gray-900 text-lg mb-3">Mis servicios</h2>
 
@@ -165,7 +164,6 @@ export default function HomeEmpresa() {
                       <span className="text-xs text-gray-400">{servicio.categoria}</span>
                     </div>
 
-                    {/* Prestadores aceptados */}
                     {aplicacionesAceptadas.length > 0 && (
                       <div className="bg-green-50 rounded-xl p-3 mb-3">
                         <p className="text-xs font-bold text-green-700 mb-2">✅ Prestadores contratados</p>
@@ -176,9 +174,7 @@ export default function HomeEmpresa() {
                                 {app.usuarios?.foto_url ? (
                                   <img src={app.usuarios.foto_url} className="w-full h-full object-cover rounded-full"/>
                                 ) : (
-                                  <span className="text-white text-xs font-bold">
-                                    {app.usuarios?.nombre?.charAt(0) || '?'}
-                                  </span>
+                                  <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>
                                 )}
                               </div>
                               <span className="text-sm font-semibold text-gray-700">{app.usuarios?.nombre}</span>
@@ -189,7 +185,6 @@ export default function HomeEmpresa() {
                       </div>
                     )}
 
-                    {/* Aplicaciones pendientes */}
                     {aplicacionesPendientes.length > 0 && (
                       <div className="bg-yellow-50 rounded-xl p-3 mb-3">
                         <p className="text-xs font-bold text-yellow-700">
@@ -219,31 +214,7 @@ export default function HomeEmpresa() {
 
       </div>
 
-      {/* Bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home-empresa" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs font-bold text-purple-600">Inicio</span>
-          </a>
-          <a href="/publicar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">➕</span>
-            <span className="text-xs text-gray-400">Publicar</span>
-          </a>
-          <a href="/aplicaciones" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs text-gray-400">Aplicaciones</span>
-          </a>
-          <a href="/chat" className="flex flex-col items-center gap-1">
-            <span className="text-xl">💬</span>
-            <span className="text-xs text-gray-400">Mensajes</span>
-          </a>
-          <a href="/perfil-empresa" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏢</span>
-            <span className="text-xs text-gray-400">Mi empresa</span>
-          </a>
-        </div>
-      </div>
+      <Nav activo="inicio" />
 
     </main>
   );
