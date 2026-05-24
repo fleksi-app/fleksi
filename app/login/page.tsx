@@ -20,10 +20,12 @@ export default function Login() {
       if (authError) throw authError;
       if (data.user) {
         const { data: usuario } = await supabase
-          .from('usuarios').select('rol').eq('id', data.user.id).single();
+          .from('usuarios').select('rol, modo_viajero').eq('id', data.user.id).single();
         const rol = usuario?.rol || 'flekser';
         if (rol === 'empresa') {
           window.location.href = '/home-empresa';
+        } else if (rol === 'viajero' || usuario?.modo_viajero) {
+          window.location.href = '/home-viajero';
         } else {
           window.location.href = '/home';
         }
