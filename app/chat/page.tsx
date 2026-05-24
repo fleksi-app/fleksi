@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 export default function Chat() {
   const [mensajes, setMensajes] = useState<any[]>([]);
@@ -27,14 +28,12 @@ export default function Chat() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Cargar conversaciones únicas
     const { data: msgs } = await supabase
       .from('mensajes')
       .select('*, remitente:remitente_id(nombre), destinatario:destinatario_id(nombre), servicios(titulo)')
       .or(`remitente_id.eq.${user.id},destinatario_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
 
-    // Agrupar por servicio
     const convMap = new Map();
     msgs?.forEach(m => {
       const key = m.servicio_id;
@@ -53,7 +52,6 @@ export default function Chat() {
       .order('created_at', { ascending: true });
     setMensajes(data || []);
 
-    // Marcar como leídos
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from('mensajes')
       .update({ leido: true })
@@ -95,12 +93,10 @@ export default function Chat() {
     );
   }
 
-  // Vista de conversación activa
   if (conversacionActiva) {
     return (
-      <main className="min-h-screen bg-gray-50 flex flex-col">
+      <main className="min-h-screen bg-gray-50 flex flex-col pb-16">
 
-        {/* HEADER */}
         <div className="bg-white px-6 pt-12 pb-4 shadow-sm flex-shrink-0">
           <div className="max-w-md mx-auto flex items-center gap-3">
             <button onClick={() => setConversacionActiva(null)}
@@ -125,7 +121,6 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* MENSAJES */}
         <div className="flex-1 overflow-y-auto px-6 py-4 max-w-md mx-auto w-full">
           {mensajes.length === 0 ? (
             <div className="text-center py-16">
@@ -157,17 +152,13 @@ export default function Chat() {
           )}
         </div>
 
-        {/* INPUT */}
-        <div className="bg-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
+        <div className="bg-white border-t border-gray-200 px-6 py-3 flex-shrink-0">
           <div className="max-w-md mx-auto flex gap-3">
-            <input
-              type="text"
-              placeholder="Escribe un mensaje..."
+            <input type="text" placeholder="Escribe un mensaje..."
               value={nuevoMensaje}
               onChange={(e) => setNuevoMensaje(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && enviarMensaje()}
-              className="flex-1 p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"
-            />
+              className="flex-1 p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
             <button onClick={enviarMensaje} disabled={enviando || !nuevoMensaje.trim()}
               className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-xl disabled:opacity-50 transition flex items-center justify-center">
               ➤
@@ -175,11 +166,11 @@ export default function Chat() {
           </div>
         </div>
 
+        <Nav activo="chat" />
       </main>
     );
   }
 
-  // Lista de conversaciones
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
@@ -197,8 +188,7 @@ export default function Chat() {
             <p className="text-gray-400 text-sm mb-6">
               Cuando apliques a un trabajo o recibas una aplicación, podrás chatear aquí
             </p>
-            <a href="/home"
-              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+            <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
               Ver trabajos disponibles
             </a>
           </div>
@@ -237,32 +227,7 @@ export default function Chat() {
         )}
       </div>
 
-      {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <button className="flex flex-col items-center gap-1">
-            <span className="text-xl">🔍</span>
-            <span className="text-xs text-gray-400">Buscar</span>
-          </button>
-          <a href="/mis-trabajos" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs text-gray-400">Mis trabajos</span>
-          </a>
-          <a href="/chat" className="flex flex-col items-center gap-1">
-            <span className="text-xl">💬</span>
-            <span className="text-xs font-bold text-purple-600">Mensajes</span>
-          </a>
-          <a href="/perfil" className="flex flex-col items-center gap-1">
-            <span className="text-xl">👤</span>
-            <span className="text-xs text-gray-400">Perfil</span>
-          </a>
-        </div>
-      </div>
-
+      <Nav activo="chat" />
     </main>
   );
 }

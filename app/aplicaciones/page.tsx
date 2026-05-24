@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -43,15 +44,9 @@ function AplicacionesContent() {
   };
 
   const verAplicaciones = async (servicio: any) => {
-    // Recargar el servicio fresco de la BD para tener estado actualizado
     const { data: svcFresco } = await supabase
-      .from('servicios')
-      .select('*')
-      .eq('id', servicio.id)
-      .single();
-
+      .from('servicios').select('*').eq('id', servicio.id).single();
     setServicioActivo(svcFresco || servicio);
-
     const { data } = await supabase
       .from('aplicaciones')
       .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url, email)')
@@ -63,9 +58,7 @@ function AplicacionesContent() {
   const handleRechazar = async (aplicacionId: string) => {
     setProcesando(aplicacionId);
     try {
-      await supabase.from('aplicaciones')
-        .update({ estado: 'rechazado' })
-        .eq('id', aplicacionId);
+      await supabase.from('aplicaciones').update({ estado: 'rechazado' }).eq('id', aplicacionId);
       await verAplicaciones(servicioActivo);
     } finally {
       setProcesando('');
@@ -100,18 +93,14 @@ function AplicacionesContent() {
       const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: { token: 'tok_visa' } },
       });
-
       if (stripeError) throw new Error(stripeError.message);
 
       await supabase.from('aplicaciones').update({
-        estado: 'aceptado',
-        payment_intent_id: paymentIntentId,
-        pago_retenido: true,
+        estado: 'aceptado', payment_intent_id: paymentIntentId, pago_retenido: true,
       }).eq('id', aplicacionId);
 
       await supabase.from('servicios').update({
-        estado: 'en_proceso',
-        pago_retenido: true,
+        estado: 'en_proceso', pago_retenido: true,
       }).eq('id', servicioActivo.id);
 
       await supabase.from('aplicaciones')
@@ -169,7 +158,6 @@ function AplicacionesContent() {
   }
 
   if (servicioActivo) {
-    // El prestador hizo checkout si alguna aplicación tiene checkout_at
     const prestadorTermino = aplicaciones.some(a => a.checkout_at);
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
 
@@ -192,7 +180,6 @@ function AplicacionesContent() {
 
         <div className="max-w-md mx-auto px-6 py-4">
 
-          {/* Banner pago retenido */}
           {servicioActivo.pago_retenido && (
             <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
               <span className="text-2xl">🔒</span>
@@ -207,7 +194,6 @@ function AplicacionesContent() {
             </div>
           )}
 
-          {/* Botón confirmar trabajo */}
           {puedeConfirmar && (
             <a href={`/confirmar?id=${servicioActivo.id}`}
               className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4">
@@ -230,9 +216,7 @@ function AplicacionesContent() {
                       {app.usuarios?.foto_url ? (
                         <img src={app.usuarios.foto_url} alt={app.usuarios.nombre} className="w-full h-full object-cover"/>
                       ) : (
-                        <span className="text-white font-bold text-lg">
-                          {app.usuarios?.nombre?.charAt(0) || '?'}
-                        </span>
+                        <span className="text-white font-bold text-lg">{app.usuarios?.nombre?.charAt(0) || '?'}</span>
                       )}
                     </div>
                     <div className="flex-1">
@@ -258,9 +242,7 @@ function AplicacionesContent() {
                   <div className="bg-gray-50 rounded-xl p-3 mb-4">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-gray-500">Precio ofrecido</span>
-                      <span className="font-extrabold text-purple-600">
-                        ${app.precio_ofrecido || servicioActivo.presupuesto} MXN
-                      </span>
+                      <span className="font-extrabold text-purple-600">${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
                     </div>
                     {servicioActivo.seguro && (
                       <div className="flex justify-between items-center">
@@ -268,9 +250,7 @@ function AplicacionesContent() {
                         <span className="text-xs text-gray-500">$45 MXN</span>
                       </div>
                     )}
-                    {app.mensaje && (
-                      <p className="text-sm text-gray-600 italic mt-2">"{app.mensaje}"</p>
-                    )}
+                    {app.mensaje && <p className="text-sm text-gray-600 italic mt-2">"{app.mensaje}"</p>}
                   </div>
 
                   {app.checkout_at && (
@@ -289,13 +269,11 @@ function AplicacionesContent() {
                         </p>
                       </div>
                       <div className="flex gap-3">
-                        <button onClick={() => handleRechazar(app.id)}
-                          disabled={procesando === app.id}
+                        <button onClick={() => handleRechazar(app.id)} disabled={procesando === app.id}
                           className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
                           ❌ Rechazar
                         </button>
-                        <button onClick={() => handleAceptarYPagar(app.id)}
-                          disabled={procesando === app.id}
+                        <button onClick={() => handleAceptarYPagar(app.id)} disabled={procesando === app.id}
                           className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
                           {procesando === app.id ? '⏳ Procesando...' : '✅ Aceptar y pagar'}
                         </button>
@@ -317,30 +295,7 @@ function AplicacionesContent() {
           )}
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-          <div className="max-w-md mx-auto flex justify-around">
-            <a href="/home" className="flex flex-col items-center gap-1">
-              <span className="text-xl">🏠</span>
-              <span className="text-xs text-gray-400">Inicio</span>
-            </a>
-            <a href="/publicar" className="flex flex-col items-center gap-1">
-              <span className="text-xl">➕</span>
-              <span className="text-xs text-gray-400">Publicar</span>
-            </a>
-            <a href="/aplicaciones" className="flex flex-col items-center gap-1">
-              <span className="text-xl">📋</span>
-              <span className="text-xs font-bold text-purple-600">Solicitudes</span>
-            </a>
-            <a href="/chat" className="flex flex-col items-center gap-1">
-              <span className="text-xl">💬</span>
-              <span className="text-xs text-gray-400">Mensajes</span>
-            </a>
-            <a href="/perfil" className="flex flex-col items-center gap-1">
-              <span className="text-xl">👤</span>
-              <span className="text-xs text-gray-400">Perfil</span>
-            </a>
-          </div>
-        </div>
+        <Nav activo="trabajos" />
       </main>
     );
   }
@@ -401,30 +356,7 @@ function AplicacionesContent() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href="/home" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <a href="/publicar" className="flex flex-col items-center gap-1">
-            <span className="text-xl">➕</span>
-            <span className="text-xs text-gray-400">Publicar</span>
-          </a>
-          <a href="/aplicaciones" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📋</span>
-            <span className="text-xs font-bold text-purple-600">Solicitudes</span>
-          </a>
-          <a href="/chat" className="flex flex-col items-center gap-1">
-            <span className="text-xl">💬</span>
-            <span className="text-xs text-gray-400">Mensajes</span>
-          </a>
-          <a href="/perfil" className="flex flex-col items-center gap-1">
-            <span className="text-xl">👤</span>
-            <span className="text-xs text-gray-400">Perfil</span>
-          </a>
-        </div>
-      </div>
+      <Nav activo="trabajos" />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 export default function Verificacion() {
   const [usuario, setUsuario] = useState<any>(null);
@@ -41,10 +42,7 @@ export default function Verificacion() {
     setUsuario(perfil);
 
     const { data: verif } = await supabase
-      .from('verificaciones')
-      .select('*')
-      .eq('usuario_id', user.id)
-      .single();
+      .from('verificaciones').select('*').eq('usuario_id', user.id).single();
 
     if (verif) {
       setVerificacion(verif);
@@ -68,17 +66,10 @@ export default function Verificacion() {
     try {
       const ext = file.name.split('.').pop();
       const path = `${usuario.id}/${campo}.${ext}`;
-
       const { error: uploadError } = await supabase.storage
-        .from('documentos-verificacion')
-        .upload(path, file, { upsert: true });
-
+        .from('documentos-verificacion').upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('documentos-verificacion')
-        .getPublicUrl(path);
-
+      const { data: urlData } = supabase.storage.from('documentos-verificacion').getPublicUrl(path);
       const url = urlData.publicUrl;
       const campoDb = `${campo}_url`;
 
@@ -123,9 +114,7 @@ export default function Verificacion() {
     const ref = getRefs(campo);
 
     return (
-      <div className={`rounded-xl p-4 border-2 transition ${
-        subido ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
-      }`}>
+      <div className={`rounded-xl p-4 border-2 transition ${subido ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -134,27 +123,16 @@ export default function Verificacion() {
             </div>
             <p className="text-xs text-gray-400 ml-7">{descripcion}</p>
           </div>
-          <button
-            onClick={() => ref?.current?.click()}
+          <button onClick={() => ref?.current?.click()}
             disabled={estáSubiendo || verificacion?.estado === 'aprobado'}
             className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 ${
-              subido
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+              subido ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
             }`}>
             {estáSubiendo ? '⏳' : subido ? 'Cambiar' : 'Subir'}
           </button>
         </div>
-        <input
-          ref={ref}
-          type="file"
-          accept={acepta}
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) subirDocumento(campo, file);
-          }}
-        />
+        <input ref={ref} type="file" accept={acepta} className="hidden"
+          onChange={(e) => { const file = e.target.files?.[0]; if (file) subirDocumento(campo, file); }}/>
       </div>
     );
   };
@@ -191,18 +169,14 @@ export default function Verificacion() {
 
         {estado && (
           <div className={`rounded-2xl p-4 mb-4 ${estado.bg}`}>
-            <p className={`font-bold text-sm ${estado.color}`}>
-              {estado.emoji} {estado.texto}
-            </p>
+            <p className={`font-bold text-sm ${estado.color}`}>{estado.emoji} {estado.texto}</p>
             {verificacion?.motivo_rechazo && (
-              <p className="text-red-600 text-xs mt-2 font-medium">
-                Motivo: {verificacion.motivo_rechazo}
-              </p>
+              <p className="text-red-600 text-xs mt-2 font-medium">Motivo: {verificacion.motivo_rechazo}</p>
             )}
           </div>
         )}
 
-        {!verificacion || verificacion.estado === 'pendiente' ? (
+        {(!verificacion || verificacion.estado === 'pendiente') && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">¿Por qué verificarte?</h3>
             <div className="flex flex-col gap-2">
@@ -219,24 +193,14 @@ export default function Verificacion() {
               ))}
             </div>
           </div>
-        ) : null}
+        )}
 
         {!esEmpresa && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">🪪 Identificación oficial</h3>
             <div className="flex flex-col gap-3">
-              <DocumentoItem
-                campo="ine_frente"
-                titulo="INE — Frente"
-                descripcion="Foto clara del frente de tu credencial de elector"
-                acepta="image/*"
-              />
-              <DocumentoItem
-                campo="ine_reverso"
-                titulo="INE — Reverso"
-                descripcion="Foto clara del reverso de tu credencial de elector"
-                acepta="image/*"
-              />
+              <DocumentoItem campo="ine_frente" titulo="INE — Frente" descripcion="Foto clara del frente de tu credencial de elector" acepta="image/*"/>
+              <DocumentoItem campo="ine_reverso" titulo="INE — Reverso" descripcion="Foto clara del reverso de tu credencial de elector" acepta="image/*"/>
             </div>
           </div>
         )}
@@ -245,9 +209,7 @@ export default function Verificacion() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-extrabold text-gray-900">📋 Antecedentes no penales</h3>
-              <span className="text-xs bg-green-100 text-green-600 font-bold px-2 py-1 rounded-full">
-                Reembolsable
-              </span>
+              <span className="text-xs bg-green-100 text-green-600 font-bold px-2 py-1 rounded-full">Reembolsable</span>
             </div>
             <div className="bg-blue-50 rounded-xl p-3 mb-4">
               <p className="text-blue-700 text-xs font-semibold mb-1">💡 ¿Cómo funciona el reembolso?</p>
@@ -256,18 +218,8 @@ export default function Verificacion() {
               </p>
             </div>
             <div className="flex flex-col gap-3">
-              <DocumentoItem
-                campo="antecedentes"
-                titulo="Carta de no antecedentes penales"
-                descripcion="Documento oficial emitido por la autoridad competente"
-                acepta="image/*,application/pdf"
-              />
-              <DocumentoItem
-                campo="comprobante_antecedentes"
-                titulo="Comprobante de pago"
-                descripcion="Recibo o comprobante del trámite para reembolso"
-                acepta="image/*,application/pdf"
-              />
+              <DocumentoItem campo="antecedentes" titulo="Carta de no antecedentes penales" descripcion="Documento oficial emitido por la autoridad competente" acepta="image/*,application/pdf"/>
+              <DocumentoItem campo="comprobante_antecedentes" titulo="Comprobante de pago" descripcion="Recibo o comprobante del trámite para reembolso" acepta="image/*,application/pdf"/>
             </div>
           </div>
         )}
@@ -276,29 +228,13 @@ export default function Verificacion() {
           <>
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <h3 className="font-extrabold text-gray-900 mb-4">🪪 Representante legal</h3>
-              <DocumentoItem
-                campo="ine_representante"
-                titulo="INE del representante legal"
-                descripcion="Foto clara del frente de la credencial del representante"
-                acepta="image/*"
-              />
+              <DocumentoItem campo="ine_representante" titulo="INE del representante legal" descripcion="Foto clara del frente de la credencial del representante" acepta="image/*"/>
             </div>
-
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <h3 className="font-extrabold text-gray-900 mb-4">📑 Documentos empresariales</h3>
               <div className="flex flex-col gap-3">
-                <DocumentoItem
-                  campo="acta_constitutiva"
-                  titulo="Acta constitutiva"
-                  descripcion="Primera hoja donde aparece el nombre del representante"
-                  acepta="image/*,application/pdf"
-                />
-                <DocumentoItem
-                  campo="constancia_fiscal"
-                  titulo="Constancia de situación fiscal"
-                  descripcion="Requerida para emitir facturas por los servicios"
-                  acepta="image/*,application/pdf"
-                />
+                <DocumentoItem campo="acta_constitutiva" titulo="Acta constitutiva" descripcion="Primera hoja donde aparece el nombre del representante" acepta="image/*,application/pdf"/>
+                <DocumentoItem campo="constancia_fiscal" titulo="Constancia de situación fiscal" descripcion="Requerida para emitir facturas por los servicios" acepta="image/*,application/pdf"/>
               </div>
             </div>
           </>
@@ -312,22 +248,7 @@ export default function Verificacion() {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="max-w-md mx-auto flex justify-around">
-          <a href={esEmpresa ? '/home-empresa' : '/home'} className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs text-gray-400">Inicio</span>
-          </a>
-          <a href={esEmpresa ? '/perfil-empresa' : '/perfil'} className="flex flex-col items-center gap-1">
-            <span className="text-xl">👤</span>
-            <span className="text-xs text-gray-400">Perfil</span>
-          </a>
-          <a href="/verificacion" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🪪</span>
-            <span className="text-xs font-bold text-purple-600">Verificación</span>
-          </a>
-        </div>
-      </div>
+      <Nav activo="perfil" />
 
     </main>
   );

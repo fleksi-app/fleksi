@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Nav from '@/lib/nav';
 
 function DetalleTrabajoContent() {
   const searchParams = useSearchParams();
@@ -27,7 +28,6 @@ function DetalleTrabajoContent() {
     setUsuario(perfil);
 
     const servicioId = searchParams.get('id');
-
     let servicio = null;
 
     if (servicioId) {
@@ -51,15 +51,12 @@ function DetalleTrabajoContent() {
     if (servicio) {
       setTrabajo(servicio);
       setMiPrecio(servicio.presupuesto?.toString() || '');
-
-      // Verificar si ya aplicó
       const { data: appExistente } = await supabase
         .from('aplicaciones')
         .select('id')
         .eq('servicio_id', servicio.id)
         .eq('prestador_id', user.id)
         .single();
-
       if (appExistente) setYaAplico(true);
     }
 
@@ -68,10 +65,7 @@ function DetalleTrabajoContent() {
 
   const handleAplicar = async () => {
     if (!trabajo || !usuario) return;
-    if (yaAplico) {
-      setError('Ya aplicaste a este trabajo.');
-      return;
-    }
+    if (yaAplico) { setError('Ya aplicaste a este trabajo.'); return; }
     setCargando(true);
     setError('');
     try {
@@ -84,7 +78,6 @@ function DetalleTrabajoContent() {
       });
       if (dbError) throw dbError;
 
-      // Enviar email al cliente
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -100,9 +93,7 @@ function DetalleTrabajoContent() {
             },
           }),
         });
-      } catch (emailErr) {
-        console.log('Email no enviado pero aplicación guardada');
-      }
+      } catch (e) {}
 
       setAplicado(true);
       setYaAplico(true);
@@ -183,7 +174,7 @@ function DetalleTrabajoContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
+    <main className="min-h-screen bg-gray-50 pb-44">
 
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
@@ -242,9 +233,7 @@ function DetalleTrabajoContent() {
               {trabajo.usuarios?.foto_url ? (
                 <img src={trabajo.usuarios.foto_url} alt="cliente" className="w-full h-full object-cover"/>
               ) : (
-                <span className="text-white font-bold text-lg">
-                  {trabajo.usuarios?.nombre?.charAt(0) || '?'}
-                </span>
+                <span className="text-white font-bold text-lg">{trabajo.usuarios?.nombre?.charAt(0) || '?'}</span>
               )}
             </div>
             <div>
@@ -298,27 +287,30 @@ function DetalleTrabajoContent() {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
+      {/* Botones aplicar encima del nav */}
+      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 z-20">
         <div className="max-w-md mx-auto flex gap-3">
           {!yaAplico ? (
             <>
               <button onClick={() => setMostrarOferta(!mostrarOferta)}
-                className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
+                className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
                 💬 Contraoferta
               </button>
               <button onClick={handleAplicar} disabled={cargando}
-                className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
                 {cargando ? 'Enviando...' : `✋ Aplicar — $${miPrecio || trabajo.presupuesto}`}
               </button>
             </>
           ) : (
             <a href="/mis-trabajos"
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
               Ver mis aplicaciones →
             </a>
           )}
         </div>
       </div>
+
+      <Nav activo="inicio" />
 
     </main>
   );
