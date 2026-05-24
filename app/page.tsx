@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 type Plataforma = 'ios' | 'android' | 'windows' | 'mac' | 'otro';
 
@@ -8,8 +9,31 @@ export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [instalada, setInstalada] = useState(false);
   const [mostrarInstruccionesIOS, setMostrarInstruccionesIOS] = useState(false);
+  const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
+    const verificarSesion = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: usuario } = await supabase
+            .from('usuarios').select('rol, modo_viajero').eq('id', session.user.id).single();
+          const rol = usuario?.rol || 'flekser';
+          if (rol === 'empresa') {
+            window.location.href = '/home-empresa';
+          } else if (rol === 'viajero' || usuario?.modo_viajero) {
+            window.location.href = '/home-viajero';
+          } else {
+            window.location.href = '/home';
+          }
+          return;
+        }
+      } catch (e) {}
+      setVerificando(false);
+    };
+
+    verificarSesion();
+
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const isAndroid = /android/.test(ua);
@@ -49,8 +73,7 @@ export default function Home() {
     if (plataforma === 'ios') {
       return (
         <div className="mt-4">
-          <button
-            onClick={() => setMostrarInstruccionesIOS(!mostrarInstruccionesIOS)}
+          <button onClick={() => setMostrarInstruccionesIOS(!mostrarInstruccionesIOS)}
             className="w-full py-3 px-6 bg-black text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
             🍎 Instalar en iPhone / iPad
           </button>
@@ -121,6 +144,17 @@ export default function Home() {
       </div>
     );
   };
+
+  if (verificando) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Cargando...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
