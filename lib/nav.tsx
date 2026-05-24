@@ -22,7 +22,6 @@ export default function Nav({ activo }: { activo: string }) {
     obtenerDatos();
   }, []);
 
-  // Suscripción en tiempo real
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase
@@ -107,7 +106,11 @@ export default function Nav({ activo }: { activo: string }) {
             <div className="overflow-y-auto flex-1 px-6 py-3">
               {notificaciones.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-4xl mb-3">🔔</p>
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#7C3AED"/>
+                    </svg>
+                  </div>
                   <p className="font-bold text-gray-900 mb-1">Sin notificaciones</p>
                   <p className="text-gray-400 text-sm">Aquí verás tus actualizaciones</p>
                 </div>
@@ -178,10 +181,12 @@ export default function Nav({ activo }: { activo: string }) {
       {/* Campanita flotante */}
       <button
         onClick={abrirNotifs}
-        className="fixed top-12 right-4 z-30 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border border-gray-200">
-        <span className="text-lg">🔔</span>
+        className="fixed top-12 right-4 z-30 w-11 h-11 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+        </svg>
         {noLeidas > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border-2 border-white">
             {noLeidas > 9 ? '9+' : noLeidas}
           </span>
         )}
