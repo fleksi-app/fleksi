@@ -48,28 +48,26 @@ function RegistroForm() {
         });
         if (dbError) throw dbError;
 
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'bienvenida',
-            destinatario: email,
-            datos: { nombre, rol },
-          }),
-        });
+        try {
+          await fetch('/api/enviar-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'bienvenida',
+              destinatario: email,
+              datos: { nombre, rol, usuario_id: data.user.id },
+            }),
+          });
+        } catch (e) {}
 
-        setPaso(4);
+        // Redirigir al onboarding
+        window.location.href = `/onboarding?rol=${rol}`;
       }
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
     } finally {
       setCargando(false);
     }
-  };
-
-  const destino = () => {
-    if (rol === 'empresa') return '/home-empresa';
-    return '/home';
   };
 
   return (
@@ -94,7 +92,6 @@ function RegistroForm() {
           </span>
         </div>
 
-        {/* PASO 1 */}
         {paso === 1 && (
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-2">¿Cómo vas a usar Fleksi?</h1>
@@ -118,7 +115,6 @@ function RegistroForm() {
           </div>
         )}
 
-        {/* PASO 2 */}
         {paso === 2 && (
           <div>
             <button onClick={() => { setPaso(1); setRol(''); }}
@@ -165,6 +161,7 @@ function RegistroForm() {
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Contraseña</label>
                 <input type="password" placeholder="Mínimo 8 caracteres" value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
               <button onClick={handleRegistro} disabled={cargando}
@@ -178,21 +175,6 @@ function RegistroForm() {
               {" "}y{" "}
               <span className="text-purple-600 cursor-pointer">Aviso de privacidad</span>
             </p>
-          </div>
-        )}
-
-        {/* PASO 4 — Éxito */}
-        {paso === 4 && (
-          <div className="text-center">
-            <div className="w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">✅</span>
-            </div>
-            <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Bienvenido a Fleksi!</h1>
-            <p className="text-gray-400 mb-8 font-light">Tu cuenta fue creada exitosamente.<br/>Estás listo para empezar.</p>
-            <a href={destino()}
-              className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition">
-              Ir a mi inicio →
-            </a>
           </div>
         )}
 
