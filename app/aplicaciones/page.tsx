@@ -1,11 +1,8 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 function AplicacionesContent() {
   const searchParams = useSearchParams();
@@ -69,7 +66,6 @@ function AplicacionesContent() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !servicioActivo) return;
 
-    // Verificar si ya existe una conversación
     const { data: existente } = await supabase
       .from('mensajes')
       .select('id')
@@ -77,7 +73,6 @@ function AplicacionesContent() {
       .limit(1);
 
     if (!existente || existente.length === 0) {
-      // Crear mensaje inicial
       await supabase.from('mensajes').insert({
         servicio_id: servicioActivo.id,
         remitente_id: user.id,
@@ -87,96 +82,6 @@ function AplicacionesContent() {
     }
 
     window.location.href = '/chat';
-  };
-
-  const handleAceptarYPagar = async (aplicacionId: string) => {
-    setProcesando(aplicacionId);
-    try {
-      const appAceptada = aplicaciones.find(a => a.id === aplicacionId);
-      const monto = appAceptada?.precio_ofrecido || servicioActivo.presupuesto;
-      const seguro = servicioActivo.seguro ? 45 : 0;
-      const total = monto + seguro;
-
-      const response = await fetch('/api/crear-pago', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          monto: total,
-          descripcion: servicioActivo.titulo,
-          servicioId: servicioActivo.id,
-          clienteEmail: usuario?.email || '',
-        }),
-      });
-
-      const { clientSecret, paymentIntentId, error: apiError } = await response.json();
-      if (apiError) throw new Error(apiError);
-
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe no disponible');
-
-      const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: { token: 'tok_visa' } },
-      });
-      if (stripeError) throw new Error(stripeError.message);
-
-      await supabase.from('aplicaciones').update({
-        estado: 'aceptado', payment_intent_id: paymentIntentId, pago_retenido: true,
-      }).eq('id', aplicacionId);
-
-      await supabase.from('servicios').update({
-        estado: 'en_proceso', pago_retenido: true,
-      }).eq('id', servicioActivo.id);
-
-      await supabase.from('aplicaciones')
-        .update({ estado: 'rechazado' })
-        .eq('servicio_id', servicioActivo.id)
-        .neq('id', aplicacionId);
-
-      // Crear mensaje inicial de chat automáticamente
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: existente } = await supabase
-          .from('mensajes')
-          .select('id')
-          .eq('servicio_id', servicioActivo.id)
-          .limit(1);
-
-        if (!existente || existente.length === 0) {
-          await supabase.from('mensajes').insert({
-            servicio_id: servicioActivo.id,
-            remitente_id: user.id,
-            destinatario_id: appAceptada.prestador_id,
-            contenido: `¡Hola! Acepté tu propuesta para: ${servicioActivo.titulo}. ¡Nos vemos el ${servicioActivo.fecha}!`,
-          });
-        }
-      }
-
-      try {
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'aplicacion_aceptada',
-            destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
-            datos: {
-              prestador: appAceptada?.usuarios?.nombre || 'Flekser',
-              prestador_id: appAceptada?.prestador_id,
-              cliente: usuario?.nombre || 'Cliente',
-              cliente_id: usuario?.authId,
-              trabajo: servicioActivo.titulo,
-              precio: monto,
-              fecha: servicioActivo.fecha,
-            },
-          }),
-        });
-      } catch (e) {}
-
-      await verAplicaciones(servicioActivo);
-    } catch (err: any) {
-      alert('Error al procesar: ' + err.message);
-    } finally {
-      setProcesando('');
-    }
   };
 
   const estadoColor: any = {
@@ -318,9 +223,10 @@ function AplicacionesContent() {
                           className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
                           ❌ Rechazar
                         </button>
-                        <button onClick={() => handleAceptarYPagar(app.id)} disabled={procesando === app.id}
-                          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                          {procesando === app.id ? '⏳ Procesando...' : '✅ Aceptar y pagar'}
+                        <button
+                          onClick={() => window.location.href = `/pago?aplicacion=${app.id}`}
+                          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition">
+                          ✅ Aceptar y pagar
                         </button>
                       </div>
                     </div>
