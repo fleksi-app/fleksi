@@ -46,6 +46,7 @@ export default function Perfil() {
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
   const [activandoViajero, setActivandoViajero] = useState(false);
   const [verificacion, setVerificacion] = useState<any>(null);
+  const [totalGanado, setTotalGanado] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -82,18 +83,20 @@ export default function Perfil() {
 
       const { data: appsData } = await supabase
         .from('aplicaciones')
-        .select('fotos_despues, servicios(titulo)')
+        .select('fotos_despues, precio_ofrecido, servicios(titulo, presupuesto)')
         .eq('prestador_id', user.id)
-        .eq('estado', 'completado')
-        .not('fotos_despues', 'eq', '{}');
+        .eq('estado', 'completado');
 
       const fotosPortafolio: { foto: string; titulo: string }[] = [];
+      let total = 0;
       (appsData || []).forEach((app: any) => {
+        total += app.precio_ofrecido || app.servicios?.presupuesto || 0;
         (app.fotos_despues || []).forEach((url: string) => {
           fotosPortafolio.push({ foto: url, titulo: app.servicios?.titulo || 'Trabajo completado' });
         });
       });
       setPortafolio(fotosPortafolio);
+      setTotalGanado(total);
 
       const { data: verifData } = await supabase
         .from('verificaciones').select('*').eq('usuario_id', user.id).single();
@@ -293,9 +296,11 @@ export default function Perfil() {
           </div>
 
           {!editando ? (
-            <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
-              ✏️ Editar perfil
-            </button>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
+                ✏️ Editar perfil
+              </button>
+            </div>
           ) : (
             <div className="flex gap-3">
               <button onClick={() => setEditando(false)} className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold transition">Cancelar</button>
@@ -305,6 +310,20 @@ export default function Perfil() {
             </div>
           )}
         </div>
+
+        {/* Banner de ganancias */}
+        <a href="/earnings"
+          className="flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-sm mb-4 hover:opacity-90 transition">
+          <div>
+            <p className="text-white/80 text-xs font-semibold mb-0.5">Total ganado</p>
+            <p className="text-white font-extrabold text-2xl">${totalGanado.toLocaleString()} <span className="text-lg font-normal">MXN</span></p>
+            <p className="text-white/70 text-xs mt-0.5">{usuario?.trabajos_completados || 0} trabajos completados</p>
+          </div>
+          <div className="text-right">
+            <span className="text-4xl">💰</span>
+            <p className="text-white text-xs font-bold mt-1">Ver historial →</p>
+          </div>
+        </a>
 
         <a href="/verificacion" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
