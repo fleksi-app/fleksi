@@ -16,6 +16,13 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+function getSaludo() {
+  const hora = new Date().getHours();
+  if (hora < 12) return 'Buenos días,';
+  if (hora < 18) return 'Buenas tardes,';
+  return 'Buenas noches,';
+}
+
 export default function HomeWorker() {
   const [trabajos, setTrabajos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -23,6 +30,7 @@ export default function HomeWorker() {
   const [busqueda, setBusqueda] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
+  const [trabajosCompletados, setTrabajosCompletados] = useState<string[]>([]);
   const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
 
   useEffect(() => { cargarDatos(); }, []);
@@ -35,6 +43,7 @@ export default function HomeWorker() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
+    // Solo trabajos activos
     const { data: servicios } = await supabase
       .from('servicios')
       .select('*, usuarios(nombre, calificacion)')
@@ -44,15 +53,23 @@ export default function HomeWorker() {
 
     setTrabajos(servicios || []);
 
+    // Aplicaciones del usuario
     const { data: apps } = await supabase
       .from('aplicaciones')
-      .select('servicio_id')
+      .select('servicio_id, estado')
       .eq('prestador_id', user.id);
+
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
+
+    // IDs de trabajos donde ya terminé (completado)
+    setTrabajosCompletados(
+      (apps || [])
+        .filter(a => a.estado === 'completado')
+        .map(a => a.servicio_id)
+    );
 
     setCargando(false);
 
-    // Mostrar banner si no ha dado permiso
     if ('Notification' in window && Notification.permission === 'default') {
       setMostrarBannerPush(true);
     }
@@ -63,25 +80,18 @@ export default function HomeWorker() {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const permiso = await Notification.requestPermission();
-      if (permiso !== 'granted') {
-        setMostrarBannerPush(false);
-        return;
-      }
-
+      if (permiso !== 'granted') { setMostrarBannerPush(false); return; }
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
       });
-
       await fetch('/api/push', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
       });
-
       setMostrarBannerPush(false);
     } catch (err) {
       console.log('Push no disponible:', err);
@@ -96,12 +106,15 @@ export default function HomeWorker() {
     cerrajeria: '🔑', estetica: '💅', otro: '✨'
   };
 
-  const trabajosFiltrados = trabajos.filter(t => {
-    const matchCat = categoriaActiva === 'Todos' ||
-      t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
-    const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase());
-    return matchCat && matchBusqueda;
-  });
+  // Filtrar trabajos — excluir completados por este usuario
+  const trabajosFiltrados = trabajos
+    .filter(t => !trabajosCompletados.includes(t.id))
+    .filter(t => {
+      const matchCat = categoriaActiva === 'Todos' ||
+        t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
+      const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase());
+      return matchCat && matchBusqueda;
+    });
 
   if (cargando) {
     return (
@@ -121,7 +134,7 @@ export default function HomeWorker() {
         <div className="max-w-md mx-auto">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <p className="text-gray-400 text-sm">Buenos días,</p>
+              <p className="text-gray-400 text-sm">{getSaludo()}</p>
               <h1 className="text-xl font-extrabold text-gray-900">
                 {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} 👋
               </h1>
@@ -133,7 +146,7 @@ export default function HomeWorker() {
 
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 text-white">
             <p className="text-sm opacity-80 mb-1">Trabajos disponibles hoy</p>
-            <p className="text-3xl font-extrabold">{trabajos.length} <span className="text-lg font-normal">cerca de ti</span></p>
+            <p className="text-3xl font-extrabold">{trabajosFiltrados.length} <span className="text-lg font-normal">cerca de ti</span></p>
             <p className="text-sm opacity-70 mt-1">↑ Nuevos trabajos publicados</p>
           </div>
 
@@ -146,7 +159,6 @@ export default function HomeWorker() {
         </div>
       </div>
 
-      {/* Banner activar notificaciones */}
       {mostrarBannerPush && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
