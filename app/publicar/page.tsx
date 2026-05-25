@@ -31,6 +31,7 @@ export default function Publicar() {
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
   const [presupuesto, setPresupuesto] = useState('');
+  const [direccion, setDireccion] = useState('');
   const [urgente, setUrgente] = useState(false);
   const [seguro, setSeguro] = useState(true);
   const [publicado, setPublicado] = useState(false);
@@ -56,6 +57,7 @@ export default function Publicar() {
         fecha,
         hora: hora || null,
         presupuesto: Number(presupuesto),
+        direccion: direccion || null,
         urgente,
         seguro,
         estado: 'activo',
@@ -79,7 +81,7 @@ export default function Publicar() {
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Publicado con éxito!</h1>
           <p className="text-gray-400 mb-8 font-light">
-            Tu solicitud ya está visible para los prestadores cerca de ti.
+            Tu solicitud ya está visible para los fleksers cerca de ti.
           </p>
           <div className="bg-white rounded-2xl p-4 mb-6 text-left border border-gray-100">
             <div className="flex justify-between mb-2">
@@ -94,6 +96,12 @@ export default function Publicar() {
               <span className="text-gray-400 text-sm">Fecha</span>
               <span className="font-semibold text-sm text-gray-900">{fecha} {hora}</span>
             </div>
+            {direccion && (
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400 text-sm">Dirección</span>
+                <span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-400 text-sm">Estado</span>
               <span className="font-semibold text-sm text-green-600">✅ Activo</span>
@@ -179,14 +187,21 @@ export default function Publicar() {
                   rows={4} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
               </div>
 
-              {/* Fecha */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección del trabajo</label>
+                <input type="text"
+                  placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX"
+                  value={direccion} onChange={(e) => setDireccion(e.target.value)}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                <p className="text-xs text-gray-400 mt-1">Solo visible para el flekser que aceptes</p>
+              </div>
+
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
                 <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
 
-              {/* Hora — selector amigable */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <div className="grid grid-cols-4 gap-2">
@@ -216,7 +231,7 @@ export default function Publicar() {
                   <span className="text-xl">🔴</span>
                   <div>
                     <p className="font-semibold text-gray-900">Marcar como urgente</p>
-                    <p className="text-xs text-gray-400">Aparece primero y atrae más prestadores</p>
+                    <p className="text-xs text-gray-400">Aparece primero y atrae más fleksers</p>
                   </div>
                 </div>
                 <div className={`w-12 h-6 rounded-full transition-all ${urgente ? 'bg-red-500' : 'bg-gray-300'}`}>
@@ -254,6 +269,12 @@ export default function Publicar() {
                   <span className="text-gray-400 text-sm">Fecha</span>
                   <span className="font-semibold text-sm text-gray-900">{fecha} {hora || 'Sin hora'}</span>
                 </div>
+                {direccion && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">📍 Dirección</span>
+                    <span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Presupuesto</span>
                   <span className="font-extrabold text-sm text-purple-600">${presupuesto} MXN</span>

@@ -99,7 +99,6 @@ export default function CheckIn() {
       const { error: e2 } = await supabase.from('servicios').update({ estado: 'completado' }).eq('id', servicioId);
       if (e2) { alert('Error checkout servicio: ' + e2.message); return; }
 
-      // Notificar al cliente que el trabajo terminó
       const trabajo = trabajos.find(t => t.id === aplicacionId);
       const clienteId = trabajo?.servicios?.usuarios?.id;
       const clienteEmail = trabajo?.servicios?.usuarios?.email;
@@ -115,7 +114,7 @@ export default function CheckIn() {
               destinatario: clienteEmail || 'fernando.najera.nm@gmail.com',
               datos: {
                 cliente_id: clienteId,
-                prestador: usuario?.nombre || 'Prestador',
+                prestador: usuario?.nombre || 'Flekser',
                 trabajo: tituloTrabajo,
                 servicio_id: servicioId,
               },
@@ -131,6 +130,10 @@ export default function CheckIn() {
       setProcesando('');
       setSubiendoFotos(false);
     }
+  };
+
+  const getMapsUrl = (direccion: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
   };
 
   if (cargando) {
@@ -172,6 +175,20 @@ export default function CheckIn() {
                   <h3 className="font-extrabold text-gray-900 mb-1">{app.servicios?.titulo}</h3>
                   <p className="text-sm text-gray-400">Cliente: {app.servicios?.usuarios?.nombre}</p>
                   <p className="text-sm text-gray-400">📅 {app.servicios?.fecha} {app.servicios?.hora?.slice(0,5)}</p>
+
+                  {/* Link de ubicación */}
+                  {app.servicios?.direccion && (
+                    <a href={getMapsUrl(app.servicios.direccion)}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 mt-2 p-3 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition">
+                      <span className="text-lg">📍</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-blue-700">Ver en Google Maps</p>
+                        <p className="text-xs text-blue-500 truncate">{app.servicios.direccion}</p>
+                      </div>
+                      <span className="text-blue-500 text-xs font-bold flex-shrink-0">→</span>
+                    </a>
+                  )}
                 </div>
 
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 mb-4 flex justify-between items-center">
