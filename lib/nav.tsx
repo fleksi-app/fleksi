@@ -24,7 +24,6 @@ export default function Nav({ activo }: { activo: string }) {
     obtenerDatos();
   }, []);
 
-  // Suscripción realtime notificaciones
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase
@@ -41,13 +40,20 @@ export default function Nav({ activo }: { activo: string }) {
     return () => { supabase.removeChannel(canal); };
   }, [usuarioId]);
 
-  // Suscripción realtime mensajes
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase
       .channel('mensajes-nav')
       .on('postgres_changes', {
         event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes',
+        filter: `destinatario_id=eq.${usuarioId}`,
+      }, () => {
+        cargarMensajesNoLeidos(usuarioId);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
         schema: 'public',
         table: 'mensajes',
         filter: `destinatario_id=eq.${usuarioId}`,
@@ -119,7 +125,6 @@ export default function Nav({ activo }: { activo: string }) {
 
   return (
     <>
-      {/* Panel notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
           onClick={() => setMostrarNotifs(false)}>
@@ -136,7 +141,7 @@ export default function Nav({ activo }: { activo: string }) {
               {notificaciones.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                       <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#7C3AED"/>
                     </svg>
                   </div>
@@ -146,8 +151,7 @@ export default function Nav({ activo }: { activo: string }) {
               ) : (
                 <div className="flex flex-col gap-2">
                   {notificaciones.map((n) => (
-                    <a key={n.id}
-                      href={n.link || '#'}
+                    <a key={n.id} href={n.link || '#'}
                       onClick={() => setMostrarNotifs(false)}
                       className={`flex items-start gap-3 p-3 rounded-2xl transition ${
                         !n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'
@@ -177,7 +181,6 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
-      {/* Modal publicar/buscar */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/50 z-40 flex items-end"
           onClick={() => setMostrarModal(false)}>
@@ -207,11 +210,9 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
-      {/* Campanita flotante */}
-      <button
-        onClick={abrirNotifs}
+      <button onClick={abrirNotifs}
         className="fixed top-12 right-4 z-30 w-11 h-11 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
         </svg>
         {noLeidas > 0 && (
@@ -221,10 +222,9 @@ export default function Nav({ activo }: { activo: string }) {
         )}
       </button>
 
-      {/* Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around items-center">
-          {items.map((item) => {
+          {items.map((item: any) => {
             const estaActivo = activo === item.id;
             if (item.href === null) {
               return (
@@ -240,7 +240,7 @@ export default function Nav({ activo }: { activo: string }) {
             return (
               <a key={item.id} href={item.href} className="relative flex flex-col items-center gap-0.5 px-2">
                 <span className="text-xl">{item.emoji}</span>
-                {item.badge && item.badge > 0 && (
+                {item.badge > 0 && (
                   <span className="absolute -top-1 -right-0 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
                     {item.badge > 9 ? '9+' : item.badge}
                   </span>

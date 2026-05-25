@@ -3,14 +3,13 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
-// Detectar números de teléfono en el mensaje
 function contienetelefono(texto: string): boolean {
   const patrones = [
-    /\b\d{10}\b/,                    // 10 dígitos seguidos
-    /\b\d{3}[\s\-\.]\d{3}[\s\-\.]\d{4}\b/, // 333-333-4444
-    /\b\d{2}[\s\-]\d{4}[\s\-]\d{4}\b/,     // 55 1234 5678
-    /\(\d{2,3}\)\s?\d{3,4}[\s\-]\d{4}/,    // (55) 1234-5678
-    /\+52\s?\d{10}/,                  // +52 seguido de 10 dígitos
+    /\b\d{10}\b/,
+    /\b\d{3}[\s\-\.]\d{3}[\s\-\.]\d{4}\b/,
+    /\b\d{2}[\s\-]\d{4}[\s\-]\d{4}\b/,
+    /\(\d{2,3}\)\s?\d{3,4}[\s\-]\d{4}/,
+    /\+52\s?\d{10}/,
     /whatsapp/i,
     /wsp/i,
     /wa\.me/i,
@@ -33,10 +32,8 @@ export default function Chat() {
   useEffect(() => { cargarDatos(); }, []);
   useEffect(() => { scrollAbajo(); }, [mensajes]);
 
-  // Suscripción realtime cuando hay conversación activa
   useEffect(() => {
     if (!conversacionActiva || !usuario) return;
-
     if (canalRef.current) supabase.removeChannel(canalRef.current);
 
     const canal = supabase
@@ -80,7 +77,6 @@ export default function Chat() {
       .or(`remitente_id.eq.${user.id},destinatario_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
 
-    // Agrupar por servicio_id — solo el último mensaje
     const convMap = new Map();
     msgs?.forEach(m => {
       if (!convMap.has(m.servicio_id)) convMap.set(m.servicio_id, m);
@@ -100,16 +96,17 @@ export default function Chat() {
     setMensajes(data || []);
 
     const { data: { user } } = await supabase.auth.getUser();
+    // Marcar como leídos
     await supabase.from('mensajes')
       .update({ leido: true })
       .eq('servicio_id', conv.servicio_id)
-      .eq('destinatario_id', user!.id);
+      .eq('destinatario_id', user!.id)
+      .eq('leido', false);
   };
 
   const enviarMensaje = async () => {
     if (!nuevoMensaje.trim() || !conversacionActiva || enviando) return;
 
-    // Detectar teléfono
     if (contienetelefono(nuevoMensaje)) {
       setAdvertencia('🔒 No puedes compartir números de teléfono. Usa Fleksi para coordinar tu trabajo.');
       return;
@@ -136,6 +133,17 @@ export default function Chat() {
         return [...prev, data];
       });
       setNuevoMensaje('');
+
+      // Crear notificación in-app para el destinatario
+      try {
+        await supabase.from('notificaciones').insert({
+          usuario_id: destinatario,
+          tipo: 'mensaje_nuevo',
+          titulo: `💬 Mensaje de ${usuario?.nombre}`,
+          mensaje: nuevoMensaje.trim().slice(0, 60),
+          link: '/chat',
+        });
+      } catch (e) {}
     }
     setEnviando(false);
   };
@@ -183,7 +191,6 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Banner de privacidad */}
         <div className="max-w-md mx-auto w-full px-6 pt-3">
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-2">
             <span className="text-sm">🔒</span>
