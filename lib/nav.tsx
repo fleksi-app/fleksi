@@ -24,8 +24,10 @@ export default function Nav({ activo }: { activo: string }) {
     obtenerDatos();
   }, []);
 
+  // Realtime notificaciones
   useEffect(() => {
     if (!usuarioId) return;
+
     const canal = supabase
       .channel('notificaciones-nav')
       .on('postgres_changes', {
@@ -37,9 +39,25 @@ export default function Nav({ activo }: { activo: string }) {
         cargarNotificaciones(usuarioId);
       })
       .subscribe();
-    return () => { supabase.removeChannel(canal); };
+
+    // BroadcastChannel para notificaciones desde el mismo dispositivo
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('fleksi-notifs');
+      bc.onmessage = (e) => {
+        if (e.data?.type === 'nueva_notificacion') {
+          cargarNotificaciones(usuarioId);
+        }
+      };
+    } catch (e) {}
+
+    return () => {
+      supabase.removeChannel(canal);
+      try { bc?.close(); } catch (e) {}
+    };
   }, [usuarioId]);
 
+  // Realtime mensajes
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase

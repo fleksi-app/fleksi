@@ -96,7 +96,6 @@ export default function Chat() {
     setMensajes(data || []);
 
     const { data: { user } } = await supabase.auth.getUser();
-    // Marcar como leídos
     await supabase.from('mensajes')
       .update({ leido: true })
       .eq('servicio_id', conv.servicio_id)
@@ -134,7 +133,7 @@ export default function Chat() {
       });
       setNuevoMensaje('');
 
-      // Crear notificación in-app para el destinatario
+      // Notificación in-app
       try {
         await supabase.from('notificaciones').insert({
           usuario_id: destinatario,
@@ -143,6 +142,13 @@ export default function Chat() {
           mensaje: nuevoMensaje.trim().slice(0, 60),
           link: '/chat',
         });
+      } catch (e) {}
+
+      // BroadcastChannel para actualizar Nav en tiempo real
+      try {
+        const bc = new BroadcastChannel('fleksi-notifs');
+        bc.postMessage({ type: 'nueva_notificacion' });
+        bc.close();
       } catch (e) {}
     }
     setEnviando(false);
@@ -260,7 +266,6 @@ export default function Chat() {
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
-
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <h1 className="font-extrabold text-gray-900 text-xl">Mensajes</h1>
