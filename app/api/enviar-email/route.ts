@@ -10,12 +10,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 async function crearNotificacion(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
   try {
     await supabaseAdmin.from('notificaciones').insert({
@@ -28,6 +22,12 @@ async function crearNotificacion(usuario_id: string, tipo: string, titulo: strin
 
 async function enviarPush(usuario_id: string, titulo: string, mensaje: string, link: string) {
   try {
+    webpush.setVapidDetails(
+      process.env.VAPID_EMAIL || 'mailto:fernando.najera.nm@gmail.com',
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+      process.env.VAPID_PRIVATE_KEY!
+    );
+
     const { data: suscripciones } = await supabaseAdmin
       .from('push_suscripciones')
       .select('*')
