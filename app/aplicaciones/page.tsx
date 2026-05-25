@@ -24,7 +24,7 @@ function AplicacionesContent() {
 
     const { data: perfil } = await supabase
       .from('usuarios').select('*').eq('id', user.id).single();
-    setUsuario(perfil);
+    setUsuario({ ...perfil, authId: user.id });
 
     const { data: svcs } = await supabase
       .from('servicios')
@@ -49,7 +49,7 @@ function AplicacionesContent() {
     setServicioActivo(svcFresco || servicio);
     const { data } = await supabase
       .from('aplicaciones')
-      .select('*, usuarios(nombre, calificacion, trabajos_completados, habilidades, foto_url, email)')
+      .select('*, usuarios(id, nombre, calificacion, trabajos_completados, habilidades, foto_url, email)')
       .eq('servicio_id', servicio.id)
       .order('created_at', { ascending: false });
     setAplicaciones(data || []);
@@ -63,6 +63,30 @@ function AplicacionesContent() {
     } finally {
       setProcesando('');
     }
+  };
+
+  const iniciarChat = async (prestadorId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !servicioActivo) return;
+
+    // Verificar si ya existe una conversación
+    const { data: existente } = await supabase
+      .from('mensajes')
+      .select('id')
+      .eq('servicio_id', servicioActivo.id)
+      .limit(1);
+
+    if (!existente || existente.length === 0) {
+      // Crear mensaje inicial
+      await supabase.from('mensajes').insert({
+        servicio_id: servicioActivo.id,
+        remitente_id: user.id,
+        destinatario_id: prestadorId,
+        contenido: `Hola, te contacto por el trabajo: ${servicioActivo.titulo}`,
+      });
+    }
+
+    window.location.href = '/chat';
   };
 
   const handleAceptarYPagar = async (aplicacionId: string) => {
@@ -108,6 +132,25 @@ function AplicacionesContent() {
         .eq('servicio_id', servicioActivo.id)
         .neq('id', aplicacionId);
 
+      // Crear mensaje inicial de chat automáticamente
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: existente } = await supabase
+          .from('mensajes')
+          .select('id')
+          .eq('servicio_id', servicioActivo.id)
+          .limit(1);
+
+        if (!existente || existente.length === 0) {
+          await supabase.from('mensajes').insert({
+            servicio_id: servicioActivo.id,
+            remitente_id: user.id,
+            destinatario_id: appAceptada.prestador_id,
+            contenido: `¡Hola! Acepté tu propuesta para: ${servicioActivo.titulo}. ¡Nos vemos el ${servicioActivo.fecha}!`,
+          });
+        }
+      }
+
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -116,10 +159,10 @@ function AplicacionesContent() {
             tipo: 'aplicacion_aceptada',
             destinatario: appAceptada?.usuarios?.email || 'fernando.najera.nm@gmail.com',
             datos: {
-              prestador: appAceptada?.usuarios?.nombre || 'Prestador',
+              prestador: appAceptada?.usuarios?.nombre || 'Flekser',
               prestador_id: appAceptada?.prestador_id,
               cliente: usuario?.nombre || 'Cliente',
-              cliente_id: usuario?.id,
+              cliente_id: usuario?.authId,
               trabajo: servicioActivo.titulo,
               precio: monto,
               fecha: servicioActivo.fecha,
@@ -189,7 +232,7 @@ function AplicacionesContent() {
                 <p className="font-bold text-green-700 text-sm">Pago retenido por Fleksi</p>
                 <p className="text-green-600 text-xs mt-0.5">
                   {prestadorTermino
-                    ? 'El prestador terminó — confirma el trabajo para liberar el pago'
+                    ? 'El flekser terminó — confirma el trabajo para liberar el pago'
                     : 'El dinero se liberará cuando confirmes que el trabajo quedó bien'}
                 </p>
               </div>
@@ -207,7 +250,7 @@ function AplicacionesContent() {
             <div className="text-center py-16">
               <p className="text-4xl mb-4">⏳</p>
               <p className="font-bold text-gray-900 mb-2">Sin aplicaciones todavía</p>
-              <p className="text-gray-400 text-sm">Los prestadores verán tu publicación y aplicarán pronto</p>
+              <p className="text-gray-400 text-sm">Los fleksers verán tu publicación y aplicarán pronto</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -222,14 +265,14 @@ function AplicacionesContent() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-gray-900">{app.usuarios?.nombre || 'Prestador'}</p>
+                      <p className="font-bold text-gray-900">{app.usuarios?.nombre || 'Flekser'}</p>
                       <div className="flex items-center gap-2">
                         <p className="text-xs text-yellow-500">⭐ {app.usuarios?.calificacion || '5.0'}</p>
                         <p className="text-xs text-gray-400">· {app.usuarios?.trabajos_completados || 0} trabajos</p>
                       </div>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoColor[app.estado]}`}>
-                      {estadoLabel[app.estado]}
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoColor[app.estado] || 'bg-gray-100 text-gray-600'}`}>
+                      {estadoLabel[app.estado] || app.estado}
                     </span>
                   </div>
 
@@ -284,11 +327,17 @@ function AplicacionesContent() {
                   )}
 
                   {app.estado === 'aceptado' && (
-                    <div className="bg-green-50 rounded-xl p-3">
-                      <p className="text-green-600 font-bold text-sm text-center">✅ Trabajador confirmado</p>
-                      <p className="text-green-500 text-xs text-center mt-1">
-                        {app.pago_retenido ? '🔒 Pago retenido — se liberará al confirmar el trabajo' : 'El servicio está en proceso'}
-                      </p>
+                    <div className="flex flex-col gap-2">
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <p className="text-green-600 font-bold text-sm text-center">✅ Flekser confirmado</p>
+                        <p className="text-green-500 text-xs text-center mt-1">
+                          {app.pago_retenido ? '🔒 Pago retenido — se liberará al confirmar el trabajo' : 'El servicio está en proceso'}
+                        </p>
+                      </div>
+                      <button onClick={() => iniciarChat(app.usuarios?.id)}
+                        className="w-full py-3 border-2 border-purple-200 text-purple-600 rounded-2xl font-bold hover:bg-purple-50 transition flex items-center justify-center gap-2">
+                        💬 Enviar mensaje
+                      </button>
                     </div>
                   )}
                 </div>
