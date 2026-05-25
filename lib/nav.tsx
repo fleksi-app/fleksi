@@ -8,6 +8,7 @@ export default function Nav({ activo }: { activo: string }) {
   const [mostrarNotifs, setMostrarNotifs] = useState(false);
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [noLeidas, setNoLeidas] = useState(0);
+  const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
   const [usuarioId, setUsuarioId] = useState('');
 
   useEffect(() => {
@@ -18,14 +19,16 @@ export default function Nav({ activo }: { activo: string }) {
       const { data } = await supabase.from('usuarios').select('rol').eq('id', user.id).single();
       setRol(data?.rol || 'flekser');
       cargarNotificaciones(user.id);
+      cargarMensajesNoLeidos(user.id);
     };
     obtenerDatos();
   }, []);
 
+  // Suscripción realtime notificaciones
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase
-      .channel('notificaciones')
+      .channel('notificaciones-nav')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -33,6 +36,23 @@ export default function Nav({ activo }: { activo: string }) {
         filter: `usuario_id=eq.${usuarioId}`,
       }, () => {
         cargarNotificaciones(usuarioId);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [usuarioId]);
+
+  // Suscripción realtime mensajes
+  useEffect(() => {
+    if (!usuarioId) return;
+    const canal = supabase
+      .channel('mensajes-nav')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes',
+        filter: `destinatario_id=eq.${usuarioId}`,
+      }, () => {
+        cargarMensajesNoLeidos(usuarioId);
       })
       .subscribe();
     return () => { supabase.removeChannel(canal); };
@@ -47,6 +67,15 @@ export default function Nav({ activo }: { activo: string }) {
       .limit(20);
     setNotificaciones(data || []);
     setNoLeidas((data || []).filter(n => !n.leida).length);
+  };
+
+  const cargarMensajesNoLeidos = async (uid: string) => {
+    const { count } = await supabase
+      .from('mensajes')
+      .select('*', { count: 'exact', head: true })
+      .eq('destinatario_id', uid)
+      .eq('leido', false);
+    setMensajesNoLeidos(count || 0);
   };
 
   const marcarLeidas = async () => {
@@ -84,7 +113,7 @@ export default function Nav({ activo }: { activo: string }) {
     { href: trabajos, emoji: '📋', label: 'Trabajos', id: 'trabajos' },
     { href: null, emoji: '➕', label: 'Nuevo', id: 'nuevo' },
     { href: '/checkin', emoji: '📍', label: 'Check-in', id: 'checkin' },
-    { href: '/chat', emoji: '💬', label: 'Mensajes', id: 'chat' },
+    { href: '/chat', emoji: '💬', label: 'Mensajes', id: 'chat', badge: mensajesNoLeidos },
     { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil' },
   ];
 
@@ -209,8 +238,13 @@ export default function Nav({ activo }: { activo: string }) {
               );
             }
             return (
-              <a key={item.id} href={item.href} className="flex flex-col items-center gap-0.5 px-2">
+              <a key={item.id} href={item.href} className="relative flex flex-col items-center gap-0.5 px-2">
                 <span className="text-xl">{item.emoji}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-0 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
                 <span className={`text-xs font-semibold ${estaActivo ? 'text-purple-600' : 'text-gray-400'}`}>
                   {item.label}
                 </span>
