@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const categorias = [
@@ -34,9 +34,25 @@ export default function Publicar() {
   const [direccion, setDireccion] = useState('');
   const [urgente, setUrgente] = useState(false);
   const [seguro, setSeguro] = useState(true);
+  const [metodoPago, setMetodoPago] = useState<'stripe' | 'efectivo'>('stripe');
   const [publicado, setPublicado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [walletSaldo, setWalletSaldo] = useState(0);
+  const [cargandoWallet, setCargandoWallet] = useState(true);
+
+  useEffect(() => {
+    const cargarWallet = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('usuarios').select('wallet_saldo').eq('id', user.id).single();
+      setWalletSaldo(data?.wallet_saldo || 0);
+      setCargandoWallet(false);
+    };
+    cargarWallet();
+  }, []);
+
+  const efectivoHabilitado = walletSaldo >= 50;
 
   const handlePublicar = async () => {
     if (!titulo || !fecha || !presupuesto) {
@@ -60,6 +76,7 @@ export default function Publicar() {
         direccion: direccion || null,
         urgente,
         seguro,
+        metodo_pago: metodoPago,
         estado: 'activo',
       });
 
@@ -102,6 +119,12 @@ export default function Publicar() {
                 <span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span>
               </div>
             )}
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-400 text-sm">Pago</span>
+              <span className="font-semibold text-sm text-gray-900">
+                {metodoPago === 'stripe' ? '💳 Stripe' : '💵 Efectivo'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-400 text-sm">Estado</span>
               <span className="font-semibold text-sm text-green-600">✅ Activo</span>
@@ -142,6 +165,7 @@ export default function Publicar() {
 
       <div className="max-w-md mx-auto px-6 py-6">
 
+        {/* PASO 1 — Categoría */}
         {paso === 1 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">¿Qué necesitas?</h2>
@@ -162,6 +186,7 @@ export default function Publicar() {
           </div>
         )}
 
+        {/* PASO 2 — Detalles */}
         {paso === 2 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Cuéntanos más</h2>
@@ -189,8 +214,7 @@ export default function Publicar() {
 
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección del trabajo</label>
-                <input type="text"
-                  placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX"
+                <input type="text" placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX"
                   value={direccion} onChange={(e) => setDireccion(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
                 <p className="text-xs text-gray-400 mt-1">Solo visible para el flekser que aceptes</p>
@@ -225,6 +249,64 @@ export default function Publicar() {
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
 
+              {/* Método de pago */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">💳 Método de pago</label>
+                <div className="flex flex-col gap-2">
+                  {/* Stripe */}
+                  <button onClick={() => setMetodoPago('stripe')}
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
+                      metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
+                    }`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'
+                    }`}>
+                      {metodoPago === 'stripe' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-sm">💳 Pagar con tarjeta</p>
+                      <p className="text-xs text-gray-400">Pago seguro vía Stripe. Sin comisión extra.</p>
+                    </div>
+                    <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Recomendado</span>
+                  </button>
+
+                  {/* Efectivo */}
+                  <button
+                    onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
+                      !efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' :
+                      metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
+                    }`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'
+                    }`}>
+                      {metodoPago === 'efectivo' && efectivoHabilitado && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full"/>}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-900 text-sm">💵 Pago en efectivo</p>
+                        {!efectivoHabilitado && <span className="text-xs">🔒</span>}
+                      </div>
+                      {efectivoHabilitado ? (
+                        <p className="text-xs text-gray-400">5% de comisión para cada parte vía wallet.</p>
+                      ) : (
+                        <p className="text-xs text-amber-600 font-semibold">
+                          Necesitas $50 en tu wallet.{' '}
+                          <a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>
+                            Recargar →
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                    {efectivoHabilitado && (
+                      <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">
+                        Saldo: ${walletSaldo.toFixed(0)}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               <div onClick={() => setUrgente(!urgente)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}>
                 <div className="flex items-center gap-3">
@@ -242,6 +324,7 @@ export default function Publicar() {
           </div>
         )}
 
+        {/* PASO 3 — Confirmar */}
         {paso === 3 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Confirma tu solicitud</h2>
@@ -279,6 +362,12 @@ export default function Publicar() {
                   <span className="text-gray-400 text-sm">Presupuesto</span>
                   <span className="font-extrabold text-sm text-purple-600">${presupuesto} MXN</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-sm">Método de pago</span>
+                  <span className="font-semibold text-sm text-gray-900">
+                    {metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}
+                  </span>
+                </div>
                 {urgente && (
                   <div className="flex justify-between">
                     <span className="text-gray-400 text-sm">Urgencia</span>
@@ -288,36 +377,63 @@ export default function Publicar() {
               </div>
             </div>
 
-            <div onClick={() => setSeguro(!seguro)}
-              className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition mb-4 ${seguro ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white'}`}>
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🛡️</span>
-                <div>
-                  <p className="font-semibold text-gray-900">Fleksi Protege</p>
-                  <p className="text-xs text-gray-400">Seguro por daños accidentales +$45 MXN</p>
+            {/* Fleksi Protege solo aplica en pagos con Stripe */}
+            {metodoPago === 'stripe' && (
+              <div onClick={() => setSeguro(!seguro)}
+                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition mb-4 ${seguro ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white'}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🛡️</span>
+                  <div>
+                    <p className="font-semibold text-gray-900">Fleksi Protege</p>
+                    <p className="text-xs text-gray-400">Seguro por daños accidentales +$45 MXN</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full transition-all ${seguro ? 'bg-purple-500' : 'bg-gray-300'}`}>
+                  <div className={`w-6 h-6 bg-white rounded-full shadow transition-all ${seguro ? 'translate-x-6' : 'translate-x-0'}`}/>
                 </div>
               </div>
-              <div className={`w-12 h-6 rounded-full transition-all ${seguro ? 'bg-purple-500' : 'bg-gray-300'}`}>
-                <div className={`w-6 h-6 bg-white rounded-full shadow transition-all ${seguro ? 'translate-x-6' : 'translate-x-0'}`}/>
-              </div>
-            </div>
+            )}
 
+            {/* Resumen de cobro */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-500 text-sm">Tu presupuesto</span>
                 <span className="font-semibold text-sm">${presupuesto} MXN</span>
               </div>
-              {seguro && (
+              {metodoPago === 'stripe' && seguro && (
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-500 text-sm">Fleksi Protege</span>
+                  <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
                   <span className="font-semibold text-sm">$45 MXN</span>
                 </div>
               )}
+              {metodoPago === 'efectivo' && (
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-500 text-sm">📊 Comisión efectivo (5%)</span>
+                  <span className="font-semibold text-sm text-orange-600">
+                    ${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)
+                  </span>
+                </div>
+              )}
               <div className="border-t border-gray-200 pt-2 flex justify-between">
-                <span className="font-extrabold text-gray-900">Total a pagar</span>
-                <span className="font-extrabold text-purple-600">${Number(presupuesto) + (seguro ? 45 : 0)} MXN</span>
+                <span className="font-extrabold text-gray-900">
+                  {metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}
+                </span>
+                <span className="font-extrabold text-purple-600">
+                  {metodoPago === 'stripe'
+                    ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN`
+                    : `$${presupuesto} MXN en efectivo`
+                  }
+                </span>
               </div>
             </div>
+
+            {metodoPago === 'efectivo' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+                <p className="text-amber-800 text-xs font-semibold">
+                  💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
