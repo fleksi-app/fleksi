@@ -48,17 +48,15 @@ export default function Wallet() {
 
     setProcesando(true);
     try {
-      // Descontar del saldo
       await supabase.from('usuarios')
         .update({ wallet_saldo: (usuario.wallet_saldo || 0) - monto })
         .eq('id', usuario.id);
 
-      // Registrar movimiento
       await supabase.from('wallet_movimientos').insert({
         usuario_id: usuario.id,
         tipo: 'retiro',
         monto: -monto,
-        descripcion: `Retiro a CLABE ${clabe.slice(-4).padStart(18, '•')}`,
+        descripcion: `Retiro a CLABE ••••${clabe.slice(-4)}`,
       });
 
       setMensaje('✅ Retiro solicitado. Lo recibirás en 1-3 días hábiles.');
@@ -74,6 +72,7 @@ export default function Wallet() {
   };
 
   const tipoInfo: any = {
+    recarga: { emoji: '💳', color: 'text-teal-600', label: 'Recarga' },
     pago_recibido: { emoji: '💰', color: 'text-green-600', label: 'Pago recibido' },
     pago_enviado: { emoji: '💸', color: 'text-red-500', label: 'Pago enviado' },
     comision: { emoji: '📊', color: 'text-orange-500', label: 'Comisión Fleksi' },
@@ -85,7 +84,7 @@ export default function Wallet() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">Cargando wallet...</p>
         </div>
       </main>
@@ -95,11 +94,11 @@ export default function Wallet() {
   const saldo = usuario?.wallet_saldo || 0;
   const ingresos = movimientos.filter(m => m.monto > 0).reduce((acc, m) => acc + m.monto, 0);
   const egresos = movimientos.filter(m => m.monto < 0).reduce((acc, m) => acc + Math.abs(m.monto), 0);
+  const efectivoHabilitado = saldo >= 50;
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* Header wallet */}
       <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 px-6 pt-12 pb-20 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-10 -translate-x-8"/>
@@ -109,19 +108,27 @@ export default function Wallet() {
               <p className="text-white/70 text-sm font-semibold">Fleksi Wallet</p>
               <p className="text-white font-bold">{usuario?.nombre}</p>
             </div>
-            <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-2xl border border-white/30">
-              💳
-            </div>
+            <a href="/perfil" className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-2xl border border-white/30">
+              ←
+            </a>
           </div>
 
-          {/* Saldo principal */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-4">
             <p className="text-white/60 text-sm font-semibold mb-1">Saldo disponible</p>
             <p className="text-5xl font-extrabold text-white">${saldo.toFixed(2)}</p>
             <p className="text-white/50 text-sm mt-1">MXN</p>
           </div>
 
-          {/* Stats */}
+          {/* Badge pagos en efectivo */}
+          <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full mx-auto w-fit mb-4 ${
+            efectivoHabilitado ? 'bg-white/20 border border-white/30' : 'bg-white/10 border border-white/20'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${efectivoHabilitado ? 'bg-green-300 animate-pulse' : 'bg-white/30'}`}/>
+            <p className={`text-xs font-semibold ${efectivoHabilitado ? 'text-white' : 'text-white/50'}`}>
+              {efectivoHabilitado ? '💵 Pagos en efectivo habilitados' : '🔒 Recarga $50 para pagos en efectivo'}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/15 rounded-2xl p-3 border border-white/20 text-center">
               <p className="text-white/60 text-xs font-semibold">↑ Entradas</p>
@@ -137,11 +144,17 @@ export default function Wallet() {
 
       <div className="max-w-md mx-auto px-6 -mt-6">
 
-        {/* Botón retirar */}
-        <button onClick={() => setMostrarRetiro(true)} disabled={saldo <= 0}
-          className="w-full py-4 bg-white text-emerald-600 rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition mb-4 disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-100">
-          🏦 Retirar a mi cuenta
-        </button>
+        {/* Botones acción */}
+        <div className="flex gap-3 mb-4">
+          <a href="/wallet/recargar"
+            className="flex-1 py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-extrabold text-base shadow-lg hover:opacity-90 transition text-center">
+            💳 Recargar
+          </a>
+          <button onClick={() => setMostrarRetiro(true)} disabled={saldo <= 0}
+            className="flex-1 py-4 bg-white text-teal-600 rounded-2xl font-extrabold text-base shadow-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed border border-teal-100">
+            🏦 Retirar
+          </button>
+        </div>
 
         {mensaje && (
           <div className={`rounded-2xl p-4 mb-4 text-sm font-semibold text-center ${
@@ -151,11 +164,22 @@ export default function Wallet() {
           </div>
         )}
 
-        {/* Info comisiones */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
-          <p className="font-bold text-amber-800 text-sm mb-1">💡 Pagos en efectivo</p>
-          <p className="text-amber-700 text-xs">Se cobra una comisión del 5% a cada parte. Paga con Stripe y evita la comisión.</p>
-        </div>
+        {/* Info pagos en efectivo */}
+        {!efectivoHabilitado ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+            <p className="font-bold text-amber-800 text-sm mb-1">💡 ¿Cómo funciona el efectivo?</p>
+            <p className="text-amber-700 text-xs mb-2">Mantén $50+ en tu wallet para aceptar y ofrecer trabajos con pago en efectivo. Se cobra 5% a cada parte.</p>
+            <a href="/wallet/recargar"
+              className="block w-full py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm text-center hover:opacity-90 transition">
+              Recargar ahora →
+            </a>
+          </div>
+        ) : (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4">
+            <p className="font-bold text-green-800 text-sm mb-1">✅ Pagos en efectivo activos</p>
+            <p className="text-green-700 text-xs">Puedes publicar y aplicar a trabajos con pago en efectivo. Se cobra 5% de comisión a cada parte.</p>
+          </div>
+        )}
 
         {/* Historial */}
         <h3 className="font-extrabold text-gray-900 mb-3">📋 Historial</h3>
@@ -200,7 +224,7 @@ export default function Wallet() {
             onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"/>
             <h3 className="font-extrabold text-gray-900 text-xl mb-1">Retirar fondos</h3>
-            <p className="text-gray-400 text-sm mb-5">Saldo disponible: <span className="font-bold text-emerald-600">${saldo.toFixed(2)} MXN</span></p>
+            <p className="text-gray-400 text-sm mb-5">Saldo disponible: <span className="font-bold text-teal-600">${saldo.toFixed(2)} MXN</span></p>
 
             <div className="flex flex-col gap-4">
               <div>
@@ -208,11 +232,11 @@ export default function Wallet() {
                 <input type="number" placeholder="Ej. 500"
                   value={montoRetiro} onChange={(e) => setMontoRetiro(e.target.value)}
                   max={saldo}
-                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-emerald-400 outline-none text-gray-900 text-lg font-bold"/>
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-lg font-bold"/>
                 <div className="flex gap-2 mt-2">
                   {[saldo*0.25, saldo*0.5, saldo*0.75, saldo].map((val, i) => (
                     <button key={i} onClick={() => setMontoRetiro(val.toFixed(2))}
-                      className="flex-1 py-1.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition">
+                      className="flex-1 py-1.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-xl hover:bg-teal-50 hover:text-teal-600 transition">
                       {['25%','50%','75%','Todo'][i]}
                     </button>
                   ))}
@@ -224,7 +248,7 @@ export default function Wallet() {
                 <input type="text" placeholder="000000000000000000"
                   value={clabe} onChange={(e) => setClabe(e.target.value.replace(/\D/g,'').slice(0,18))}
                   maxLength={18}
-                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-emerald-400 outline-none text-gray-900 font-mono tracking-widest"/>
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 font-mono tracking-widest"/>
                 <p className="text-xs text-gray-400 mt-1">{clabe.length}/18 dígitos</p>
               </div>
 
@@ -233,7 +257,7 @@ export default function Wallet() {
               </div>
 
               <button onClick={solicitarRetiro} disabled={procesando || !montoRetiro || !clabe || clabe.length !== 18}
-                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                className="w-full py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
                 {procesando ? 'Procesando...' : `Retirar $${montoRetiro || '0'} MXN`}
               </button>
             </div>
