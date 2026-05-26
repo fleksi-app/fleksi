@@ -99,7 +99,8 @@ export default function Wallet() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 px-6 pt-12 pb-20 relative overflow-hidden">
+      {/* Header sin overlap */}
+      <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 px-6 pt-12 pb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-10 -translate-x-8"/>
         <div className="max-w-md mx-auto relative">
@@ -108,7 +109,7 @@ export default function Wallet() {
               <p className="text-white/70 text-sm font-semibold">Fleksi Wallet</p>
               <p className="text-white font-bold">{usuario?.nombre}</p>
             </div>
-            <a href="/perfil" className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-2xl border border-white/30">
+            <a href="/perfil" className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-white font-bold text-lg border border-white/30">
               ←
             </a>
           </div>
@@ -120,7 +121,7 @@ export default function Wallet() {
           </div>
 
           {/* Badge pagos en efectivo */}
-          <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full mx-auto w-fit mb-4 ${
+          <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full mx-auto w-fit mb-5 ${
             efectivoHabilitado ? 'bg-white/20 border border-white/30' : 'bg-white/10 border border-white/20'
           }`}>
             <div className={`w-2 h-2 rounded-full ${efectivoHabilitado ? 'bg-green-300 animate-pulse' : 'bg-white/30'}`}/>
@@ -142,7 +143,8 @@ export default function Wallet() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-6">
+      {/* Contenido sin overlap */}
+      <div className="max-w-md mx-auto px-6 mt-5">
 
         {/* Botones acción */}
         <div className="flex gap-3 mb-4">
@@ -151,7 +153,7 @@ export default function Wallet() {
             💳 Recargar
           </a>
           <button onClick={() => setMostrarRetiro(true)} disabled={saldo <= 0}
-            className="flex-1 py-4 bg-white text-teal-600 rounded-2xl font-extrabold text-base shadow-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed border border-teal-100">
+            className="flex-1 py-4 bg-white text-teal-600 rounded-2xl font-extrabold text-base shadow-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed border-2 border-teal-100">
             🏦 Retirar
           </button>
         </div>
@@ -168,7 +170,7 @@ export default function Wallet() {
         {!efectivoHabilitado ? (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
             <p className="font-bold text-amber-800 text-sm mb-1">💡 ¿Cómo funciona el efectivo?</p>
-            <p className="text-amber-700 text-xs mb-2">Mantén $50+ en tu wallet para aceptar y ofrecer trabajos con pago en efectivo. Se cobra 5% a cada parte.</p>
+            <p className="text-amber-700 text-xs mb-3">Mantén $50+ en tu wallet para aceptar y ofrecer trabajos con pago en efectivo. Se cobra 5% a cada parte.</p>
             <a href="/wallet/recargar"
               className="block w-full py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm text-center hover:opacity-90 transition">
               Recargar ahora →
