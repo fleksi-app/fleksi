@@ -4,30 +4,36 @@ import { supabase } from '@/lib/supabase';
 
 export default function Nav({ activo }: { activo: string }) {
   const [rol, setRol] = useState('');
+  const [roles, setRoles] = useState<string[]>([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarNotifs, setMostrarNotifs] = useState(false);
+  const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [noLeidas, setNoLeidas] = useState(0);
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
   const [usuarioId, setUsuarioId] = useState('');
+  const [cambiandoRol, setCambiandoRol] = useState(false);
 
   useEffect(() => {
     const obtenerDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUsuarioId(user.id);
-      const { data } = await supabase.from('usuarios').select('rol').eq('id', user.id).single();
-      setRol(data?.rol || 'flekser');
+      const { data } = await supabase.from('usuarios')
+        .select('rol, rol_activo, roles')
+        .eq('id', user.id).single();
+      const rolActivo = data?.rol_activo || data?.rol || 'flekser';
+      const rolesUsuario = data?.roles || [data?.rol || 'flekser'];
+      setRol(rolActivo);
+      setRoles(rolesUsuario);
       cargarNotificaciones(user.id);
       cargarMensajesNoLeidos(user.id);
     };
     obtenerDatos();
   }, []);
 
-  // Realtime notificaciones
   useEffect(() => {
     if (!usuarioId) return;
-
     const canal = supabase
       .channel('notificaciones-nav')
       .on('postgres_changes', {
@@ -35,19 +41,14 @@ export default function Nav({ activo }: { activo: string }) {
         schema: 'public',
         table: 'notificaciones',
         filter: `usuario_id=eq.${usuarioId}`,
-      }, () => {
-        cargarNotificaciones(usuarioId);
-      })
+      }, () => { cargarNotificaciones(usuarioId); })
       .subscribe();
 
-    // BroadcastChannel para notificaciones desde el mismo dispositivo
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel('fleksi-notifs');
       bc.onmessage = (e) => {
-        if (e.data?.type === 'nueva_notificacion') {
-          cargarNotificaciones(usuarioId);
-        }
+        if (e.data?.type === 'nueva_notificacion') cargarNotificaciones(usuarioId);
       };
     } catch (e) {}
 
@@ -57,57 +58,35 @@ export default function Nav({ activo }: { activo: string }) {
     };
   }, [usuarioId]);
 
-  // Realtime mensajes
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase
       .channel('mensajes-nav')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'mensajes',
-        filter: `destinatario_id=eq.${usuarioId}`,
-      }, () => {
-        cargarMensajesNoLeidos(usuarioId);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'mensajes',
-        filter: `destinatario_id=eq.${usuarioId}`,
-      }, () => {
-        cargarMensajesNoLeidos(usuarioId);
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` }, () => { cargarMensajesNoLeidos(usuarioId); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` }, () => { cargarMensajesNoLeidos(usuarioId); })
       .subscribe();
     return () => { supabase.removeChannel(canal); };
   }, [usuarioId]);
 
   const cargarNotificaciones = async (uid: string) => {
     const { data } = await supabase
-      .from('notificaciones')
-      .select('*')
-      .eq('usuario_id', uid)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .from('notificaciones').select('*').eq('usuario_id', uid)
+      .order('created_at', { ascending: false }).limit(20);
     setNotificaciones(data || []);
     setNoLeidas((data || []).filter(n => !n.leida).length);
   };
 
   const cargarMensajesNoLeidos = async (uid: string) => {
     const { count } = await supabase
-      .from('mensajes')
-      .select('*', { count: 'exact', head: true })
-      .eq('destinatario_id', uid)
-      .eq('leido', false);
+      .from('mensajes').select('*', { count: 'exact', head: true })
+      .eq('destinatario_id', uid).eq('leido', false);
     setMensajesNoLeidos(count || 0);
   };
 
   const marcarLeidas = async () => {
     if (!usuarioId) return;
-    await supabase.from('notificaciones')
-      .update({ leida: true })
-      .eq('usuario_id', usuarioId)
-      .eq('leida', false);
+    await supabase.from('notificaciones').update({ leida: true })
+      .eq('usuario_id', usuarioId).eq('leida', false);
     setNoLeidas(0);
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
@@ -117,18 +96,41 @@ export default function Nav({ activo }: { activo: string }) {
     marcarLeidas();
   };
 
+  const agregarRol = async (nuevoRol: string) => {
+    if (!usuarioId || roles.includes(nuevoRol)) return;
+    const nuevosRoles = [...roles, nuevoRol];
+    await supabase.from('usuarios').update({ roles: nuevosRoles }).eq('id', usuarioId);
+    setRoles(nuevosRoles);
+  };
+
+  const cambiarRolActivo = async (nuevoRol: string) => {
+    if (!usuarioId || cambiandoRol) return;
+    setCambiandoRol(true);
+    try {
+      await supabase.from('usuarios').update({ rol_activo: nuevoRol }).eq('id', usuarioId);
+      setRol(nuevoRol);
+      setMostrarCambioRol(false);
+      if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
+      else if (nuevoRol === 'viajero') window.location.href = '/home-viajero';
+      else window.location.href = '/home';
+    } finally {
+      setCambiandoRol(false);
+    }
+  };
+
   const notifEmoji: any = {
-    nueva_aplicacion: '✋',
-    aplicacion_aceptada: '✅',
-    aplicacion_rechazada: '❌',
-    trabajo_completado: '🎉',
-    nuevo_trabajo: '🔔',
-    pago_liberado: '💰',
-    mensaje_nuevo: '💬',
+    nueva_aplicacion: '✋', aplicacion_aceptada: '✅', aplicacion_rechazada: '❌',
+    trabajo_completado: '🎉', nuevo_trabajo: '🔔', pago_liberado: '💰', mensaje_nuevo: '💬',
+  };
+
+  const rolInfo: any = {
+    flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
+    empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
+    viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
   };
 
   const esEmpresa = rol === 'empresa';
-  const inicio = esEmpresa ? '/home-empresa' : '/home';
+  const inicio = esEmpresa ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
   const trabajos = esEmpresa ? '/aplicaciones' : '/mis-trabajos';
 
@@ -141,8 +143,11 @@ export default function Nav({ activo }: { activo: string }) {
     { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil' },
   ];
 
+  const rolesDisponibles = ['flekser', 'empresa', 'viajero'];
+
   return (
     <>
+      {/* Modal notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
           onClick={() => setMostrarNotifs(false)}>
@@ -151,9 +156,7 @@ export default function Nav({ activo }: { activo: string }) {
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
               <h3 className="font-extrabold text-gray-900 text-lg">Notificaciones</h3>
               <button onClick={() => setMostrarNotifs(false)}
-                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-                ✕
-              </button>
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-3">
               {notificaciones.length === 0 ? (
@@ -169,26 +172,17 @@ export default function Nav({ activo }: { activo: string }) {
               ) : (
                 <div className="flex flex-col gap-2">
                   {notificaciones.map((n) => (
-                    <a key={n.id} href={n.link || '#'}
-                      onClick={() => setMostrarNotifs(false)}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${
-                        !n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'
-                      }`}>
-                      <span className="text-2xl flex-shrink-0 mt-0.5">
-                        {notifEmoji[n.tipo] || '🔔'}
-                      </span>
+                    <a key={n.id} href={n.link || '#'} onClick={() => setMostrarNotifs(false)}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'}`}>
+                      <span className="text-2xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo] || '🔔'}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
                         {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
                         <p className="text-xs text-gray-400 mt-1">
-                          {new Date(n.created_at).toLocaleString('es-MX', {
-                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                          })}
+                          {new Date(n.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                      {!n.leida && (
-                        <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>
-                      )}
+                      {!n.leida && <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>}
                     </a>
                   ))}
                 </div>
@@ -199,6 +193,65 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
+      {/* Modal cambio de rol */}
+      {mostrarCambioRol && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
+          onClick={() => setMostrarCambioRol(false)}>
+          <div className="w-full bg-white rounded-t-3xl p-6 pb-10"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"/>
+            <h3 className="font-extrabold text-gray-900 text-lg mb-1 text-center">Cambiar modo</h3>
+            <p className="text-gray-400 text-sm text-center mb-5">Alterna entre tus perfiles sin cerrar sesión</p>
+
+            <div className="flex flex-col gap-3 mb-5">
+              {rolesDisponibles.map((r) => {
+                const info = rolInfo[r];
+                const tieneRol = roles.includes(r);
+                const esActivo = rol === r;
+                return (
+                  <button key={r}
+                    onClick={() => tieneRol ? cambiarRolActivo(r) : agregarRol(r).then(() => cambiarRolActivo(r))}
+                    disabled={cambiandoRol}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${
+                      esActivo
+                        ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${
+                      esActivo ? 'bg-white/20' : 'bg-gray-100'
+                    }`}>
+                      {info.emoji}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className={`font-extrabold ${esActivo ? 'text-white' : 'text-gray-900'}`}>
+                        Modo {info.label}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${esActivo ? 'text-white/70' : 'text-gray-400'}`}>
+                        {r === 'flekser' ? 'Busca y ofrece servicios' :
+                         r === 'empresa' ? 'Gestiona tus solicitudes' :
+                         'Trabaja desde cualquier ciudad'}
+                      </p>
+                    </div>
+                    {esActivo ? (
+                      <span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span>
+                    ) : tieneRol ? (
+                      <span className="text-gray-400 text-xs">→</span>
+                    ) : (
+                      <span className="text-xs bg-purple-100 text-purple-600 font-bold px-2 py-1 rounded-full">+ Activar</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-xs text-gray-400 text-center">
+              Al activar un nuevo modo, se agrega a tu cuenta permanentemente
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nuevo */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-black/50 z-40 flex items-end"
           onClick={() => setMostrarModal(false)}>
@@ -228,6 +281,7 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
+      {/* Campanita */}
       <button onClick={abrirNotifs}
         className="fixed top-12 right-4 z-30 w-11 h-11 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -240,6 +294,17 @@ export default function Nav({ activo }: { activo: string }) {
         )}
       </button>
 
+      {/* Botón cambio de rol — solo si tiene más de un rol o puede agregar */}
+      <button onClick={() => setMostrarCambioRol(true)}
+        className="fixed top-12 left-4 z-30 h-11 px-3 bg-white rounded-full shadow-lg flex items-center gap-2 border border-gray-200">
+        <span className="text-base">{rolInfo[rol]?.emoji || '⚡'}</span>
+        <span className="text-xs font-extrabold text-gray-700">{rolInfo[rol]?.label || 'Flekser'}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-400">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+
+      {/* Nav inferior */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around items-center">
           {items.map((item: any) => {
