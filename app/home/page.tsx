@@ -43,7 +43,6 @@ export default function HomeWorker() {
       .from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
 
-    // Solo trabajos activos
     const { data: servicios } = await supabase
       .from('servicios')
       .select('*, usuarios(nombre, calificacion)')
@@ -53,19 +52,14 @@ export default function HomeWorker() {
 
     setTrabajos(servicios || []);
 
-    // Aplicaciones del usuario
     const { data: apps } = await supabase
       .from('aplicaciones')
       .select('servicio_id, estado')
       .eq('prestador_id', user.id);
 
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
-
-    // IDs de trabajos donde ya terminé (completado)
     setTrabajosCompletados(
-      (apps || [])
-        .filter(a => a.estado === 'completado')
-        .map(a => a.servicio_id)
+      (apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id)
     );
 
     setCargando(false);
@@ -94,7 +88,6 @@ export default function HomeWorker() {
       });
       setMostrarBannerPush(false);
     } catch (err) {
-      console.log('Push no disponible:', err);
       setMostrarBannerPush(false);
     }
   };
@@ -106,7 +99,6 @@ export default function HomeWorker() {
     cerrajeria: '🔑', estetica: '💅', otro: '✨'
   };
 
-  // Filtrar trabajos — excluir completados por este usuario
   const trabajosFiltrados = trabajos
     .filter(t => !trabajosCompletados.includes(t.id))
     .filter(t => {
@@ -130,31 +122,43 @@ export default function HomeWorker() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      <div className="bg-white px-6 pt-12 pb-6 shadow-sm">
-        <div className="max-w-md mx-auto">
-          <div className="flex justify-between items-center mb-6">
+      {/* Header Flekser — azul-morado vibrante */}
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 px-6 pt-12 pb-8 relative overflow-hidden">
+        {/* Decoración de fondo */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
+        <div className="max-w-md mx-auto relative">
+          <div className="flex justify-between items-center mb-5">
             <div>
-              <p className="text-gray-400 text-sm">{getSaludo()}</p>
-              <h1 className="text-xl font-extrabold text-gray-900">
-                {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} 👋
+              <p className="text-white/70 text-sm">{getSaludo()}</p>
+              <h1 className="text-2xl font-extrabold text-white">
+                {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} ⚡
               </h1>
             </div>
-            <a href="/perfil" className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+            <a href="/perfil" className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-white font-extrabold text-lg border border-white/30">
               {usuario?.nombre?.charAt(0).toUpperCase() || 'U'}
             </a>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 text-white">
-            <p className="text-sm opacity-80 mb-1">Trabajos disponibles hoy</p>
-            <p className="text-3xl font-extrabold">{trabajosFiltrados.length} <span className="text-lg font-normal">cerca de ti</span></p>
-            <p className="text-sm opacity-70 mt-1">↑ Nuevos trabajos publicados</p>
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
+            <p className="text-white/70 text-xs font-semibold mb-1">⚡ Trabajos disponibles ahora</p>
+            <div className="flex items-end gap-2">
+              <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
+              <p className="text-white/60 text-sm mb-1">cerca de ti</p>
+            </div>
+            <div className="flex gap-3 mt-2">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"/>
+                <span className="text-white/60 text-xs">En tiempo real</span>
+              </div>
+            </div>
           </div>
 
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
             <input type="text" placeholder="Buscar trabajos..."
               value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50"/>
+              className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
           </div>
         </div>
       </div>
@@ -169,24 +173,17 @@ export default function HomeWorker() {
             </div>
             <div className="flex-1">
               <p className="font-bold text-gray-900 text-sm">Activa las notificaciones</p>
-              <p className="text-xs text-gray-500 mt-0.5">Recibe avisos de nuevos trabajos y aplicaciones</p>
+              <p className="text-xs text-gray-500 mt-0.5">Recibe avisos de nuevos trabajos</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setMostrarBannerPush(false)}
-                className="text-xs text-gray-400 font-semibold px-2 py-1">
-                Ahora no
-              </button>
-              <button onClick={activarNotificaciones}
-                className="text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-3 py-1.5 rounded-xl">
-                Activar
-              </button>
+              <button onClick={() => setMostrarBannerPush(false)} className="text-xs text-gray-400 font-semibold px-2 py-1">Ahora no</button>
+              <button onClick={activarNotificaciones} className="text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold px-3 py-1.5 rounded-xl">Activar</button>
             </div>
           </div>
         </div>
       )}
 
       <div className="max-w-md mx-auto px-6 py-4">
-
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
@@ -219,29 +216,23 @@ export default function HomeWorker() {
                 <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
                   <div className="flex gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
                       {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-bold text-gray-900 text-sm leading-tight">{trabajo.titulo}</h3>
                         {trabajo.urgente && (
-                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-                            🔴 Urgente
-                          </span>
+                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">🔴 Urgente</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {trabajo.usuarios?.nombre || 'Cliente verificado'}
-                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{trabajo.usuarios?.nombre || 'Cliente verificado'}</p>
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
                           <p className="font-extrabold text-purple-600 text-sm">${trabajo.presupuesto} MXN</p>
                           <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${
-                            yaAplico
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                            yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                           }`}>
                             {yaAplico ? '✅ Aplicado' : 'Aplicar'}
                           </span>
@@ -254,11 +245,9 @@ export default function HomeWorker() {
             })}
           </div>
         )}
-
       </div>
 
       <Nav activo="inicio" />
-
     </main>
   );
 }

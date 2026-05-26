@@ -47,95 +47,106 @@ export default function HomeEmpresa() {
 
   const estadoColor = (estado: string) => {
     const colores: { [key: string]: string } = {
-      activo: 'bg-blue-100 text-blue-600',
-      publicado: 'bg-blue-100 text-blue-600',
-      en_proceso: 'bg-yellow-100 text-yellow-600',
-      completado: 'bg-green-100 text-green-600',
-      pagado: 'bg-green-100 text-green-600',
-      cancelado: 'bg-red-100 text-red-600',
+      activo: 'bg-blue-100 text-blue-700',
+      publicado: 'bg-blue-100 text-blue-700',
+      en_proceso: 'bg-amber-100 text-amber-700',
+      completado: 'bg-emerald-100 text-emerald-700',
+      pagado: 'bg-emerald-100 text-emerald-700',
+      cancelado: 'bg-red-100 text-red-700',
     };
     return colores[estado] || 'bg-gray-100 text-gray-600';
   };
 
   const estadoLabel = (estado: string) => {
     const labels: { [key: string]: string } = {
-      activo: '🟢 Activo',
-      publicado: '🟢 Publicado',
-      en_proceso: '🔄 En proceso',
-      completado: '✅ Completado',
-      pagado: '💰 Pagado',
-      cancelado: '❌ Cancelado',
+      activo: '● Activo',
+      publicado: '● Publicado',
+      en_proceso: '↻ En proceso',
+      completado: '✓ Completado',
+      pagado: '✓ Pagado',
+      cancelado: '✕ Cancelado',
     };
     return labels[estado] || estado;
   };
 
   if (cargando) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Cargando panel...</p>
+          <div className="w-12 h-12 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Cargando panel...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
+    <main className="min-h-screen bg-slate-50 pb-32">
 
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20">
-        <div className="max-w-md mx-auto">
-          <div className="flex justify-between items-start mb-2">
+      {/* Header Empresa — slate/azul marino corporativo */}
+      <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-blue-900 px-6 pt-12 pb-20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-16 translate-x-16"/>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-8"/>
+        {/* Grid decorativo sutil */}
+        <div className="absolute inset-0 opacity-5"
+          style={{backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '20px 20px'}}/>
+
+        <div className="max-w-md mx-auto relative">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <p className="text-white/70 text-sm font-medium">Panel empresarial</p>
-              <h1 className="text-white font-extrabold text-2xl">{usuario?.nombre}</h1>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"/>
+                <p className="text-white/50 text-xs font-semibold tracking-widest uppercase">Panel empresarial</p>
+              </div>
+              <h1 className="text-2xl font-extrabold text-white">{usuario?.nombre}</h1>
             </div>
             <a href="/perfil-empresa"
-              className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center text-white text-lg">
+              className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-xl border border-white/20 hover:bg-white/20 transition">
               🏢
             </a>
+          </div>
+
+          {/* Stats compactas */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { valor: stats.activos, label: 'Activos', color: 'text-blue-300' },
+              { valor: stats.prestadores, label: 'Profesionales', color: 'text-purple-300' },
+              { valor: stats.completados, label: 'Completados', color: 'text-emerald-300' },
+              { valor: `$${stats.gasto > 999 ? (stats.gasto/1000).toFixed(1)+'k' : stats.gasto}`, label: 'Invertido', color: 'text-amber-300' },
+            ].map((s, i) => (
+              <div key={i} className="bg-white/10 rounded-xl p-2.5 text-center border border-white/10">
+                <p className={`text-xl font-extrabold ${s.color}`}>{s.valor}</p>
+                <p className="text-white/40 text-xs mt-0.5 leading-tight">{s.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-12">
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-3xl font-extrabold text-blue-600">{stats.activos}</p>
-            <p className="text-xs text-gray-400 mt-1">Servicios activos</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-3xl font-extrabold text-purple-600">{stats.prestadores}</p>
-            <p className="text-xs text-gray-400 mt-1">Prestadores contratados</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-3xl font-extrabold text-green-600">{stats.completados}</p>
-            <p className="text-xs text-gray-400 mt-1">Trabajos completados</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-3xl font-extrabold text-gray-900">${stats.gasto.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 mt-1">Gasto total MXN</p>
-          </div>
-        </div>
+      <div className="max-w-md mx-auto px-6 -mt-6">
 
         <a href="/publicar"
-          className="flex items-center justify-between w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl p-5 mb-4 shadow-lg hover:opacity-90 transition">
+          className="flex items-center justify-between w-full bg-gradient-to-r from-slate-700 to-blue-800 text-white rounded-2xl p-5 mb-5 shadow-lg hover:opacity-90 transition border border-slate-600">
           <div>
-            <p className="font-extrabold text-lg">Publicar nuevo servicio</p>
-            <p className="text-white/70 text-sm">Encuentra al prestador ideal</p>
+            <p className="font-extrabold text-lg">+ Nuevo servicio</p>
+            <p className="text-white/60 text-sm">Publica y encuentra al profesional ideal</p>
           </div>
-          <span className="text-3xl">+</span>
+          <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-2xl">
+            📋
+          </div>
         </a>
 
         <div className="mb-4">
-          <h2 className="font-extrabold text-gray-900 text-lg mb-3">Mis servicios</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-extrabold text-slate-800 text-lg">Mis servicios</h2>
+            <span className="text-xs text-slate-400 font-semibold">{servicios.length} total</span>
+          </div>
 
           {servicios.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+            <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100">
               <p className="text-4xl mb-3">📋</p>
-              <p className="font-bold text-gray-900 mb-1">Sin servicios publicados</p>
-              <p className="text-gray-400 text-sm">Publica tu primer servicio para encontrar talento</p>
+              <p className="font-bold text-slate-700 mb-1">Sin servicios publicados</p>
+              <p className="text-slate-400 text-sm">Publica tu primer servicio para encontrar profesionales</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -148,37 +159,37 @@ export default function HomeEmpresa() {
                 );
 
                 return (
-                  <div key={servicio.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <div key={servicio.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 pr-3">
-                        <h3 className="font-extrabold text-gray-900 mb-1">{servicio.titulo}</h3>
-                        <p className="text-xs text-gray-400">📅 {servicio.fecha} {servicio.hora?.slice(0,5)}</p>
+                        <h3 className="font-extrabold text-slate-800 mb-1">{servicio.titulo}</h3>
+                        <p className="text-xs text-slate-400">📅 {servicio.fecha} {servicio.hora?.slice(0,5)}</p>
                       </div>
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${estadoColor(servicio.estado)}`}>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-lg ${estadoColor(servicio.estado)}`}>
                         {estadoLabel(servicio.estado)}
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-purple-600 font-extrabold">${servicio.presupuesto} MXN</span>
-                      <span className="text-xs text-gray-400">{servicio.categoria}</span>
+                    <div className="flex justify-between items-center mb-3 py-2 border-y border-slate-50">
+                      <span className="text-blue-700 font-extrabold">${servicio.presupuesto} MXN</span>
+                      <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{servicio.categoria}</span>
                     </div>
 
                     {aplicacionesAceptadas.length > 0 && (
-                      <div className="bg-green-50 rounded-xl p-3 mb-3">
-                        <p className="text-xs font-bold text-green-700 mb-2">✅ Prestadores contratados</p>
+                      <div className="bg-emerald-50 rounded-xl p-3 mb-3 border border-emerald-100">
+                        <p className="text-xs font-bold text-emerald-700 mb-2">✓ Profesionales confirmados</p>
                         <div className="flex flex-col gap-2">
                           {aplicacionesAceptadas.map((app: any) => (
                             <div key={app.id} className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-600 to-blue-700 flex items-center justify-center flex-shrink-0">
                                 {app.usuarios?.foto_url ? (
-                                  <img src={app.usuarios.foto_url} className="w-full h-full object-cover rounded-full"/>
+                                  <img src={app.usuarios.foto_url} className="w-full h-full object-cover rounded-lg"/>
                                 ) : (
                                   <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>
                                 )}
                               </div>
-                              <span className="text-sm font-semibold text-gray-700">{app.usuarios?.nombre}</span>
-                              <span className="text-xs text-yellow-500 ml-auto">⭐ {app.usuarios?.calificacion || '5.0'}</span>
+                              <span className="text-sm font-semibold text-slate-700">{app.usuarios?.nombre}</span>
+                              <span className="text-xs text-amber-500 ml-auto">⭐ {app.usuarios?.calificacion || '5.0'}</span>
                             </div>
                           ))}
                         </div>
@@ -186,9 +197,9 @@ export default function HomeEmpresa() {
                     )}
 
                     {aplicacionesPendientes.length > 0 && (
-                      <div className="bg-yellow-50 rounded-xl p-3 mb-3">
-                        <p className="text-xs font-bold text-yellow-700">
-                          ⏳ {aplicacionesPendientes.length} aplicación{aplicacionesPendientes.length !== 1 ? 'es' : ''} pendiente{aplicacionesPendientes.length !== 1 ? 's' : ''}
+                      <div className="bg-amber-50 rounded-xl p-3 mb-3 border border-amber-100">
+                        <p className="text-xs font-bold text-amber-700">
+                          ⏳ {aplicacionesPendientes.length} propuesta{aplicacionesPendientes.length !== 1 ? 's' : ''} recibida{aplicacionesPendientes.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     )}
@@ -196,12 +207,12 @@ export default function HomeEmpresa() {
                     <div className="flex gap-2">
                       {aplicacionesPendientes.length > 0 && (
                         <a href={`/aplicaciones?servicio=${servicio.id}`}
-                          className="flex-1 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-sm text-center">
-                          Ver aplicaciones
+                          className="flex-1 py-2.5 bg-gradient-to-r from-slate-700 to-blue-800 text-white rounded-xl font-semibold text-sm text-center">
+                          Ver propuestas
                         </a>
                       )}
                       <a href={`/trabajo?id=${servicio.id}`}
-                        className="flex-1 py-2 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm text-center hover:border-purple-400 transition">
+                        className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold text-sm text-center hover:border-slate-400 transition">
                         Ver detalle
                       </a>
                     </div>
@@ -211,11 +222,9 @@ export default function HomeEmpresa() {
             </div>
           )}
         </div>
-
       </div>
 
       <Nav activo="inicio" />
-
     </main>
   );
 }
