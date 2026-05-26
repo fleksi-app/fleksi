@@ -10,9 +10,7 @@ function urlBase64ToUint8Array(base64String: string) {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
 
@@ -32,6 +30,12 @@ export default function HomeWorker() {
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
   const [trabajosCompletados, setTrabajosCompletados] = useState<string[]>([]);
   const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
+  const [mostrarNotifs, setMostrarNotifs] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [cambiandoRol, setCambiandoRol] = useState(false);
 
   // Filtros
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
@@ -47,35 +51,22 @@ export default function HomeWorker() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
-
-    const { data: servicios } = await supabase
-      .from('servicios')
+    setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
+    const { data: servicios } = await supabase.from('servicios')
       .select('*, usuarios(nombre, calificacion, ciudad)')
-      .eq('estado', 'activo')
-      .neq('cliente_id', user.id)
+      .eq('estado', 'activo').neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
-
     setTrabajos(servicios || []);
-
-    const { data: apps } = await supabase
-      .from('aplicaciones')
-      .select('servicio_id, estado')
-      .eq('prestador_id', user.id);
-
+    const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
-    setTrabajosCompletados(
-      (apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id)
-    );
-
+    setTrabajosCompletados((apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id));
+    const { data: notifs } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
+    setNotificaciones(notifs || []);
+    setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
-
-    if ('Notification' in window && Notification.permission === 'default') {
-      setMostrarBannerPush(true);
-    }
+    if ('Notification' in window && Notification.permission === 'default') setMostrarBannerPush(true);
   };
 
   const activarNotificaciones = async () => {
@@ -90,54 +81,50 @@ export default function HomeWorker() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
       });
-      await fetch('/api/push', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
-      });
+      await fetch('/api/push', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }) });
       setMostrarBannerPush(false);
-    } catch (err) {
-      setMostrarBannerPush(false);
-    }
+    } catch (err) { setMostrarBannerPush(false); }
+  };
+
+  const abrirNotifs = async () => {
+    setMostrarNotifs(true);
+    if (!usuario) return;
+    await supabase.from('notificaciones').update({ leida: true }).eq('usuario_id', usuario.id).eq('leida', false);
+    setNoLeidas(0);
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  const cambiarRol = async (nuevoRol: string) => {
+    if (!usuario || cambiandoRol) return;
+    setCambiandoRol(true);
+    const rolesActuales = roles.includes(nuevoRol) ? roles : [...roles, nuevoRol];
+    await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
+    setMostrarCambioRol(false);
+    if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
+    else if (nuevoRol === 'viajero') window.location.href = '/home-viajero';
+    setCambiandoRol(false);
   };
 
   const limpiarFiltros = () => {
-    setFiltroCiudad('');
-    setFiltroPresupuestoMin('');
-    setFiltroPresupuestoMax('');
-    setFiltroFecha('');
-    setFiltroUrgente(false);
-    setFiltroSeguro(false);
+    setFiltroCiudad(''); setFiltroPresupuestoMin(''); setFiltroPresupuestoMax('');
+    setFiltroFecha(''); setFiltroUrgente(false); setFiltroSeguro(false);
     setCategoriaActiva('Todos');
   };
 
-  const filtrosActivos = [
-    filtroCiudad,
-    filtroPresupuestoMin,
-    filtroPresupuestoMax,
-    filtroFecha,
-    filtroUrgente,
-    filtroSeguro,
-    categoriaActiva !== 'Todos',
-  ].filter(Boolean).length;
+  const filtrosActivos = [filtroCiudad, filtroPresupuestoMin, filtroPresupuestoMax, filtroFecha, filtroUrgente, filtroSeguro, categoriaActiva !== 'Todos'].filter(Boolean).length;
 
   const categoriaEmoji: any = {
-    hogar: '🔧', limpieza: '🧹', eventos: '🍽️',
-    mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️',
-    cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
+    hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
+    interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
     cerrajeria: '🔑', estetica: '💅', otro: '✨'
   };
 
   const trabajosFiltrados = trabajos
     .filter(t => !trabajosCompletados.includes(t.id))
     .filter(t => {
-      const matchCat = categoriaActiva === 'Todos' ||
-        t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
-      const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
-      const matchCiudad = !filtroCiudad ||
-        t.usuarios?.ciudad?.toLowerCase().includes(filtroCiudad.toLowerCase()) ||
-        t.direccion?.toLowerCase().includes(filtroCiudad.toLowerCase());
+      const matchCat = categoriaActiva === 'Todos' || t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
+      const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
+      const matchCiudad = !filtroCiudad || t.usuarios?.ciudad?.toLowerCase().includes(filtroCiudad.toLowerCase()) || t.direccion?.toLowerCase().includes(filtroCiudad.toLowerCase());
       const matchMin = !filtroPresupuestoMin || t.presupuesto >= Number(filtroPresupuestoMin);
       const matchMax = !filtroPresupuestoMax || t.presupuesto <= Number(filtroPresupuestoMax);
       const matchFecha = !filtroFecha || t.fecha === filtroFecha;
@@ -145,6 +132,13 @@ export default function HomeWorker() {
       const matchSeguro = !filtroSeguro || t.seguro === true;
       return matchCat && matchBusqueda && matchCiudad && matchMin && matchMax && matchFecha && matchUrgente && matchSeguro;
     });
+
+  const notifEmoji: any = { nueva_aplicacion: '✋', aplicacion_aceptada: '✅', aplicacion_rechazada: '❌', trabajo_completado: '🎉', nuevo_trabajo: '🔔', pago_liberado: '💰', mensaje_nuevo: '💬' };
+  const rolInfo: any = {
+    flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
+    empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
+    viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
+  };
 
   if (cargando) {
     return (
@@ -160,30 +154,41 @@ export default function HomeWorker() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* Header */}
       <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 px-6 pt-12 pb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
         <div className="max-w-md mx-auto relative">
-          <div className="flex justify-between items-center mb-5">
-            <div>
-              <p className="text-white/70 text-sm">{getSaludo()}</p>
-              <h1 className="text-2xl font-extrabold text-white">
-                {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} ⚡
-              </h1>
-            </div>
-            <a href="/perfil" className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-white font-extrabold text-lg border border-white/30">
-              {usuario?.nombre?.charAt(0).toUpperCase() || 'U'}
-            </a>
+
+          {/* Barra superior: rol + campanita */}
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setMostrarCambioRol(true)}
+              className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
+              <span className="text-sm">⚡</span>
+              <span className="text-white text-xs font-extrabold">Flekser</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <button onClick={abrirNotifs} className="relative w-9 h-9 bg-white/15 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/25 transition">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+              {noLeidas > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
+                  {noLeidas > 9 ? '9+' : noLeidas}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-white/70 text-sm">{getSaludo()}</p>
+            <h1 className="text-2xl font-extrabold text-white">{usuario?.nombre?.split(' ')[0] || 'Bienvenido'} ⚡</h1>
           </div>
 
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
             <p className="text-white/70 text-xs font-semibold mb-1">⚡ Trabajos disponibles ahora</p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
-              <p className="text-white/60 text-sm mb-1">
-                {filtrosActivos > 0 ? 'con tus filtros' : 'cerca de ti'}
-              </p>
+              <p className="text-white/60 text-sm mb-1">{filtrosActivos > 0 ? 'con tus filtros' : 'cerca de ti'}</p>
             </div>
             <div className="flex items-center gap-1 mt-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"/>
@@ -191,7 +196,6 @@ export default function HomeWorker() {
             </div>
           </div>
 
-          {/* Búsqueda + botón filtros */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
@@ -202,12 +206,10 @@ export default function HomeWorker() {
             <button onClick={() => setMostrarFiltros(true)}
               className="relative w-12 h-12 bg-white/15 border border-white/25 rounded-2xl flex items-center justify-center text-white hover:bg-white/25 transition flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="4" y1="6" x2="20" y2="6"/>
-                <line x1="7" y1="12" x2="17" y2="12"/>
-                <line x1="10" y1="18" x2="14" y2="18"/>
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
               </svg>
               {filtrosActivos > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border-2 border-white">
                   {filtrosActivos}
                 </span>
               )}
@@ -220,9 +222,7 @@ export default function HomeWorker() {
         <div className="max-w-md mx-auto px-6 pt-4">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-              </svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
             </div>
             <div className="flex-1">
               <p className="font-bold text-gray-900 text-sm">Activa las notificaciones</p>
@@ -237,57 +237,23 @@ export default function HomeWorker() {
       )}
 
       <div className="max-w-md mx-auto px-6 py-4">
-
-        {/* Categorías */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-                categoriaActiva === cat
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
-                  : 'bg-white text-gray-500 border-2 border-gray-200'
-              }`}>
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${categoriaActiva === cat ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md' : 'bg-white text-gray-500 border-2 border-gray-200'}`}>
               {cat}
             </button>
           ))}
         </div>
 
-        {/* Chips de filtros activos */}
         {filtrosActivos > 0 && (
           <div className="flex gap-2 flex-wrap mb-4">
-            {filtroCiudad && (
-              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
-                📍 {filtroCiudad}
-                <button onClick={() => setFiltroCiudad('')} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
-              </span>
-            )}
-            {(filtroPresupuestoMin || filtroPresupuestoMax) && (
-              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
-                💰 ${filtroPresupuestoMin || '0'} - ${filtroPresupuestoMax || '∞'}
-                <button onClick={() => { setFiltroPresupuestoMin(''); setFiltroPresupuestoMax(''); }} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
-              </span>
-            )}
-            {filtroFecha && (
-              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
-                📅 {filtroFecha}
-                <button onClick={() => setFiltroFecha('')} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
-              </span>
-            )}
-            {filtroUrgente && (
-              <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-full font-semibold">
-                🔴 Urgentes
-                <button onClick={() => setFiltroUrgente(false)} className="ml-1 text-red-400 hover:text-red-600">✕</button>
-              </span>
-            )}
-            {filtroSeguro && (
-              <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full font-semibold">
-                🛡️ Con seguro
-                <button onClick={() => setFiltroSeguro(false)} className="ml-1 text-blue-400 hover:text-blue-600">✕</button>
-              </span>
-            )}
-            <button onClick={limpiarFiltros} className="text-xs text-gray-400 font-semibold px-3 py-1.5 rounded-full border border-gray-200 hover:border-red-300 hover:text-red-500 transition">
-              Limpiar todo
-            </button>
+            {filtroCiudad && <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">📍 {filtroCiudad}<button onClick={() => setFiltroCiudad('')} className="ml-1 text-purple-400">✕</button></span>}
+            {(filtroPresupuestoMin || filtroPresupuestoMax) && <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">💰 ${filtroPresupuestoMin || '0'}-${filtroPresupuestoMax || '∞'}<button onClick={() => { setFiltroPresupuestoMin(''); setFiltroPresupuestoMax(''); }} className="ml-1 text-purple-400">✕</button></span>}
+            {filtroFecha && <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">📅 {filtroFecha}<button onClick={() => setFiltroFecha('')} className="ml-1 text-purple-400">✕</button></span>}
+            {filtroUrgente && <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-full font-semibold">🔴 Urgentes<button onClick={() => setFiltroUrgente(false)} className="ml-1 text-red-400">✕</button></span>}
+            {filtroSeguro && <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full font-semibold">🛡️ Con seguro<button onClick={() => setFiltroSeguro(false)} className="ml-1 text-blue-400">✕</button></span>}
+            <button onClick={limpiarFiltros} className="text-xs text-gray-400 font-semibold px-3 py-1.5 rounded-full border border-gray-200">Limpiar todo</button>
           </div>
         )}
 
@@ -301,20 +267,14 @@ export default function HomeWorker() {
             <p className="text-4xl mb-4">🔍</p>
             <p className="font-bold text-gray-900 mb-2">No hay trabajos con esos filtros</p>
             <p className="text-gray-400 text-sm mb-4">Prueba cambiando los filtros</p>
-            {filtrosActivos > 0 && (
-              <button onClick={limpiarFiltros}
-                className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
-                Limpiar filtros
-              </button>
-            )}
+            {filtrosActivos > 0 && <button onClick={limpiarFiltros} className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">Limpiar filtros</button>}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {trabajosFiltrados.map((trabajo) => {
               const yaAplico = aplicacionesUsuario.includes(trabajo.id);
               return (
-                <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
+                <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
                   <div className="flex gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
                       {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
@@ -322,25 +282,17 @@ export default function HomeWorker() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-bold text-gray-900 text-sm leading-tight">{trabajo.titulo}</h3>
-                        {trabajo.urgente && (
-                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">🔴 Urgente</span>
-                        )}
+                        {trabajo.urgente && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">🔴 Urgente</span>}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-xs text-gray-400">{trabajo.usuarios?.nombre || 'Cliente verificado'}</p>
-                        {trabajo.usuarios?.ciudad && (
-                          <span className="text-xs bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded-full font-semibold">
-                            📍 {trabajo.usuarios.ciudad}
-                          </span>
-                        )}
+                        {trabajo.usuarios?.ciudad && <span className="text-xs bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded-full font-semibold">📍 {trabajo.usuarios.ciudad}</span>}
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
                           <p className="font-extrabold text-purple-600 text-sm">${trabajo.presupuesto} MXN</p>
-                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${
-                            yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                          }`}>
+                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'}`}>
                             {yaAplico ? '✅ Aplicado' : 'Aplicar'}
                           </span>
                         </div>
@@ -354,158 +306,159 @@ export default function HomeWorker() {
         )}
       </div>
 
-      {/* Panel de filtros — bottom sheet */}
+      {/* Panel filtros */}
       {mostrarFiltros && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
-          onClick={() => setMostrarFiltros(false)}>
-          <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}>
-
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarFiltros(false)}>
+          <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-extrabold text-gray-900 text-lg">Filtros</h3>
-                {filtrosActivos > 0 && (
-                  <p className="text-xs text-purple-600 font-semibold">{filtrosActivos} filtro{filtrosActivos !== 1 ? 's' : ''} activo{filtrosActivos !== 1 ? 's' : ''}</p>
-                )}
+                {filtrosActivos > 0 && <p className="text-xs text-purple-600 font-semibold">{filtrosActivos} filtro{filtrosActivos !== 1 ? 's' : ''} activo{filtrosActivos !== 1 ? 's' : ''}</p>}
               </div>
               <div className="flex items-center gap-3">
-                {filtrosActivos > 0 && (
-                  <button onClick={limpiarFiltros} className="text-sm text-red-500 font-semibold">Limpiar</button>
-                )}
-                <button onClick={() => setMostrarFiltros(false)}
-                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+                {filtrosActivos > 0 && <button onClick={limpiarFiltros} className="text-sm text-red-500 font-semibold">Limpiar</button>}
+                <button onClick={() => setMostrarFiltros(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
               </div>
             </div>
-
             <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-5">
-
-              {/* Ciudad */}
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">📍 Ciudad</label>
-                <input type="text" placeholder="Ej. Guadalajara, Monterrey, CDMX..."
-                  value={filtroCiudad} onChange={(e) => setFiltroCiudad(e.target.value)}
+                <input type="text" placeholder="Ej. Guadalajara, Monterrey, CDMX..." value={filtroCiudad} onChange={(e) => setFiltroCiudad(e.target.value)}
                   className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
               </div>
-
-              {/* Presupuesto */}
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Presupuesto (MXN)</label>
                 <div className="flex gap-3">
-                  <div className="flex-1">
-                    <input type="number" placeholder="Mínimo"
-                      value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)}
-                      className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
-                  </div>
+                  <input type="number" placeholder="Mínimo" value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
                   <div className="flex items-center text-gray-400 font-bold">—</div>
-                  <div className="flex-1">
-                    <input type="number" placeholder="Máximo"
-                      value={filtroPresupuestoMax} onChange={(e) => setFiltroPresupuestoMax(e.target.value)}
-                      className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
-                  </div>
+                  <input type="number" placeholder="Máximo" value={filtroPresupuestoMax} onChange={(e) => setFiltroPresupuestoMax(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
                 </div>
-                {/* Rangos rápidos */}
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  {[['0','500'],['500','1000'],['1000','3000'],['3000','']].map(([min, max], i) => (
-                    <button key={i}
-                      onClick={() => { setFiltroPresupuestoMin(min); setFiltroPresupuestoMax(max); }}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
-                        filtroPresupuestoMin === min && filtroPresupuestoMax === max
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 text-gray-500'
-                      }`}>
+                  {[['0','500'],['500','1000'],['1000','3000'],['3000','']].map(([min,max],i) => (
+                    <button key={i} onClick={() => { setFiltroPresupuestoMin(min); setFiltroPresupuestoMax(max); }}
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${filtroPresupuestoMin===min&&filtroPresupuestoMax===max ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
                       {max ? `$${min}-$${max}` : `$${min}+`}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Fecha */}
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">📅 Fecha</label>
-                <input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}
-                  className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
-                {/* Fechas rápidas */}
+                <input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)} className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
                 <div className="flex gap-2 mt-2">
-                  {[
-                    ['Hoy', new Date().toISOString().split('T')[0]],
-                    ['Mañana', new Date(Date.now()+86400000).toISOString().split('T')[0]],
-                    ['Esta semana', ''],
-                  ].map(([label, val], i) => (
-                    <button key={i}
-                      onClick={() => val ? setFiltroFecha(val) : null}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
-                        filtroFecha === val && val
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 text-gray-500'
-                      }`}>
+                  {[['Hoy', new Date().toISOString().split('T')[0]], ['Mañana', new Date(Date.now()+86400000).toISOString().split('T')[0]]].map(([label,val],i) => (
+                    <button key={i} onClick={() => setFiltroFecha(val)}
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${filtroFecha===val ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Categoría */}
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">🏷️ Categoría</label>
                 <div className="flex flex-wrap gap-2">
                   {categorias.map((cat) => (
                     <button key={cat} onClick={() => setCategoriaActiva(cat)}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
-                        categoriaActiva === cat
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 text-gray-500'
-                      }`}>
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${categoriaActiva===cat ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
                       {cat}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Toggles */}
               <div className="flex flex-col gap-3">
-                <div onClick={() => setFiltroUrgente(!filtroUrgente)}
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${
-                    filtroUrgente ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
-                  }`}>
+                <div onClick={() => setFiltroUrgente(!filtroUrgente)} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${filtroUrgente ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🔴</span>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">Solo urgentes</p>
-                      <p className="text-xs text-gray-400">Trabajos marcados como urgentes</p>
-                    </div>
+                    <div><p className="font-semibold text-gray-900 text-sm">Solo urgentes</p><p className="text-xs text-gray-400">Trabajos marcados como urgentes</p></div>
                   </div>
                   <div className={`w-11 h-6 rounded-full transition-all ${filtroUrgente ? 'bg-red-500' : 'bg-gray-200'}`}>
                     <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroUrgente ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
                   </div>
                 </div>
-
-                <div onClick={() => setFiltroSeguro(!filtroSeguro)}
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${
-                    filtroSeguro ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'
-                  }`}>
+                <div onClick={() => setFiltroSeguro(!filtroSeguro)} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${filtroSeguro ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🛡️</span>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">Con Fleksi Protege</p>
-                      <p className="text-xs text-gray-400">Trabajos con seguro incluido</p>
-                    </div>
+                    <div><p className="font-semibold text-gray-900 text-sm">Con Fleksi Protege</p><p className="text-xs text-gray-400">Trabajos con seguro incluido</p></div>
                   </div>
                   <div className={`w-11 h-6 rounded-full transition-all ${filtroSeguro ? 'bg-purple-500' : 'bg-gray-200'}`}>
                     <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroSeguro ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
                   </div>
                 </div>
               </div>
-
             </div>
-
-            {/* Botón aplicar */}
             <div className="px-6 py-4 border-t border-gray-100">
-              <button onClick={() => setMostrarFiltros(false)}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition">
+              <button onClick={() => setMostrarFiltros(false)} className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition">
                 Ver {trabajosFiltrados.length} trabajo{trabajosFiltrados.length !== 1 ? 's' : ''}
               </button>
             </div>
             <div className="pb-6"/>
+          </div>
+        </div>
+      )}
+
+      {/* Modal notificaciones */}
+      {mostrarNotifs && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
+          <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
+              <h3 className="font-extrabold text-gray-900 text-lg">Notificaciones</h3>
+              <button onClick={() => setMostrarNotifs(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-3">
+              {notificaciones.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-4xl mb-3">🔔</p>
+                  <p className="font-bold text-gray-900 mb-1">Sin notificaciones</p>
+                  <p className="text-gray-400 text-sm">Aquí verás tus actualizaciones</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {notificaciones.map((n) => (
+                    <a key={n.id} href={n.link || '#'} onClick={() => setMostrarNotifs(false)}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'}`}>
+                      <span className="text-2xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo] || '🔔'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
+                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
+                        <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      {!n.leida && <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="pb-8"/>
+          </div>
+        </div>
+      )}
+
+      {/* Modal cambio rol */}
+      {mostrarCambioRol && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarCambioRol(false)}>
+          <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"/>
+            <h3 className="font-extrabold text-gray-900 text-lg mb-1 text-center">Cambiar modo</h3>
+            <p className="text-gray-400 text-sm text-center mb-5">Alterna entre tus perfiles sin cerrar sesión</p>
+            <div className="flex flex-col gap-3 mb-4">
+              {(['flekser','empresa','viajero'] as string[]).map((r) => {
+                const info = rolInfo[r];
+                const esActivo = r === 'flekser';
+                return (
+                  <button key={r} onClick={() => cambiarRol(r)} disabled={cambiandoRol || esActivo}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${esActivo ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${esActivo ? 'bg-white/20' : 'bg-gray-100'}`}>{info.emoji}</div>
+                    <div className="flex-1 text-left">
+                      <p className={`font-extrabold ${esActivo ? 'text-white' : 'text-gray-900'}`}>Modo {info.label}</p>
+                      <p className={`text-xs mt-0.5 ${esActivo ? 'text-white/70' : 'text-gray-400'}`}>
+                        {r === 'flekser' ? 'Busca y ofrece servicios' : r === 'empresa' ? 'Gestiona tus solicitudes' : 'Trabaja desde cualquier ciudad'}
+                      </p>
+                    </div>
+                    {esActivo ? <span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span> : <span className="text-gray-400 text-xs font-bold">Cambiar →</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
