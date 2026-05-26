@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
-const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo'];
+const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Otro'];
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -33,6 +33,15 @@ export default function HomeWorker() {
   const [trabajosCompletados, setTrabajosCompletados] = useState<string[]>([]);
   const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
 
+  // Filtros
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [filtroCiudad, setFiltroCiudad] = useState('');
+  const [filtroPresupuestoMin, setFiltroPresupuestoMin] = useState('');
+  const [filtroPresupuestoMax, setFiltroPresupuestoMax] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroUrgente, setFiltroUrgente] = useState(false);
+  const [filtroSeguro, setFiltroSeguro] = useState(false);
+
   useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
@@ -45,7 +54,7 @@ export default function HomeWorker() {
 
     const { data: servicios } = await supabase
       .from('servicios')
-      .select('*, usuarios(nombre, calificacion)')
+      .select('*, usuarios(nombre, calificacion, ciudad)')
       .eq('estado', 'activo')
       .neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
@@ -92,6 +101,26 @@ export default function HomeWorker() {
     }
   };
 
+  const limpiarFiltros = () => {
+    setFiltroCiudad('');
+    setFiltroPresupuestoMin('');
+    setFiltroPresupuestoMax('');
+    setFiltroFecha('');
+    setFiltroUrgente(false);
+    setFiltroSeguro(false);
+    setCategoriaActiva('Todos');
+  };
+
+  const filtrosActivos = [
+    filtroCiudad,
+    filtroPresupuestoMin,
+    filtroPresupuestoMax,
+    filtroFecha,
+    filtroUrgente,
+    filtroSeguro,
+    categoriaActiva !== 'Todos',
+  ].filter(Boolean).length;
+
   const categoriaEmoji: any = {
     hogar: '🔧', limpieza: '🧹', eventos: '🍽️',
     mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️',
@@ -104,8 +133,17 @@ export default function HomeWorker() {
     .filter(t => {
       const matchCat = categoriaActiva === 'Todos' ||
         t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
-      const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase());
-      return matchCat && matchBusqueda;
+      const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
+      const matchCiudad = !filtroCiudad ||
+        t.usuarios?.ciudad?.toLowerCase().includes(filtroCiudad.toLowerCase()) ||
+        t.direccion?.toLowerCase().includes(filtroCiudad.toLowerCase());
+      const matchMin = !filtroPresupuestoMin || t.presupuesto >= Number(filtroPresupuestoMin);
+      const matchMax = !filtroPresupuestoMax || t.presupuesto <= Number(filtroPresupuestoMax);
+      const matchFecha = !filtroFecha || t.fecha === filtroFecha;
+      const matchUrgente = !filtroUrgente || t.urgente === true;
+      const matchSeguro = !filtroSeguro || t.seguro === true;
+      return matchCat && matchBusqueda && matchCiudad && matchMin && matchMax && matchFecha && matchUrgente && matchSeguro;
     });
 
   if (cargando) {
@@ -122,9 +160,8 @@ export default function HomeWorker() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* Header Flekser — azul-morado vibrante */}
+      {/* Header */}
       <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 px-6 pt-12 pb-8 relative overflow-hidden">
-        {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
         <div className="max-w-md mx-auto relative">
@@ -144,21 +181,37 @@ export default function HomeWorker() {
             <p className="text-white/70 text-xs font-semibold mb-1">⚡ Trabajos disponibles ahora</p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
-              <p className="text-white/60 text-sm mb-1">cerca de ti</p>
+              <p className="text-white/60 text-sm mb-1">
+                {filtrosActivos > 0 ? 'con tus filtros' : 'cerca de ti'}
+              </p>
             </div>
-            <div className="flex gap-3 mt-2">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"/>
-                <span className="text-white/60 text-xs">En tiempo real</span>
-              </div>
+            <div className="flex items-center gap-1 mt-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"/>
+              <span className="text-white/60 text-xs">En tiempo real</span>
             </div>
           </div>
 
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
-            <input type="text" placeholder="Buscar trabajos..."
-              value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
+          {/* Búsqueda + botón filtros */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
+              <input type="text" placeholder="Buscar trabajos..."
+                value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
+            </div>
+            <button onClick={() => setMostrarFiltros(true)}
+              className="relative w-12 h-12 bg-white/15 border border-white/25 rounded-2xl flex items-center justify-center text-white hover:bg-white/25 transition flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="7" y1="12" x2="17" y2="12"/>
+                <line x1="10" y1="18" x2="14" y2="18"/>
+              </svg>
+              {filtrosActivos > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
+                  {filtrosActivos}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -184,6 +237,8 @@ export default function HomeWorker() {
       )}
 
       <div className="max-w-md mx-auto px-6 py-4">
+
+        {/* Categorías */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
@@ -197,6 +252,45 @@ export default function HomeWorker() {
           ))}
         </div>
 
+        {/* Chips de filtros activos */}
+        {filtrosActivos > 0 && (
+          <div className="flex gap-2 flex-wrap mb-4">
+            {filtroCiudad && (
+              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
+                📍 {filtroCiudad}
+                <button onClick={() => setFiltroCiudad('')} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
+              </span>
+            )}
+            {(filtroPresupuestoMin || filtroPresupuestoMax) && (
+              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
+                💰 ${filtroPresupuestoMin || '0'} - ${filtroPresupuestoMax || '∞'}
+                <button onClick={() => { setFiltroPresupuestoMin(''); setFiltroPresupuestoMax(''); }} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
+              </span>
+            )}
+            {filtroFecha && (
+              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
+                📅 {filtroFecha}
+                <button onClick={() => setFiltroFecha('')} className="ml-1 text-purple-400 hover:text-purple-700">✕</button>
+              </span>
+            )}
+            {filtroUrgente && (
+              <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-full font-semibold">
+                🔴 Urgentes
+                <button onClick={() => setFiltroUrgente(false)} className="ml-1 text-red-400 hover:text-red-600">✕</button>
+              </span>
+            )}
+            {filtroSeguro && (
+              <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full font-semibold">
+                🛡️ Con seguro
+                <button onClick={() => setFiltroSeguro(false)} className="ml-1 text-blue-400 hover:text-blue-600">✕</button>
+              </span>
+            )}
+            <button onClick={limpiarFiltros} className="text-xs text-gray-400 font-semibold px-3 py-1.5 rounded-full border border-gray-200 hover:border-red-300 hover:text-red-500 transition">
+              Limpiar todo
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-extrabold text-gray-900">Trabajos cerca de ti</h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
@@ -205,8 +299,14 @@ export default function HomeWorker() {
         {trabajosFiltrados.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-4">🔍</p>
-            <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
-            <p className="text-gray-400 text-sm">Vuelve más tarde o cambia los filtros</p>
+            <p className="font-bold text-gray-900 mb-2">No hay trabajos con esos filtros</p>
+            <p className="text-gray-400 text-sm mb-4">Prueba cambiando los filtros</p>
+            {filtrosActivos > 0 && (
+              <button onClick={limpiarFiltros}
+                className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+                Limpiar filtros
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -226,7 +326,14 @@ export default function HomeWorker() {
                           <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">🔴 Urgente</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{trabajo.usuarios?.nombre || 'Cliente verificado'}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs text-gray-400">{trabajo.usuarios?.nombre || 'Cliente verificado'}</p>
+                        {trabajo.usuarios?.ciudad && (
+                          <span className="text-xs bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded-full font-semibold">
+                            📍 {trabajo.usuarios.ciudad}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
@@ -246,6 +353,162 @@ export default function HomeWorker() {
           </div>
         )}
       </div>
+
+      {/* Panel de filtros — bottom sheet */}
+      {mostrarFiltros && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end"
+          onClick={() => setMostrarFiltros(false)}>
+          <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
+              <div>
+                <h3 className="font-extrabold text-gray-900 text-lg">Filtros</h3>
+                {filtrosActivos > 0 && (
+                  <p className="text-xs text-purple-600 font-semibold">{filtrosActivos} filtro{filtrosActivos !== 1 ? 's' : ''} activo{filtrosActivos !== 1 ? 's' : ''}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {filtrosActivos > 0 && (
+                  <button onClick={limpiarFiltros} className="text-sm text-red-500 font-semibold">Limpiar</button>
+                )}
+                <button onClick={() => setMostrarFiltros(false)}
+                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-5">
+
+              {/* Ciudad */}
+              <div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">📍 Ciudad</label>
+                <input type="text" placeholder="Ej. Guadalajara, Monterrey, CDMX..."
+                  value={filtroCiudad} onChange={(e) => setFiltroCiudad(e.target.value)}
+                  className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
+              </div>
+
+              {/* Presupuesto */}
+              <div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Presupuesto (MXN)</label>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <input type="number" placeholder="Mínimo"
+                      value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)}
+                      className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
+                  </div>
+                  <div className="flex items-center text-gray-400 font-bold">—</div>
+                  <div className="flex-1">
+                    <input type="number" placeholder="Máximo"
+                      value={filtroPresupuestoMax} onChange={(e) => setFiltroPresupuestoMax(e.target.value)}
+                      className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
+                  </div>
+                </div>
+                {/* Rangos rápidos */}
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {[['0','500'],['500','1000'],['1000','3000'],['3000','']].map(([min, max], i) => (
+                    <button key={i}
+                      onClick={() => { setFiltroPresupuestoMin(min); setFiltroPresupuestoMax(max); }}
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
+                        filtroPresupuestoMin === min && filtroPresupuestoMax === max
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}>
+                      {max ? `$${min}-$${max}` : `$${min}+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fecha */}
+              <div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">📅 Fecha</label>
+                <input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}
+                  className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
+                {/* Fechas rápidas */}
+                <div className="flex gap-2 mt-2">
+                  {[
+                    ['Hoy', new Date().toISOString().split('T')[0]],
+                    ['Mañana', new Date(Date.now()+86400000).toISOString().split('T')[0]],
+                    ['Esta semana', ''],
+                  ].map(([label, val], i) => (
+                    <button key={i}
+                      onClick={() => val ? setFiltroFecha(val) : null}
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
+                        filtroFecha === val && val
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Categoría */}
+              <div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">🏷️ Categoría</label>
+                <div className="flex flex-wrap gap-2">
+                  {categorias.map((cat) => (
+                    <button key={cat} onClick={() => setCategoriaActiva(cat)}
+                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${
+                        categoriaActiva === cat
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="flex flex-col gap-3">
+                <div onClick={() => setFiltroUrgente(!filtroUrgente)}
+                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${
+                    filtroUrgente ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
+                  }`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">🔴</span>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">Solo urgentes</p>
+                      <p className="text-xs text-gray-400">Trabajos marcados como urgentes</p>
+                    </div>
+                  </div>
+                  <div className={`w-11 h-6 rounded-full transition-all ${filtroUrgente ? 'bg-red-500' : 'bg-gray-200'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroUrgente ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
+                  </div>
+                </div>
+
+                <div onClick={() => setFiltroSeguro(!filtroSeguro)}
+                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${
+                    filtroSeguro ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'
+                  }`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">🛡️</span>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">Con Fleksi Protege</p>
+                      <p className="text-xs text-gray-400">Trabajos con seguro incluido</p>
+                    </div>
+                  </div>
+                  <div className={`w-11 h-6 rounded-full transition-all ${filtroSeguro ? 'bg-purple-500' : 'bg-gray-200'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroSeguro ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Botón aplicar */}
+            <div className="px-6 py-4 border-t border-gray-100">
+              <button onClick={() => setMostrarFiltros(false)}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition">
+                Ver {trabajosFiltrados.length} trabajo{trabajosFiltrados.length !== 1 ? 's' : ''}
+              </button>
+            </div>
+            <div className="pb-6"/>
+          </div>
+        </div>
+      )}
 
       <Nav activo="inicio" />
     </main>
