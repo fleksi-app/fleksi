@@ -47,6 +47,7 @@ export default function Perfil() {
   const [activandoViajero, setActivandoViajero] = useState(false);
   const [verificacion, setVerificacion] = useState<any>(null);
   const [totalGanado, setTotalGanado] = useState(0);
+  const [walletSaldo, setWalletSaldo] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -68,6 +69,7 @@ export default function Perfil() {
         setModoViajero(data.modo_viajero || false);
         setCiudadActual(data.ciudad || '');
         setCiudadesVisitadas(data.ciudades_visitadas || []);
+        setWalletSaldo(data.wallet_saldo || 0);
       }
 
       const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', user.id);
@@ -296,11 +298,9 @@ export default function Perfil() {
           </div>
 
           {!editando ? (
-            <div className="flex flex-col gap-2">
-              <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
-                ✏️ Editar perfil
-              </button>
-            </div>
+            <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
+              ✏️ Editar perfil
+            </button>
           ) : (
             <div className="flex gap-3">
               <button onClick={() => setEditando(false)} className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold transition">Cancelar</button>
@@ -311,9 +311,9 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Banner de ganancias */}
+        {/* Banner ganancias */}
         <a href="/earnings"
-          className="flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-sm mb-4 hover:opacity-90 transition">
+          className="flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-sm mb-3 hover:opacity-90 transition">
           <div>
             <p className="text-white/80 text-xs font-semibold mb-0.5">Total ganado</p>
             <p className="text-white font-extrabold text-2xl">${totalGanado.toLocaleString()} <span className="text-lg font-normal">MXN</span></p>
@@ -322,6 +322,20 @@ export default function Perfil() {
           <div className="text-right">
             <span className="text-4xl">💰</span>
             <p className="text-white text-xs font-bold mt-1">Ver historial →</p>
+          </div>
+        </a>
+
+        {/* Banner Wallet */}
+        <a href="/wallet"
+          className="flex items-center justify-between bg-gradient-to-r from-teal-500 to-cyan-600 rounded-2xl p-5 shadow-sm mb-4 hover:opacity-90 transition">
+          <div>
+            <p className="text-white/80 text-xs font-semibold mb-0.5">💳 Fleksi Wallet</p>
+            <p className="text-white font-extrabold text-2xl">${walletSaldo.toFixed(2)} <span className="text-lg font-normal">MXN</span></p>
+            <p className="text-white/70 text-xs mt-0.5">Saldo disponible para retirar</p>
+          </div>
+          <div className="text-right">
+            <span className="text-4xl">🏦</span>
+            <p className="text-white text-xs font-bold mt-1">Ver wallet →</p>
           </div>
         </a>
 
@@ -507,7 +521,6 @@ export default function Perfil() {
       )}
 
       <Nav activo="perfil" />
-
     </main>
   );
 }
