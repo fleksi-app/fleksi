@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+// liberar pagos automaticamente cada hora
+// import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
