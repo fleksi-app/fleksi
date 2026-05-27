@@ -22,7 +22,47 @@ const todosLosBadges = [
   { tipo: 'perfecto', nombre: 'Perfección', emoji: '✨', desc: 'Calificación perfecta 5.0' },
   { tipo: 'verificado', nombre: 'Verificado', emoji: '✅', desc: 'Identidad verificada' },
   { tipo: 'viajero', nombre: 'Viajero', emoji: '✈️', desc: 'Trabajó en 2+ ciudades' },
+  { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆', desc: 'Perfil al 100%' },
 ];
+
+function calcularProgresoPerfil(usuario: any, documentos: any[], rol: string) {
+  let puntos = 0;
+
+  // Campos básicos — 10% cada uno
+  if (usuario?.foto_url) puntos += 10;
+  if (usuario?.nombre?.trim()) puntos += 10;
+  if (usuario?.telefono?.trim()) puntos += 10;
+  if (usuario?.ciudad?.trim()) puntos += 10;
+  if (usuario?.descripcion?.trim()) puntos += 10;
+
+  if (rol === 'empresa') {
+    if (usuario?.datos_factura?.nombre_fiscal && usuario?.datos_factura?.rfc) puntos += 10;
+  } else {
+    if (usuario?.habilidades?.length > 0) puntos += 10;
+  }
+
+  // Documentos subidos — 15%
+  const docsRequeridos = rol === 'empresa'
+    ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes']
+    : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
+
+  const docsSubidos = documentos.filter(d =>
+    docsRequeridos.includes(d.tipo) && (d.estado === 'subido' || d.estado === 'aprobado')
+  ).length;
+  if (docsSubidos > 0) {
+    puntos += Math.round((docsSubidos / docsRequeridos.length) * 15);
+  }
+
+  // Documentos aprobados — 25%
+  const docsAprobados = documentos.filter(d =>
+    docsRequeridos.includes(d.tipo) && d.estado === 'aprobado'
+  ).length;
+  if (docsAprobados > 0) {
+    puntos += Math.round((docsAprobados / docsRequeridos.length) * 25);
+  }
+
+  return Math.min(puntos, 100);
+}
 
 export default function Perfil() {
   const [usuario, setUsuario] = useState<any>(null);
@@ -48,6 +88,8 @@ export default function Perfil() {
   const [verificacion, setVerificacion] = useState<any>(null);
   const [totalGanado, setTotalGanado] = useState(0);
   const [walletSaldo, setWalletSaldo] = useState(0);
+  const [documentos, setDocumentos] = useState<any[]>([]);
+  const [progresoPerfil, setProgresoPerfil] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -70,6 +112,27 @@ export default function Perfil() {
         setCiudadActual(data.ciudad || '');
         setCiudadesVisitadas(data.ciudades_visitadas || []);
         setWalletSaldo(data.wallet_saldo || 0);
+
+        const { data: docs } = await supabase
+          .from('documentos').select('*').eq('usuario_id', user.id);
+        setDocumentos(docs || []);
+
+        const rol = data.rol_activo || data.rol || 'flekser';
+        const progreso = calcularProgresoPerfil({ ...data, id: user.id }, docs || [], rol);
+        setProgresoPerfil(progreso);
+
+        // Asignar badge perfil_completo si llega al 100%
+        if (progreso === 100) {
+          const yaTiene = (docs || []).some((b: any) => b.tipo === 'perfil_completo');
+          if (!yaTiene) {
+            try {
+              await supabase.from('badges').upsert({
+                usuario_id: user.id,
+                tipo: 'perfil_completo',
+              }, { onConflict: 'usuario_id,tipo' });
+            } catch (e) {}
+          }
+        }
       }
 
       const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', user.id);
@@ -172,14 +235,19 @@ export default function Perfil() {
 
   const guardarPerfil = async () => {
     setGuardando(true);
-    await supabase.from('usuarios').update({ nombre, telefono, descripcion, ciudad, habilidades: habilidadesSeleccionadas }).eq('id', usuario.id);
+    await supabase.from('usuarios').update({
+      nombre, telefono, descripcion, ciudad,
+      habilidades: habilidadesSeleccionadas
+    }).eq('id', usuario.id);
     setGuardando(false);
     setEditando(false);
     cargarPerfil();
   };
 
   const toggleHabilidad = (h: string) => {
-    setHabilidadesSeleccionadas(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+    setHabilidadesSeleccionadas(prev =>
+      prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]
+    );
   };
 
   const agregarHabilidadCustom = () => {
@@ -212,6 +280,30 @@ export default function Perfil() {
     return estados[verificacion.estado] || estados['en_revision'];
   };
 
+  // Pasos faltantes para completar perfil
+  const pasosFaltantes = () => {
+    if (!usuario) return [];
+    const rol = usuario.rol_activo || usuario.rol || 'flekser';
+    const pasos: string[] = [];
+    if (!usuario.foto_url) pasos.push('Agrega una foto de perfil');
+    if (!usuario.telefono?.trim()) pasos.push('Agrega tu teléfono');
+    if (!usuario.ciudad?.trim()) pasos.push('Agrega tu ciudad');
+    if (!usuario.descripcion?.trim()) pasos.push('Agrega una descripción');
+    if (rol === 'empresa') {
+      if (!usuario.datos_factura?.nombre_fiscal) pasos.push('Completa tus datos de facturación');
+    } else {
+      if (!usuario.habilidades?.length) pasos.push('Agrega al menos una habilidad');
+    }
+    const docsRequeridos = rol === 'empresa'
+      ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes']
+      : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
+    const docsAprobados = documentos.filter(d =>
+      docsRequeridos.includes(d.tipo) && d.estado === 'aprobado'
+    ).length;
+    if (docsAprobados < docsRequeridos.length) pasos.push('Sube y espera aprobación de documentos');
+    return pasos;
+  };
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -224,6 +316,8 @@ export default function Perfil() {
   }
 
   const verif = verificacionInfo();
+  const perfilCompleto = progresoPerfil === 100;
+  const faltantes = pasosFaltantes();
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
@@ -246,6 +340,7 @@ export default function Perfil() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
+        {/* Card principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
@@ -267,20 +362,69 @@ export default function Perfil() {
             <div className="flex-1">
               {editando ? (
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-                  className="w-full p-2 rounded-xl border-2 border-purple-400 outline-none text-gray-900 font-bold mb-1" placeholder="Tu nombre"/>
+                  className="w-full p-2 rounded-xl border-2 border-purple-400 outline-none text-gray-900 font-bold mb-1"
+                  placeholder="Tu nombre"/>
               ) : (
                 <h2 className="font-extrabold text-gray-900 text-lg">{nombre || 'Sin nombre'}</h2>
               )}
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
-                  ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : 'Flekser'}
+                  ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
                 </span>
                 {modoViajero && <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">✈️ Modo viajero ON</span>}
                 {tieneBadge('verificado') && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>}
                 {tieneBadge('top_rated') && <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">⭐ Top Rated</span>}
+                {perfilCompleto && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>}
               </div>
             </div>
           </div>
+
+          {/* Barra de progreso — desaparece al 100% */}
+          {!perfilCompleto && (
+            <div className="mb-4 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-gray-700">Completa tu perfil</p>
+                <span className="text-sm font-extrabold text-purple-600">{progresoPerfil}%</span>
+              </div>
+              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${progresoPerfil}%`,
+                    background: progresoPerfil < 40
+                      ? '#EF4444'
+                      : progresoPerfil < 70
+                      ? '#F59E0B'
+                      : 'linear-gradient(90deg, #2563EB, #7C3AED)',
+                  }}
+                />
+              </div>
+              {faltantes.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {faltantes.slice(0, 3).map((paso, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                      <p className="text-xs text-gray-500">{paso}</p>
+                    </div>
+                  ))}
+                  {faltantes.length > 3 && (
+                    <p className="text-xs text-purple-500 font-semibold ml-3.5">+{faltantes.length - 3} más</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Badge perfil completo */}
+          {perfilCompleto && (
+            <div className="mb-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border border-purple-100 flex items-center gap-3">
+              <span className="text-3xl">🏆</span>
+              <div>
+                <p className="font-extrabold text-purple-700 text-sm">¡Perfil al 100%!</p>
+                <p className="text-xs text-purple-500">Apareces primero en búsquedas y generas más confianza</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
@@ -298,13 +442,18 @@ export default function Perfil() {
           </div>
 
           {!editando ? (
-            <button onClick={() => setEditando(true)} className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
+            <button onClick={() => setEditando(true)}
+              className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:border-purple-400 transition">
               ✏️ Editar perfil
             </button>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => setEditando(false)} className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold transition">Cancelar</button>
-              <button onClick={guardarPerfil} disabled={guardando} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold disabled:opacity-50 transition">
+              <button onClick={() => setEditando(false)}
+                className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold transition">
+                Cancelar
+              </button>
+              <button onClick={guardarPerfil} disabled={guardando}
+                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold disabled:opacity-50 transition">
                 {guardando ? 'Guardando...' : 'Guardar ✓'}
               </button>
             </div>
@@ -339,7 +488,7 @@ export default function Perfil() {
           </div>
         </a>
 
-        {/* Banner verificación — apunta a /documentos */}
+        {/* Banner verificación */}
         <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -349,10 +498,13 @@ export default function Perfil() {
               </div>
               <p className="text-xs text-gray-500 ml-7">{verif.texto}</p>
             </div>
-            <span className={`flex-shrink-0 ml-3 px-3 py-2 rounded-xl text-xs font-bold ${verif.botonColor}`}>{verif.boton} →</span>
+            <span className={`flex-shrink-0 ml-3 px-3 py-2 rounded-xl text-xs font-bold ${verif.botonColor}`}>
+              {verif.boton} →
+            </span>
           </div>
         </a>
 
+        {/* Modo viajero */}
         <div className={`rounded-2xl p-5 shadow-sm border mb-4 transition ${modoViajero ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-transparent' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -383,31 +535,40 @@ export default function Perfil() {
               <p className={`text-xs font-semibold mb-2 ${modoViajero ? 'text-white/80' : 'text-gray-500'}`}>🗺️ Ciudades donde has trabajado</p>
               <div className="flex flex-wrap gap-2">
                 {ciudadesVisitadas.map((c, i) => (
-                  <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${modoViajero ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>📍 {c}</span>
+                  <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${modoViajero ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                    📍 {c}
+                  </span>
                 ))}
               </div>
             </div>
           )}
         </div>
 
+        {/* Teléfono */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📱 Teléfono</h3>
           {editando ? (
-            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900" placeholder="55 1234 5678"/>
+            <input value={telefono} onChange={(e) => setTelefono(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"
+              placeholder="55 1234 5678"/>
           ) : (
             <p className="text-gray-600">{telefono || 'Sin teléfono registrado'}</p>
           )}
         </div>
 
+        {/* Ciudad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📍 Ciudad base</h3>
           {editando ? (
-            <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900" placeholder="Ej. Ciudad de México"/>
+            <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"
+              placeholder="Ej. Ciudad de México"/>
           ) : (
             <p className="text-gray-600">{ciudad || 'Sin ciudad registrada'}</p>
           )}
         </div>
 
+        {/* Descripción */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📝 Sobre mí</h3>
           {editando ? (
@@ -419,6 +580,7 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* Insignias */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">🏅 Insignias</h3>
           <div className="grid grid-cols-4 gap-3">
@@ -434,9 +596,12 @@ export default function Perfil() {
               );
             })}
           </div>
-          <p className="text-xs text-gray-400 text-center mt-3">{badges.length} de {todosLosBadges.length} insignias desbloqueadas</p>
+          <p className="text-xs text-gray-400 text-center mt-3">
+            {badges.length} de {todosLosBadges.length} insignias desbloqueadas
+          </p>
         </div>
 
+        {/* Reseñas */}
         {reseñas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas recientes</h3>
@@ -459,6 +624,7 @@ export default function Perfil() {
           </div>
         )}
 
+        {/* Portafolio */}
         {portafolio.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <div className="flex items-center justify-between mb-4">
@@ -480,6 +646,7 @@ export default function Perfil() {
           </div>
         )}
 
+        {/* Habilidades */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -492,7 +659,9 @@ export default function Perfil() {
             {habilidadesSeleccionadas.filter(h => !habilidades.includes(h)).map((h) => (
               <span key={h} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white">
                 {h}
-                {editando && <button onClick={() => toggleHabilidad(h)} className="ml-1 text-white/70 hover:text-white">✕</button>}
+                {editando && (
+                  <button onClick={() => toggleHabilidad(h)} className="ml-1 text-white/70 hover:text-white">✕</button>
+                )}
               </span>
             ))}
           </div>
@@ -502,7 +671,10 @@ export default function Perfil() {
                 value={habilidadCustom} onChange={(e) => setHabilidadCustom(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && agregarHabilidadCustom()}
                 className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
-              <button onClick={agregarHabilidadCustom} className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-sm">+ Agregar</button>
+              <button onClick={agregarHabilidadCustom}
+                className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-sm">
+                + Agregar
+              </button>
             </div>
           )}
           {!editando && habilidadesSeleccionadas.length === 0 && (
@@ -513,10 +685,14 @@ export default function Perfil() {
       </div>
 
       {fotoAmpliada && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" onClick={() => setFotoAmpliada(null)}>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+          onClick={() => setFotoAmpliada(null)}>
           <div className="relative max-w-sm w-full">
             <img src={fotoAmpliada} className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]"/>
-            <button onClick={() => setFotoAmpliada(null)} className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">✕</button>
+            <button onClick={() => setFotoAmpliada(null)}
+              className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">
+              ✕
+            </button>
           </div>
         </div>
       )}
