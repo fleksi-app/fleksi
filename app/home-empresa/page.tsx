@@ -14,6 +14,8 @@ export default function HomeEmpresa() {
   const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
+  const [busquedaCiudad, setBusquedaCiudad] = useState('');
+  const [ciudadFiltro, setCiudadFiltro] = useState('');
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -70,6 +72,12 @@ export default function HomeEmpresa() {
 
   const notifEmoji: any = { nueva_aplicacion:'✋', aplicacion_aceptada:'✅', aplicacion_rechazada:'❌', trabajo_completado:'🎉', nuevo_trabajo:'🔔', pago_liberado:'💰', mensaje_nuevo:'💬' };
 
+  const serviciosFiltrados = servicios.filter(s => {
+    if (!ciudadFiltro.trim()) return true;
+    return s.direccion?.toLowerCase().includes(ciudadFiltro.toLowerCase()) ||
+           s.ciudad?.toLowerCase().includes(ciudadFiltro.toLowerCase());
+  });
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -90,7 +98,6 @@ export default function HomeEmpresa() {
         <div className="absolute inset-0 opacity-5" style={{backgroundImage:'linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
 
         <div className="max-w-md mx-auto relative">
-          {/* Barra superior */}
           <div className="flex items-center justify-between mb-5">
             <button onClick={() => setMostrarCambioRol(true)}
               className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
@@ -110,7 +117,7 @@ export default function HomeEmpresa() {
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-5">{usuario?.nombre}</h1>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2 mb-5">
             {[
               { valor: stats.activos, label: 'Activos', color: 'text-blue-300' },
               { valor: stats.prestadores, label: 'Profesionales', color: 'text-purple-300' },
@@ -122,6 +129,28 @@ export default function HomeEmpresa() {
                 <p className="text-white/40 text-xs mt-0.5 leading-tight">{s.label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Búsqueda por ciudad */}
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
+            <input
+              type="text"
+              placeholder="Filtrar mis servicios por ciudad..."
+              value={busquedaCiudad}
+              onChange={(e) => {
+                setBusquedaCiudad(e.target.value);
+                setCiudadFiltro(e.target.value);
+              }}
+              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"
+            />
+            {busquedaCiudad && (
+              <button
+                onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">
+                ✕
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -136,19 +165,25 @@ export default function HomeEmpresa() {
         </a>
 
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-extrabold text-slate-800 text-lg">Mis servicios</h2>
-          <span className="text-xs text-slate-400 font-semibold">{servicios.length} total</span>
+          <h2 className="font-extrabold text-slate-800 text-lg">
+            {ciudadFiltro ? `Servicios en "${ciudadFiltro}"` : 'Mis servicios'}
+          </h2>
+          <span className="text-xs text-slate-400 font-semibold">{serviciosFiltrados.length} total</span>
         </div>
 
-        {servicios.length === 0 ? (
+        {serviciosFiltrados.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100">
-            <p className="text-4xl mb-3">📋</p>
-            <p className="font-bold text-slate-700 mb-1">Sin servicios publicados</p>
-            <p className="text-slate-400 text-sm">Publica tu primer servicio para encontrar profesionales</p>
+            <p className="text-4xl mb-3">{ciudadFiltro ? '🔍' : '📋'}</p>
+            <p className="font-bold text-slate-700 mb-1">
+              {ciudadFiltro ? `Sin servicios en "${ciudadFiltro}"` : 'Sin servicios publicados'}
+            </p>
+            <p className="text-slate-400 text-sm">
+              {ciudadFiltro ? 'Intenta con otra ciudad' : 'Publica tu primer servicio para encontrar profesionales'}
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {servicios.map((servicio) => {
+            {serviciosFiltrados.map((servicio) => {
               const aplicacionesAceptadas = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='aceptado'||a.estado==='completado');
               const aplicacionesPendientes = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='pendiente');
               return (
@@ -157,6 +192,9 @@ export default function HomeEmpresa() {
                     <div className="flex-1 pr-3">
                       <h3 className="font-extrabold text-slate-800 mb-1">{servicio.titulo}</h3>
                       <p className="text-xs text-slate-400">📅 {servicio.fecha} {servicio.hora?.slice(0,5)}</p>
+                      {servicio.direccion && (
+                        <p className="text-xs text-slate-400 mt-0.5">📍 {servicio.direccion}</p>
+                      )}
                     </div>
                     <span className={`text-xs font-bold px-3 py-1 rounded-lg ${estadoColor(servicio.estado)}`}>{estadoLabel(servicio.estado)}</span>
                   </div>
@@ -196,7 +234,6 @@ export default function HomeEmpresa() {
         )}
       </div>
 
-      {/* Modal notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -228,7 +265,6 @@ export default function HomeEmpresa() {
         </div>
       )}
 
-      {/* Modal cambio rol */}
       {mostrarCambioRol && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarCambioRol(false)}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>

@@ -17,6 +17,8 @@ export default function HomeViajero() {
   const [cargando, setCargando] = useState(true);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaCiudad, setBusquedaCiudad] = useState('');
+  const [ciudadFiltro, setCiudadFiltro] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
   const [ciudadActual, setCiudadActual] = useState('');
@@ -38,6 +40,8 @@ export default function HomeViajero() {
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'viajero']);
     setCiudadActual(perfil?.ciudad || '');
+    setBusquedaCiudad(perfil?.ciudad || '');
+    setCiudadFiltro(perfil?.ciudad || '');
     const { data: servicios } = await supabase.from('servicios')
       .select('*, usuarios(nombre, calificacion, ciudad)')
       .eq('estado', 'activo').neq('cliente_id', user.id)
@@ -59,6 +63,8 @@ export default function HomeViajero() {
       if (!nuevasCiudades.includes(ciudadActual.trim())) nuevasCiudades.push(ciudadActual.trim());
       await supabase.from('usuarios').update({ ciudad: ciudadActual.trim(), ciudades_visitadas: nuevasCiudades }).eq('id', usuario.id);
       setUsuario((prev: any) => ({ ...prev, ciudad: ciudadActual.trim(), ciudades_visitadas: nuevasCiudades }));
+      setBusquedaCiudad(ciudadActual.trim());
+      setCiudadFiltro(ciudadActual.trim());
       setEditandoCiudad(false);
     } finally { setGuardandoCiudad(false); }
   };
@@ -92,8 +98,11 @@ export default function HomeViajero() {
 
   const trabajosFiltrados = trabajos.filter(t => {
     const matchCat = categoriaActiva === 'Todos' || t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
-    const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase());
-    return matchCat && matchBusqueda;
+    const matchBusqueda = !busqueda || t.titulo?.toLowerCase().includes(busqueda.toLowerCase());
+    const matchCiudad = !ciudadFiltro.trim() ||
+      t.usuarios?.ciudad?.toLowerCase().includes(ciudadFiltro.toLowerCase()) ||
+      t.direccion?.toLowerCase().includes(ciudadFiltro.toLowerCase());
+    return matchCat && matchBusqueda && matchCiudad;
   });
 
   if (cargando) {
@@ -116,7 +125,6 @@ export default function HomeViajero() {
         <div className="absolute top-8 left-4 w-16 h-6 bg-white/10 rounded-full"/>
 
         <div className="max-w-md mx-auto relative">
-          {/* Barra superior */}
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setMostrarCambioRol(true)}
               className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
@@ -136,6 +144,7 @@ export default function HomeViajero() {
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-4">{usuario?.nombre?.split(' ')[0] || 'Viajero'} 🌍</h1>
 
+          {/* Ciudad actual */}
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-3 border border-white/25">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
@@ -157,7 +166,7 @@ export default function HomeViajero() {
             ) : (
               <div className="flex items-end justify-between mt-1">
                 <p className="text-xl font-extrabold text-white">{usuario?.ciudad || 'Sin ciudad'}</p>
-                <p className="text-white/60 text-xs">{trabajos.length} trabajos disponibles</p>
+                <p className="text-white/60 text-xs">{trabajosFiltrados.length} trabajos disponibles</p>
               </div>
             )}
           </div>
@@ -165,14 +174,37 @@ export default function HomeViajero() {
           {usuario?.ciudades_visitadas?.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-1 mb-3">
               {usuario.ciudades_visitadas.map((c: string, i: number) => (
-                <span key={i} className="flex-shrink-0 text-xs bg-white/20 text-white font-semibold px-3 py-1.5 rounded-full border border-white/25">📍 {c}</span>
+                <button key={i}
+                  onClick={() => { setBusquedaCiudad(c); setCiudadFiltro(c); }}
+                  className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${ciudadFiltro === c ? 'bg-white text-teal-600 border-white' : 'bg-white/20 text-white border-white/25 hover:bg-white/30'}`}>
+                  📍 {c}
+                </button>
               ))}
             </div>
           )}
 
+          {/* Búsqueda por ciudad */}
+          <div className="relative mb-2">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
+            <input
+              type="text"
+              placeholder="Buscar por ciudad..."
+              value={busquedaCiudad}
+              onChange={(e) => { setBusquedaCiudad(e.target.value); setCiudadFiltro(e.target.value); }}
+              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"
+            />
+            {busquedaCiudad && (
+              <button onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Búsqueda por texto */}
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
-            <input type="text" placeholder="Buscar trabajos en todo el país..."
+            <input type="text" placeholder="Buscar trabajos..."
               value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
           </div>
@@ -190,7 +222,9 @@ export default function HomeViajero() {
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-extrabold text-gray-900">Trabajos en todo el país 🗺️</h2>
+          <h2 className="font-extrabold text-gray-900">
+            {ciudadFiltro ? `Trabajos en ${ciudadFiltro} 📍` : 'Trabajos en todo el país 🗺️'}
+          </h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
         </div>
 
@@ -217,7 +251,11 @@ export default function HomeViajero() {
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-xs text-gray-400">{trabajo.usuarios?.nombre || 'Cliente verificado'}</p>
-                        {trabajo.usuarios?.ciudad && <span className="text-xs bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-semibold border border-teal-100">📍 {trabajo.usuarios.ciudad}</span>}
+                        {trabajo.usuarios?.ciudad && (
+                          <span className="text-xs bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-semibold border border-teal-100">
+                            📍 {trabajo.usuarios.ciudad}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
@@ -237,7 +275,6 @@ export default function HomeViajero() {
         )}
       </div>
 
-      {/* Modal notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -269,7 +306,6 @@ export default function HomeViajero() {
         </div>
       )}
 
-      {/* Modal cambio rol */}
       {mostrarCambioRol && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarCambioRol(false)}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>
