@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '@/lib/supabase';
+import { calcularPagoCliente, calcularPagoFlekser } from '@/lib/comisiones';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -13,22 +14,21 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
 
+  const precio = aplicacion?.precio_ofrecido || servicio?.presupuesto || 0;
+  const desglose = calcularPagoCliente(precio, servicio?.seguro);
+  const desgloseFlekser = calcularPagoFlekser(precio);
+
   const handlePagar = async () => {
     if (!stripe || !elements) return;
     setProcesando(true);
     setError('');
 
     try {
-      const monto = aplicacion?.precio_ofrecido || servicio.presupuesto;
-      const seguro = servicio.seguro ? 45 : 0;
-      const total = monto + seguro;
-
-      // Crear PaymentIntent
       const response = await fetch('/api/crear-pago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          monto: total,
+          monto: desglose.total,
           descripcion: servicio.titulo,
           servicioId: servicio.id,
           clienteEmail: usuario?.email || '',
@@ -38,7 +38,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
       const { clientSecret, paymentIntentId, error: apiError } = await response.json();
       if (apiError) throw new Error(apiError);
 
-      // Confirmar pago con tarjeta real
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) throw new Error('No se encontró el elemento de tarjeta');
 
@@ -57,11 +56,12 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         throw new Error('Pago no completado');
       }
 
-      // Actualizar base de datos
       await supabase.from('aplicaciones').update({
         estado: 'aceptado',
         payment_intent_id: paymentIntentId,
         pago_retenido: true,
+        monto_cliente: desglose.total,
+        monto_flekser: desgloseFlekser.total,
       }).eq('id', aplicacionId);
 
       await supabase.from('servicios').update({
@@ -74,11 +74,9 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         .eq('servicio_id', servicio.id)
         .neq('id', aplicacionId);
 
-      // Mensaje inicial de chat
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: existente } = await supabase
-          .from('mensajes').select('id').eq('servicio_id', servicio.id).limit(1);
+        const { data: existente } = await supabase.from('mensajes').select('id').eq('servicio_id', servicio.id).limit(1);
         if (!existente || existente.length === 0) {
           await supabase.from('mensajes').insert({
             servicio_id: servicio.id,
@@ -89,7 +87,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         }
       }
 
-      // Email de confirmación
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -103,7 +100,7 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
               cliente: usuario?.nombre || 'Cliente',
               cliente_id: usuario?.id,
               trabajo: servicio.titulo,
-              precio: monto,
+              precio,
               fecha: servicio.fecha,
             },
           }),
@@ -118,12 +115,9 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
     }
   };
 
-  const monto = aplicacion?.precio_ofrecido || servicio?.presupuesto || 0;
-  const seguro = servicio?.seguro ? 45 : 0;
-  const total = monto + seguro;
-
   return (
     <div className="flex flex-col gap-4">
+      {/* Resumen para el cliente */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen</h3>
         <div className="flex flex-col gap-2">
@@ -136,8 +130,12 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
             <span className="font-semibold text-sm text-gray-900">{aplicacion?.usuarios?.nombre}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Servicio</span>
-            <span className="font-semibold text-sm">${monto} MXN</span>
+            <span className="text-gray-500 text-sm">Precio del servicio</span>
+            <span className="font-semibold text-sm">${precio} MXN</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 text-sm">Comisión de plataforma</span>
+            <span className="font-semibold text-sm">${desglose.comision} MXN</span>
           </div>
           {servicio?.seguro && (
             <div className="flex justify-between">
@@ -147,9 +145,16 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
           )}
           <div className="border-t border-gray-100 pt-2 flex justify-between">
             <span className="font-extrabold text-gray-900">Total</span>
-            <span className="font-extrabold text-purple-600 text-lg">${total} MXN</span>
+            <span className="font-extrabold text-purple-600 text-lg">${desglose.total} MXN</span>
           </div>
         </div>
+      </div>
+
+      {/* Lo que recibirá el flekser — sección informativa */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4">
+        <p className="text-green-700 text-xs font-semibold mb-1">💰 El flekser recibirá</p>
+        <p className="text-green-800 font-extrabold text-xl">${desgloseFlekser.total} MXN</p>
+        <p className="text-green-600 text-xs mt-0.5">Después de comisión de plataforma (10%)</p>
       </div>
 
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -157,37 +162,28 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         <div className="p-4 border-2 border-gray-200 rounded-2xl focus-within:border-purple-400 transition">
           <CardElement options={{
             style: {
-              base: {
-                fontSize: '16px',
-                color: '#0D0D1A',
-                fontFamily: 'system-ui, sans-serif',
-                '::placeholder': { color: '#94a3b8' },
-              },
+              base: { fontSize: '16px', color: '#0D0D1A', fontFamily: 'system-ui, sans-serif', '::placeholder': { color: '#94a3b8' } },
               invalid: { color: '#ef4444' },
             },
             hidePostalCode: true,
           }}/>
         </div>
-        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-          🔒 Pago seguro procesado por Stripe
-        </p>
+        <p className="text-xs text-gray-400 mt-2">🔒 Pago seguro procesado por Stripe</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">
-          {error}
-        </div>
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">{error}</div>
       )}
 
       <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
         <p className="text-blue-700 text-xs font-semibold">
-          🔒 El pago quedará retenido por Fleksi hasta que confirmes que el trabajo quedó bien. No se cobra hasta entonces.
+          🔒 El pago quedará retenido por Fleksi hasta que confirmes que el trabajo quedó bien.
         </p>
       </div>
 
       <button onClick={handlePagar} disabled={procesando || !stripe}
         className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-        {procesando ? '⏳ Procesando...' : `🔒 Pagar $${total} MXN`}
+        {procesando ? '⏳ Procesando...' : `🔒 Pagar $${desglose.total} MXN`}
       </button>
     </div>
   );
@@ -206,27 +202,15 @@ function PagoContent() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
-
     const aplicacionId = searchParams.get('aplicacion');
     if (!aplicacionId) { window.location.href = '/aplicaciones'; return; }
-
-    const { data: app } = await supabase
-      .from('aplicaciones')
-      .select('*, usuarios(id, nombre, email, foto_url)')
-      .eq('id', aplicacionId)
-      .single();
-
+    const { data: app } = await supabase.from('aplicaciones').select('*, usuarios(id, nombre, email, foto_url)').eq('id', aplicacionId).single();
     if (!app) { window.location.href = '/aplicaciones'; return; }
     setAplicacion(app);
-
-    const { data: svc } = await supabase
-      .from('servicios').select('*').eq('id', app.servicio_id).single();
+    const { data: svc } = await supabase.from('servicios').select('*').eq('id', app.servicio_id).single();
     setServicio(svc);
-
     setCargando(false);
   };
 
@@ -249,9 +233,7 @@ function PagoContent() {
             <span className="text-4xl">🎉</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Pago realizado!</h1>
-          <p className="text-gray-400 mb-8 font-light">
-            El pago está retenido de forma segura. Se liberará cuando confirmes el trabajo.
-          </p>
+          <p className="text-gray-400 mb-8 font-light">El pago está retenido de forma segura. Se liberará cuando confirmes el trabajo.</p>
           <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis solicitudes
           </a>
@@ -267,13 +249,10 @@ function PagoContent() {
     <main className="min-h-screen bg-gray-50 pb-10">
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto flex items-center gap-4">
-          <a href="/aplicaciones" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
-            ←
-          </a>
+          <a href="/aplicaciones" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">←</a>
           <h1 className="font-extrabold text-gray-900 text-lg">Confirmar pago</h1>
         </div>
       </div>
-
       <div className="max-w-md mx-auto px-6 py-4">
         <Elements stripe={stripePromise}>
           <PagoForm
