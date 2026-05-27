@@ -1,5 +1,4 @@
-// liberar pagos automaticamente cada hora
-// import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -9,7 +8,6 @@ const supabase = createClient(
 
 export async function GET(request: Request) {
   try {
-    // Verificar que es Vercel Cron
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,7 +15,6 @@ export async function GET(request: Request) {
 
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // Buscar servicios completados hace más de 24h sin confirmar y sin disputa
     const { data: servicios, error } = await supabase
       .from('servicios')
       .select('*, aplicaciones(id, prestador_id, precio_ofrecido, payment_intent_id, usuarios(nombre, email))')
@@ -42,14 +39,11 @@ export async function GET(request: Request) {
 
         const precio = appAceptada.precio_ofrecido || servicio.presupuesto;
 
-        // Marcar como pagado
         await supabase.from('servicios').update({ estado: 'pagado' }).eq('id', servicio.id);
         await supabase.from('aplicaciones').update({ pago_liberado: true, estado: 'completado' }).eq('id', appAceptada.id);
 
-        // Incrementar trabajos completados
         try { await supabase.rpc('incrementar_trabajos', { user_id: appAceptada.prestador_id }); } catch (e) {}
 
-        // Notificar al flekser
         await supabase.from('notificaciones').insert({
           usuario_id: appAceptada.prestador_id,
           tipo: 'pago_liberado',
@@ -58,7 +52,6 @@ export async function GET(request: Request) {
           link: '/earnings',
         });
 
-        // Notificar al cliente
         await supabase.from('notificaciones').insert({
           usuario_id: servicio.cliente_id,
           tipo: 'pago_liberado',
@@ -67,7 +60,6 @@ export async function GET(request: Request) {
           link: '/mis-trabajos',
         });
 
-        // Email al flekser
         try {
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/enviar-email`, {
             method: 'POST',
@@ -96,4 +88,4 @@ export async function GET(request: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}// cron
+}
