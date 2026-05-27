@@ -10,8 +10,6 @@ export default function Home() {
   const [instalada, setInstalada] = useState(false);
   const [mostrarInstruccionesIOS, setMostrarInstruccionesIOS] = useState(false);
   const [verificando, setVerificando] = useState(true);
-
-  // Animación splash
   const [fase, setFase] = useState<'blur' | 'nitido' | 'texto' | 'boton'>('blur');
 
   useEffect(() => {
@@ -51,14 +49,12 @@ export default function Home() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Secuencia de animación después de que termina verificando
   useEffect(() => {
     if (verificando) return;
 
-    // Sonido amigable con Web Audio API
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const notas = [523.25, 659.25, 783.99, 1046.5]; // Do Mi Sol Do
+      const notas = [523.25, 659.25, 783.99, 1046.5];
       notas.forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -74,7 +70,6 @@ export default function Home() {
       });
     } catch (e) {}
 
-    // Secuencia de fases
     const t1 = setTimeout(() => setFase('nitido'), 600);
     const t2 = setTimeout(() => setFase('texto'), 1400);
     const t3 = setTimeout(() => setFase('boton'), 2200);
@@ -168,7 +163,6 @@ export default function Home() {
     );
   };
 
-  // Pantalla de carga inicial
   if (verificando) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
@@ -182,14 +176,6 @@ export default function Home() {
       style={{ background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #EDE9FE 100%)' }}>
 
       <style>{`
-        @keyframes blurIn {
-          0% { filter: blur(20px); transform: scale(1.4); opacity: 0.3; }
-          100% { filter: blur(0px); transform: scale(1); opacity: 1; }
-        }
-        @keyframes shrinkDown {
-          0% { transform: scale(1.4); }
-          100% { transform: scale(1); }
-        }
         @keyframes fadeSlideUp {
           0% { opacity: 0; transform: translateY(20px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -220,7 +206,6 @@ export default function Home() {
 
       <div className="max-w-md w-full flex flex-col items-center">
 
-        {/* Logo animado */}
         <div className={`flex flex-col items-center mb-2 ${fase === 'blur' ? 'logo-blur' : 'logo-nitido pulse-logo'}`}>
           <svg width="96" height="96" viewBox="0 0 32 32" fill="none">
             <defs>
@@ -239,22 +224,20 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Texto animado */}
         {(fase === 'texto' || fase === 'boton') && (
           <div className="text-center mt-6 fade-up">
             <h1 className="text-2xl font-extrabold text-gray-900 leading-snug mb-3">
               Bienvenido a Fleksi 👋
             </h1>
             <p className="text-gray-500 text-base font-light leading-relaxed px-4">
-              ¿Listo para generar ingresos extra,<br/>
-              <span className="font-semibold text-purple-600">o encontrar quien te ayude?</span>
+              Gana más. Delega más.{' '}
+              <span className="font-semibold text-purple-600">Vive más.</span>
             </p>
           </div>
         )}
 
-        {/* Botón principal + instalar */}
         {fase === 'boton' && (
-          <div className="w-full mt-10 fade-up flex flex-col items-center gap-0">
+          <div className="w-full mt-10 fade-up flex flex-col items-center">
             <a href="/login"
               className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-xl hover:opacity-90 transition text-center">
               Sí, empezar ✨
