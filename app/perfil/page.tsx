@@ -339,7 +339,8 @@ export default function Perfil() {
           </div>
         </a>
 
-        <a href="/verificacion" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
+        {/* Banner verificación — apunta a /documentos */}
+        <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
