@@ -14,6 +14,7 @@ function ConfirmarContent() {
   const [confirmado, setConfirmado] = useState(false);
   const [problema, setProblema] = useState(false);
   const [descripcionProblema, setDescripcionProblema] = useState('');
+  const [enviandoDisputa, setEnviandoDisputa] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => { cargarDatos(); }, []);
@@ -47,21 +48,19 @@ function ConfirmarContent() {
       const desgloseFlekser = calcularPagoFlekser(precio);
       const desgloseCliente = calcularPagoCliente(precio, servicio.seguro);
 
-      // Actualizar aplicacion y servicio
       await supabase.from('aplicaciones').update({
         pago_liberado: true,
         estado: 'completado',
       }).eq('id', aplicacion.id);
 
-      await supabase.from('servicios').update({ estado: 'pagado' }).eq('id', servicio.id);
+      await supabase.from('servicios').update({
+        estado: 'pagado',
+      }).eq('id', servicio.id);
 
-      // Si es pago en efectivo — descontar comisiones del wallet de ambos
       if (esEfectivo) {
-        // Comisión del cliente (5% en efectivo)
         const comisionEfectivoCliente = Math.round(precio * 0.05);
         const comisionEfectivoFlekser = Math.round(precio * 0.05);
 
-        // Wallet del cliente
         const { data: clienteData } = await supabase.from('usuarios').select('wallet_saldo').eq('id', servicio.cliente_id).single();
         const saldoCliente = clienteData?.wallet_saldo || 0;
         await supabase.from('usuarios').update({ wallet_saldo: saldoCliente - comisionEfectivoCliente }).eq('id', servicio.cliente_id);
@@ -73,7 +72,6 @@ function ConfirmarContent() {
           servicio_id: servicio.id,
         });
 
-        // Wallet del flekser
         const { data: flekserData } = await supabase.from('usuarios').select('wallet_saldo').eq('id', aplicacion.prestador_id).single();
         const saldoFlekser = flekserData?.wallet_saldo || 0;
         await supabase.from('usuarios').update({ wallet_saldo: saldoFlekser - comisionEfectivoFlekser }).eq('id', aplicacion.prestador_id);
@@ -85,7 +83,6 @@ function ConfirmarContent() {
           servicio_id: servicio.id,
         });
 
-        // Notificar al flekser
         await supabase.from('notificaciones').insert({
           usuario_id: aplicacion.prestador_id,
           tipo: 'pago_liberado',
@@ -94,7 +91,6 @@ function ConfirmarContent() {
           link: '/wallet',
         });
       } else {
-        // Pago con Stripe — notificar al flekser lo que recibirá
         await supabase.from('notificaciones').insert({
           usuario_id: aplicacion.prestador_id,
           tipo: 'pago_liberado',
@@ -104,10 +100,8 @@ function ConfirmarContent() {
         });
       }
 
-      // Incrementar trabajos completados
       try { await supabase.rpc('incrementar_trabajos', { user_id: aplicacion.prestador_id }); } catch (e) {}
 
-      // Email de confirmación
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -133,6 +127,53 @@ function ConfirmarContent() {
       setError(err.message || 'Error al confirmar el trabajo');
     } finally {
       setProcesando(false);
+    }
+  };
+
+  const reportarProblema = async () => {
+    if (!descripcionProblema.trim() || !servicio) return;
+    setEnviandoDisputa(true);
+    try {
+      // Guardar disputa en la BD — pago queda congelado
+      await supabase.from('servicios').update({
+        disputa_descripcion: descripcionProblema.trim(),
+        disputa_at: new Date().toISOString(),
+        estado: 'en_disputa',
+      }).eq('id', servicio.id);
+
+      // Notificar al admin (fernando)
+      await supabase.from('notificaciones').insert({
+        usuario_id: usuario?.id,
+        tipo: 'disputa',
+        titulo: '⚠️ Disputa registrada',
+        mensaje: `Tu reporte fue recibido. Nuestro equipo revisará el caso en menos de 24 horas.`,
+        link: '/mis-trabajos',
+      });
+
+      // Email al admin
+      try {
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'disputa',
+            destinatario: 'fernando.najera.nm@gmail.com',
+            datos: {
+              cliente: usuario?.nombre,
+              trabajo: servicio.titulo,
+              servicio_id: servicio.id,
+              descripcion: descripcionProblema.trim(),
+              monto: (aplicacion?.precio_ofrecido || servicio.presupuesto),
+            },
+          }),
+        });
+      } catch (e) {}
+
+      window.location.href = '/mis-trabajos';
+    } catch (err: any) {
+      setError('Error al enviar el reporte. Intenta de nuevo.');
+    } finally {
+      setEnviandoDisputa(false);
     }
   };
 
@@ -219,6 +260,15 @@ function ConfirmarContent() {
 
       <div className="max-w-md mx-auto px-6 py-4">
 
+        {/* Banner 24h */}
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 flex items-center gap-3">
+          <span className="text-2xl">⏰</span>
+          <div>
+            <p className="font-bold text-blue-800 text-sm">Tienes 24 horas para revisar</p>
+            <p className="text-blue-600 text-xs mt-0.5">Si no confirmas ni reportas, el pago se libera automáticamente.</p>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen del trabajo</h3>
           <p className="font-bold text-gray-900 mb-1">{servicio.titulo}</p>
@@ -251,7 +301,7 @@ function ConfirmarContent() {
             </div>
             {!esEfectivo && (
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Comisión de plataforma (15%)</span>
+                <span className="text-gray-500 text-sm">Comisión de plataforma</span>
                 <span className="font-semibold text-sm">${desgloseCliente.comision} MXN</span>
               </div>
             )}
@@ -263,7 +313,7 @@ function ConfirmarContent() {
             )}
             {esEfectivo && (
               <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Comisión efectivo (5% wallet)</span>
+                <span className="text-gray-500 text-sm">Comisión efectivo (wallet)</span>
                 <span className="font-semibold text-sm text-orange-600">-${Math.round(precio * 0.05)} MXN</span>
               </div>
             )}
@@ -274,12 +324,6 @@ function ConfirmarContent() {
               <span className="font-extrabold text-purple-600 text-lg">
                 {esEfectivo ? `$${precio} MXN` : `$${desgloseCliente.total} MXN`}
               </span>
-            </div>
-            <div className="bg-green-50 rounded-xl p-3 mt-1">
-              <div className="flex justify-between">
-                <span className="text-green-700 text-sm font-semibold">💰 Flekser recibirá</span>
-                <span className="font-extrabold text-green-700">${desgloseFlekser.total} MXN</span>
-              </div>
             </div>
           </div>
         </div>
@@ -310,13 +354,16 @@ function ConfirmarContent() {
               👎 Hay un problema
             </button>
           </div>
+
           {problema && (
             <div>
               <textarea value={descripcionProblema} onChange={(e) => setDescripcionProblema(e.target.value)}
-                placeholder="Describe el problema para que podamos ayudarte..."
-                rows={3} className="w-full p-3 rounded-xl border-2 border-red-200 outline-none text-gray-900 text-sm resize-none mb-3"/>
-              <div className="bg-red-50 rounded-xl p-3">
-                <p className="text-red-700 text-xs font-semibold">⚠️ El pago quedará retenido hasta resolver el problema. Nuestro equipo te contactará en menos de 24 horas.</p>
+                placeholder="Describe el problema detalladamente para que podamos ayudarte..."
+                rows={4} className="w-full p-3 rounded-xl border-2 border-red-200 outline-none text-gray-900 text-sm resize-none mb-3"/>
+              <div className="bg-red-50 rounded-xl p-3 mb-3">
+                <p className="text-red-700 text-xs font-semibold">
+                  ⚠️ Al reportar, el pago quedará congelado hasta que nuestro equipo resuelva el caso. Te contactaremos en menos de 24 horas.
+                </p>
               </div>
             </div>
           )}
@@ -332,20 +379,17 @@ function ConfirmarContent() {
           {!problema ? (
             <button onClick={confirmarTrabajo} disabled={procesando}
               className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-              {procesando ? 'Confirmando...' : `🎉 Confirmar y liberar pago`}
+              {procesando ? 'Confirmando...' : '🎉 Confirmar y liberar pago'}
             </button>
           ) : (
-            <button disabled={!descripcionProblema.trim()}
-              className="w-full py-4 bg-red-500 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50"
-              onClick={async () => {
-                if (!descripcionProblema.trim()) return;
-                alert('✅ Tu reporte fue enviado. Nuestro equipo te contactará pronto.');
-                window.location.href = '/mis-trabajos';
-              }}>
-              📩 Reportar problema
+            <button onClick={reportarProblema} disabled={!descripcionProblema.trim() || enviandoDisputa}
+              className="w-full py-4 bg-red-500 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              {enviandoDisputa ? 'Enviando reporte...' : '📩 Reportar problema y congelar pago'}
             </button>
           )}
-          <p className="text-xs text-gray-400 text-center mt-2">🔒 El pago está protegido por Fleksi hasta tu confirmación</p>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            🔒 El pago se libera automáticamente después de 24h si no hay reporte
+          </p>
         </div>
       </div>
     </main>
