@@ -11,21 +11,20 @@ export default function Home() {
   const [mostrarInstruccionesIOS, setMostrarInstruccionesIOS] = useState(false);
   const [verificando, setVerificando] = useState(true);
 
+  // Animación splash
+  const [fase, setFase] = useState<'blur' | 'nitido' | 'texto' | 'boton'>('blur');
+
   useEffect(() => {
     const verificarSesion = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const { data: usuario } = await supabase
-            .from('usuarios').select('rol, modo_viajero').eq('id', session.user.id).single();
-          const rol = usuario?.rol || 'flekser';
-          if (rol === 'empresa') {
-            window.location.href = '/home-empresa';
-          } else if (rol === 'viajero' || usuario?.modo_viajero) {
-            window.location.href = '/home-viajero';
-          } else {
-            window.location.href = '/home';
-          }
+            .from('usuarios').select('rol, rol_activo, modo_viajero').eq('id', session.user.id).single();
+          const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
+          if (rol === 'empresa') { window.location.href = '/home-empresa'; return; }
+          if (rol === 'viajero' || usuario?.modo_viajero) { window.location.href = '/home-viajero'; return; }
+          window.location.href = '/home';
           return;
         }
       } catch (e) {}
@@ -39,24 +38,48 @@ export default function Home() {
     const isAndroid = /android/.test(ua);
     const isWindows = /windows/.test(ua);
     const isMac = /macintosh|mac os x/.test(ua) && !isIOS;
-
     if (isIOS) setPlataforma('ios');
     else if (isAndroid) setPlataforma('android');
     else if (isWindows) setPlataforma('windows');
     else if (isMac) setPlataforma('mac');
     else setPlataforma('otro');
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setInstalada(true);
-    }
+    if (window.matchMedia('(display-mode: standalone)').matches) setInstalada(true);
 
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
+    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Secuencia de animación después de que termina verificando
+  useEffect(() => {
+    if (verificando) return;
+
+    // Sonido amigable con Web Audio API
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const notas = [523.25, 659.25, 783.99, 1046.5]; // Do Mi Sol Do
+      notas.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.15 + 0.05);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.15 + 0.25);
+        osc.start(ctx.currentTime + i * 0.15);
+        osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+      });
+    } catch (e) {}
+
+    // Secuencia de fases
+    const t1 = setTimeout(() => setFase('nitido'), 600);
+    const t2 = setTimeout(() => setFase('texto'), 1400);
+    const t3 = setTimeout(() => setFase('boton'), 2200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [verificando]);
 
   const instalarApp = async () => {
     if (deferredPrompt) {
@@ -72,7 +95,7 @@ export default function Home() {
 
     if (plataforma === 'ios') {
       return (
-        <div className="mt-4">
+        <div className="mt-3 w-full">
           <button onClick={() => setMostrarInstruccionesIOS(!mostrarInstruccionesIOS)}
             className="w-full py-3 px-6 bg-black text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
             🍎 Instalar en iPhone / iPad
@@ -103,7 +126,7 @@ export default function Home() {
     if (deferredPrompt && plataforma === 'android') {
       return (
         <button onClick={instalarApp}
-          className="mt-4 w-full py-3 px-6 bg-green-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          className="mt-3 w-full py-3 px-6 bg-green-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🤖 Instalar en Android
         </button>
       );
@@ -112,7 +135,7 @@ export default function Home() {
     if (deferredPrompt && plataforma === 'windows') {
       return (
         <button onClick={instalarApp}
-          className="mt-4 w-full py-3 px-6 bg-blue-700 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          className="mt-3 w-full py-3 px-6 bg-blue-700 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🪟 Instalar en Windows
         </button>
       );
@@ -121,7 +144,7 @@ export default function Home() {
     if (deferredPrompt && plataforma === 'mac') {
       return (
         <button onClick={instalarApp}
-          className="mt-4 w-full py-3 px-6 bg-gray-800 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          className="mt-3 w-full py-3 px-6 bg-gray-800 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           🍎 Instalar en Mac
         </button>
       );
@@ -130,14 +153,14 @@ export default function Home() {
     if (deferredPrompt) {
       return (
         <button onClick={instalarApp}
-          className="mt-4 w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          className="mt-3 w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
           📲 Instalar Fleksi
         </button>
       );
     }
 
     return (
-      <div className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
+      <div className="mt-3 bg-gray-50 rounded-2xl p-4 border border-gray-200">
         <p className="text-sm text-gray-500 text-center">
           📲 Para instalar Fleksi, abre esta página en <span className="font-bold">Chrome</span> y busca la opción "Instalar app" en el menú
         </p>
@@ -145,85 +168,112 @@ export default function Home() {
     );
   };
 
+  // Pantalla de carga inicial
   if (verificando) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Cargando...</p>
-        </div>
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-      <div className="max-w-md w-full text-center">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #EDE9FE 100%)' }}>
 
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+      <style>{`
+        @keyframes blurIn {
+          0% { filter: blur(20px); transform: scale(1.4); opacity: 0.3; }
+          100% { filter: blur(0px); transform: scale(1); opacity: 1; }
+        }
+        @keyframes shrinkDown {
+          0% { transform: scale(1.4); }
+          100% { transform: scale(1); }
+        }
+        @keyframes fadeSlideUp {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse-soft {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.03); }
+        }
+        .logo-blur {
+          filter: blur(18px);
+          transform: scale(1.5);
+          opacity: 0.4;
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .logo-nitido {
+          filter: blur(0px);
+          transform: scale(1);
+          opacity: 1;
+          transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .fade-up {
+          animation: fadeSlideUp 0.6s ease forwards;
+        }
+        .pulse-logo {
+          animation: pulse-soft 3s ease-in-out infinite;
+        }
+      `}</style>
+
+      <div className="max-w-md w-full flex flex-col items-center">
+
+        {/* Logo animado */}
+        <div className={`flex flex-col items-center mb-2 ${fase === 'blur' ? 'logo-blur' : 'logo-nitido pulse-logo'}`}>
+          <svg width="96" height="96" viewBox="0 0 32 32" fill="none">
             <defs>
-              <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <linearGradient id="lg-splash" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#2563EB"/>
                 <stop offset="100%" stopColor="#7C3AED"/>
               </linearGradient>
             </defs>
-            <rect width="32" height="32" rx="10" fill="url(#lg)"/>
+            <rect width="32" height="32" rx="10" fill="url(#lg-splash)"/>
             <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
             <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
             <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
           </svg>
-          <span className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="text-4xl font-extrabold mt-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             fleksi
           </span>
         </div>
 
-        <h1 className="text-4xl font-extrabold text-gray-900 leading-tight mb-4">
-          Tu trabajo,<br/>
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            tus reglas.
-          </span>
-        </h1>
-
-        <p className="text-gray-500 text-lg mb-10 font-light leading-relaxed">
-          Conectamos personas que necesitan un servicio con quienes pueden hacerlo. Rápido, seguro y flexible.
-        </p>
-
-        <div className="flex flex-col gap-4">
-          <a href="/registro?rol=flekser"
-            className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:opacity-90 transition text-center">
-            ⚡ Soy Flekser
-          </a>
-          <a href="/registro?rol=empresa"
-            className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
-            🏢 Soy empresa
-          </a>
-          <a href="/registro?rol=viajero"
-            className="w-full py-4 px-6 bg-white text-gray-800 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-400 transition text-center">
-            ✈️ Soy viajero
-          </a>
-        </div>
-
-        <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4">
-          <p className="text-sm text-gray-600 font-medium">
-            ⚡ <span className="font-bold text-purple-600">Flekser</span> — ofrece tus servicios <span className="text-gray-400">y</span> contrata cuando lo necesites
-          </p>
-        </div>
-
-        {instalada ? (
-          <div className="mt-4 bg-green-50 rounded-2xl p-3 border border-green-200">
-            <p className="text-sm text-green-700 font-semibold">✅ Fleksi ya está instalada en tu dispositivo</p>
+        {/* Texto animado */}
+        {(fase === 'texto' || fase === 'boton') && (
+          <div className="text-center mt-6 fade-up">
+            <h1 className="text-2xl font-extrabold text-gray-900 leading-snug mb-3">
+              Bienvenido a Fleksi 👋
+            </h1>
+            <p className="text-gray-500 text-base font-light leading-relaxed px-4">
+              ¿Listo para generar ingresos extra,<br/>
+              <span className="font-semibold text-purple-600">o encontrar quien te ayude?</span>
+            </p>
           </div>
-        ) : (
-          botonInstalar()
         )}
 
-        <p className="mt-6 text-gray-400 text-sm">
-          ¿Ya tienes cuenta?{" "}
-          <a href="/login" className="text-purple-600 font-semibold hover:underline">
-            Inicia sesión
-          </a>
-        </p>
+        {/* Botón principal + instalar */}
+        {fase === 'boton' && (
+          <div className="w-full mt-10 fade-up flex flex-col items-center gap-0">
+            <a href="/login"
+              className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-xl hover:opacity-90 transition text-center">
+              Sí, empezar ✨
+            </a>
+            <p className="mt-4 text-gray-400 text-sm">
+              ¿Ya tienes cuenta?{' '}
+              <a href="/login" className="text-purple-600 font-semibold hover:underline">
+                Inicia sesión
+              </a>
+            </p>
+            {instalada ? (
+              <div className="mt-3 w-full bg-green-50 rounded-2xl p-3 border border-green-200">
+                <p className="text-sm text-green-700 font-semibold text-center">✅ Fleksi ya está instalada en tu dispositivo</p>
+              </div>
+            ) : (
+              botonInstalar()
+            )}
+          </div>
+        )}
 
       </div>
     </main>
