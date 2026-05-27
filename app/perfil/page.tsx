@@ -27,40 +27,27 @@ const todosLosBadges = [
 
 function calcularProgresoPerfil(usuario: any, documentos: any[], rol: string) {
   let puntos = 0;
-
-  // Campos básicos — 10% cada uno
   if (usuario?.foto_url) puntos += 10;
   if (usuario?.nombre?.trim()) puntos += 10;
   if (usuario?.telefono?.trim()) puntos += 10;
   if (usuario?.ciudad?.trim()) puntos += 10;
   if (usuario?.descripcion?.trim()) puntos += 10;
-
   if (rol === 'empresa') {
     if (usuario?.datos_factura?.nombre_fiscal && usuario?.datos_factura?.rfc) puntos += 10;
   } else {
     if (usuario?.habilidades?.length > 0) puntos += 10;
   }
-
-  // Documentos subidos — 15%
   const docsRequeridos = rol === 'empresa'
     ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes']
     : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
-
   const docsSubidos = documentos.filter(d =>
     docsRequeridos.includes(d.tipo) && (d.estado === 'subido' || d.estado === 'aprobado')
   ).length;
-  if (docsSubidos > 0) {
-    puntos += Math.round((docsSubidos / docsRequeridos.length) * 15);
-  }
-
-  // Documentos aprobados — 25%
+  if (docsSubidos > 0) puntos += Math.round((docsSubidos / docsRequeridos.length) * 15);
   const docsAprobados = documentos.filter(d =>
     docsRequeridos.includes(d.tipo) && d.estado === 'aprobado'
   ).length;
-  if (docsAprobados > 0) {
-    puntos += Math.round((docsAprobados / docsRequeridos.length) * 25);
-  }
-
+  if (docsAprobados > 0) puntos += Math.round((docsAprobados / docsRequeridos.length) * 25);
   return Math.min(puntos, 100);
 }
 
@@ -81,10 +68,7 @@ export default function Perfil() {
   const [reseñas, setReseñas] = useState<any[]>([]);
   const [portafolio, setPortafolio] = useState<{ foto: string; titulo: string }[]>([]);
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
-  const [modoViajero, setModoViajero] = useState(false);
-  const [ciudadActual, setCiudadActual] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
-  const [activandoViajero, setActivandoViajero] = useState(false);
   const [verificacion, setVerificacion] = useState<any>(null);
   const [totalGanado, setTotalGanado] = useState(0);
   const [walletSaldo, setWalletSaldo] = useState(0);
@@ -108,30 +92,23 @@ export default function Perfil() {
         setCiudad(data.ciudad || '');
         setHabilidadesSeleccionadas(data.habilidades || []);
         setFotoUrl(data.foto_url || '');
-        setModoViajero(data.modo_viajero || false);
-        setCiudadActual(data.ciudad || '');
         setCiudadesVisitadas(data.ciudades_visitadas || []);
         setWalletSaldo(data.wallet_saldo || 0);
 
-        const { data: docs } = await supabase
-          .from('documentos').select('*').eq('usuario_id', user.id);
+        const { data: docs } = await supabase.from('documentos').select('*').eq('usuario_id', user.id);
         setDocumentos(docs || []);
 
         const rol = data.rol_activo || data.rol || 'flekser';
         const progreso = calcularProgresoPerfil({ ...data, id: user.id }, docs || [], rol);
         setProgresoPerfil(progreso);
 
-        // Asignar badge perfil_completo si llega al 100%
         if (progreso === 100) {
-          const yaTiene = (docs || []).some((b: any) => b.tipo === 'perfil_completo');
-          if (!yaTiene) {
-            try {
-              await supabase.from('badges').upsert({
-                usuario_id: user.id,
-                tipo: 'perfil_completo',
-              }, { onConflict: 'usuario_id,tipo' });
-            } catch (e) {}
-          }
+          try {
+            await supabase.from('badges').upsert({
+              usuario_id: user.id,
+              tipo: 'perfil_completo',
+            }, { onConflict: 'usuario_id,tipo' });
+          } catch (e) {}
         }
       }
 
@@ -177,39 +154,6 @@ export default function Perfil() {
       console.error(err);
     } finally {
       setCargando(false);
-    }
-  };
-
-  const toggleModoViajero = async () => {
-    if (!usuario) return;
-    setActivandoViajero(true);
-    try {
-      const nuevoModo = !modoViajero;
-      let nuevasCiudades = ciudadesVisitadas;
-      if (nuevoModo && ciudadActual && !ciudadesVisitadas.includes(ciudadActual)) {
-        nuevasCiudades = [...ciudadesVisitadas, ciudadActual];
-        setCiudadesVisitadas(nuevasCiudades);
-      }
-      await supabase.from('usuarios').update({ modo_viajero: nuevoModo, ciudades_visitadas: nuevasCiudades }).eq('id', usuario.id);
-      setModoViajero(nuevoModo);
-    } finally {
-      setActivandoViajero(false);
-    }
-  };
-
-  const actualizarCiudadViajero = async () => {
-    if (!usuario || !ciudadActual.trim()) return;
-    setActivandoViajero(true);
-    try {
-      let nuevasCiudades = ciudadesVisitadas;
-      if (!ciudadesVisitadas.includes(ciudadActual.trim())) {
-        nuevasCiudades = [...ciudadesVisitadas, ciudadActual.trim()];
-        setCiudadesVisitadas(nuevasCiudades);
-      }
-      await supabase.from('usuarios').update({ ciudad: ciudadActual.trim(), ciudades_visitadas: nuevasCiudades }).eq('id', usuario.id);
-      alert('✅ Ciudad actualizada');
-    } finally {
-      setActivandoViajero(false);
     }
   };
 
@@ -280,7 +224,6 @@ export default function Perfil() {
     return estados[verificacion.estado] || estados['en_revision'];
   };
 
-  // Pasos faltantes para completar perfil
   const pasosFaltantes = () => {
     if (!usuario) return [];
     const rol = usuario.rol_activo || usuario.rol || 'flekser';
@@ -371,7 +314,6 @@ export default function Perfil() {
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
                 </span>
-                {modoViajero && <span className="text-xs bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded-full">✈️ Modo viajero ON</span>}
                 {tieneBadge('verificado') && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>}
                 {tieneBadge('top_rated') && <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">⭐ Top Rated</span>}
                 {perfilCompleto && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>}
@@ -379,7 +321,7 @@ export default function Perfil() {
             </div>
           </div>
 
-          {/* Barra de progreso — desaparece al 100% */}
+          {/* Barra de progreso */}
           {!perfilCompleto && (
             <div className="mb-4 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-2">
@@ -504,45 +446,19 @@ export default function Perfil() {
           </div>
         </a>
 
-        {/* Modo viajero */}
-        <div className={`rounded-2xl p-5 shadow-sm border mb-4 transition ${modoViajero ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-transparent' : 'bg-white border-gray-100'}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className={`font-extrabold text-lg ${modoViajero ? 'text-white' : 'text-gray-900'}`}>✈️ Modo Viajero</h3>
-              <p className={`text-xs mt-0.5 ${modoViajero ? 'text-white/70' : 'text-gray-400'}`}>
-                {modoViajero ? 'Activo — apareces en búsquedas de tu ciudad actual' : 'Actívalo cuando estés de viaje'}
-              </p>
+        {/* Ciudades visitadas — sin toggle */}
+        {ciudadesVisitadas.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde has trabajado</h3>
+            <div className="flex flex-wrap gap-2">
+              {ciudadesVisitadas.map((c, i) => (
+                <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-600">
+                  📍 {c}
+                </span>
+              ))}
             </div>
-            <button onClick={toggleModoViajero} disabled={activandoViajero}
-              className={`w-14 h-7 rounded-full transition-all duration-300 relative ${modoViajero ? 'bg-white' : 'bg-gray-200'}`}>
-              <div className={`w-6 h-6 rounded-full absolute top-0.5 transition-all duration-300 shadow-sm ${modoViajero ? 'left-7 bg-purple-600' : 'left-0.5 bg-white'}`}/>
-            </button>
           </div>
-          {modoViajero && (
-            <div className="mt-3">
-              <p className="text-white/80 text-xs font-semibold mb-2">📍 ¿Dónde estás ahora?</p>
-              <div className="flex gap-2">
-                <input value={ciudadActual} onChange={(e) => setCiudadActual(e.target.value)}
-                  placeholder="Ej. Monterrey, Guadalajara..."
-                  className="flex-1 p-3 rounded-xl bg-white/20 text-white placeholder-white/50 outline-none border border-white/30 text-sm font-semibold"/>
-                <button onClick={actualizarCiudadViajero} disabled={activandoViajero}
-                  className="px-4 py-3 bg-white text-purple-600 rounded-xl font-bold text-sm hover:bg-white/90 transition disabled:opacity-50">✓</button>
-              </div>
-            </div>
-          )}
-          {ciudadesVisitadas.length > 0 && (
-            <div className="mt-3">
-              <p className={`text-xs font-semibold mb-2 ${modoViajero ? 'text-white/80' : 'text-gray-500'}`}>🗺️ Ciudades donde has trabajado</p>
-              <div className="flex flex-wrap gap-2">
-                {ciudadesVisitadas.map((c, i) => (
-                  <span key={i} className={`text-xs font-semibold px-3 py-1 rounded-full ${modoViajero ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
-                    📍 {c}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Teléfono */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
