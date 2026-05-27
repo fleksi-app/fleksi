@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { calcularPagoFlekser } from '@/lib/comisiones';
 
 function DetalleTrabajoContent() {
   const searchParams = useSearchParams();
@@ -34,8 +35,7 @@ function DetalleTrabajoContent() {
       const { data } = await supabase
         .from('servicios')
         .select('*, usuarios(nombre, calificacion, foto_url, email)')
-        .eq('id', servicioId)
-        .single();
+        .eq('id', servicioId).single();
       servicio = data;
     } else {
       const { data } = await supabase
@@ -52,11 +52,9 @@ function DetalleTrabajoContent() {
       setTrabajo(servicio);
       setMiPrecio(servicio.presupuesto?.toString() || '');
       const { data: appExistente } = await supabase
-        .from('aplicaciones')
-        .select('id')
+        .from('aplicaciones').select('id')
         .eq('servicio_id', servicio.id)
-        .eq('prestador_id', user.id)
-        .single();
+        .eq('prestador_id', user.id).single();
       if (appExistente) setYaAplico(true);
     }
 
@@ -140,6 +138,10 @@ function DetalleTrabajoContent() {
     );
   }
 
+  // Calcular lo que recibirá el flekser
+  const precioBase = Number(miPrecio) || trabajo.presupuesto;
+  const desgloseFlekser = calcularPagoFlekser(precioBase);
+
   if (aplicado) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -158,7 +160,15 @@ function DetalleTrabajoContent() {
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Tu precio</span>
-              <span className="font-semibold text-sm text-purple-600">${miPrecio} MXN</span>
+              <span className="font-semibold text-sm text-gray-500 line-through">${miPrecio} MXN</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-400 text-sm">Comisión Fleksi (10%)</span>
+              <span className="font-semibold text-sm text-orange-500">-${calcularPagoFlekser(Number(miPrecio)).comision} MXN</span>
+            </div>
+            <div className="flex justify-between mb-2 pt-1 border-t border-gray-100">
+              <span className="font-bold text-gray-900 text-sm">💰 Recibirás</span>
+              <span className="font-extrabold text-green-600 text-sm">${calcularPagoFlekser(Number(miPrecio)).total} MXN</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400 text-sm">Estado</span>
@@ -182,9 +192,7 @@ function DetalleTrabajoContent() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href="/home" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
-              ←
-            </a>
+            <a href="/home" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</a>
             <h1 className="font-extrabold text-gray-900 text-lg">Detalle del trabajo</h1>
           </div>
         </div>
@@ -201,23 +209,39 @@ function DetalleTrabajoContent() {
               <div className="flex items-start justify-between gap-2">
                 <h2 className="font-extrabold text-gray-900 text-lg leading-tight">{trabajo.titulo}</h2>
                 {trabajo.urgente && (
-                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">
-                    🔴 Urgente
-                  </span>
+                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">🔴 Urgente</span>
                 )}
               </div>
-              <p className="text-gray-400 text-sm mt-1">Precio fijo</p>
+              <p className="text-gray-400 text-sm mt-1">{trabajo.categoria}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1">💰 Pago</p>
-              <p className="font-extrabold text-purple-600 text-lg">${trabajo.presupuesto} MXN</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+              <p className="text-xs text-green-600 font-semibold mb-1">💰 Tú recibirás</p>
+              <p className="font-extrabold text-green-700 text-xl">${desgloseFlekser.total} MXN</p>
+              <p className="text-xs text-green-500 mt-0.5">Después de comisión (10%)</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-1">📅 Cuándo</p>
-              <p className="font-bold text-gray-900 text-sm">{trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
+              <p className="font-bold text-gray-900 text-sm">{trabajo.fecha}</p>
+              {trabajo.hora && <p className="text-xs text-gray-400">{trabajo.hora.slice(0,5)}</p>}
+            </div>
+          </div>
+
+          {/* Desglose transparente */}
+          <div className="bg-gray-50 rounded-xl p-3 text-xs">
+            <div className="flex justify-between mb-1">
+              <span className="text-gray-400">Precio del trabajo</span>
+              <span className="text-gray-600 font-semibold">${trabajo.presupuesto} MXN</span>
+            </div>
+            <div className="flex justify-between mb-1">
+              <span className="text-gray-400">Comisión Fleksi (10%)</span>
+              <span className="text-orange-500 font-semibold">-${calcularPagoFlekser(trabajo.presupuesto).comision} MXN</span>
+            </div>
+            <div className="flex justify-between pt-1 border-t border-gray-200">
+              <span className="font-bold text-gray-700">Tu ganancia</span>
+              <span className="font-extrabold text-green-600">${desgloseFlekser.total} MXN</span>
             </div>
           </div>
         </div>
@@ -246,16 +270,17 @@ function DetalleTrabajoContent() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 border border-purple-100 mb-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">🛡️</span>
-            <div>
-              <h3 className="font-extrabold text-gray-900 mb-1">Fleksi Protege</h3>
-              <p className="text-gray-600 text-sm">Seguro activado. Cubre daños accidentales durante el trabajo.</p>
-              {trabajo.seguro && <p className="text-purple-600 font-bold text-sm mt-1">+$45 MXN incluido</p>}
+        {trabajo.seguro && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 border border-purple-100 mb-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🛡️</span>
+              <div>
+                <h3 className="font-extrabold text-gray-900 mb-1">Fleksi Protege activado</h3>
+                <p className="text-gray-600 text-sm">Cubre daños accidentales durante el trabajo.</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {yaAplico && !aplicado && (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4 text-center">
@@ -265,9 +290,7 @@ function DetalleTrabajoContent() {
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
-            {error}
-          </div>
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
         )}
 
         {!yaAplico && mostrarOferta && (
@@ -278,6 +301,12 @@ function DetalleTrabajoContent() {
               <input type="number" placeholder="Ej. 600" value={miPrecio}
                 onChange={(e) => setMiPrecio(e.target.value)}
                 className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+              {miPrecio && (
+                <div className="mt-2 bg-green-50 rounded-xl p-2 flex justify-between text-xs">
+                  <span className="text-green-600">💰 Recibirás</span>
+                  <span className="font-extrabold text-green-700">${calcularPagoFlekser(Number(miPrecio)).total} MXN</span>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje al cliente</label>
@@ -300,7 +329,7 @@ function DetalleTrabajoContent() {
               </button>
               <button onClick={handleAplicar} disabled={cargando}
                 className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                {cargando ? 'Enviando...' : `✋ Aplicar — $${miPrecio || trabajo.presupuesto}`}
+                {cargando ? 'Enviando...' : `✋ Aplicar — $${desgloseFlekser.total}`}
               </button>
             </>
           ) : (
@@ -313,7 +342,6 @@ function DetalleTrabajoContent() {
       </div>
 
       <Nav activo="inicio" />
-
     </main>
   );
 }

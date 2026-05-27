@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { calcularPagoFlekser } from '@/lib/comisiones';
 
 const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Otro'];
 
@@ -37,7 +38,6 @@ export default function HomeWorker() {
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
 
-  // Filtros
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [filtroCiudad, setFiltroCiudad] = useState('');
   const [filtroPresupuestoMin, setFiltroPresupuestoMin] = useState('');
@@ -159,7 +159,6 @@ export default function HomeWorker() {
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
         <div className="max-w-md mx-auto relative">
 
-          {/* Barra superior: rol + campanita */}
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setMostrarCambioRol(true)}
               className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
@@ -273,6 +272,7 @@ export default function HomeWorker() {
           <div className="flex flex-col gap-3">
             {trabajosFiltrados.map((trabajo) => {
               const yaAplico = aplicacionesUsuario.includes(trabajo.id);
+              const ganancia = calcularPagoFlekser(trabajo.presupuesto);
               return (
                 <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
                   <div className="flex gap-3">
@@ -291,7 +291,8 @@ export default function HomeWorker() {
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
-                          <p className="font-extrabold text-purple-600 text-sm">${trabajo.presupuesto} MXN</p>
+                          <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
+                          <p className="text-xs text-gray-300 line-through">${trabajo.presupuesto}</p>
                           <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'}`}>
                             {yaAplico ? '✅ Aplicado' : 'Aplicar'}
                           </span>
@@ -327,7 +328,7 @@ export default function HomeWorker() {
                   className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
               </div>
               <div>
-                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Presupuesto (MXN)</label>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Tu ganancia estimada (MXN)</label>
                 <div className="flex gap-3">
                   <input type="number" placeholder="Mínimo" value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
                   <div className="flex items-center text-gray-400 font-bold">—</div>
