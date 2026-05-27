@@ -292,7 +292,6 @@ export default function HomeWorker() {
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
                           <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
-                          <p className="text-xs text-gray-300 line-through">${trabajo.presupuesto}</p>
                           <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'}`}>
                             {yaAplico ? '✅ Aplicado' : 'Aplicar'}
                           </span>
@@ -307,7 +306,6 @@ export default function HomeWorker() {
         )}
       </div>
 
-      {/* Panel filtros */}
       {mostrarFiltros && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarFiltros(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -328,7 +326,7 @@ export default function HomeWorker() {
                   className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
               </div>
               <div>
-                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Tu ganancia estimada (MXN)</label>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Ganancia estimada (MXN)</label>
                 <div className="flex gap-3">
                   <input type="number" placeholder="Mínimo" value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
                   <div className="flex items-center text-gray-400 font-bold">—</div>
@@ -397,7 +395,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* Modal notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -434,7 +431,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* Modal cambio rol */}
       {mostrarCambioRol && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarCambioRol(false)}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>

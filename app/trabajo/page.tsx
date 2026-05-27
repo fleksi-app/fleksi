@@ -23,41 +23,29 @@ function DetalleTrabajoContent() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
-
     const servicioId = searchParams.get('id');
     let servicio = null;
-
     if (servicioId) {
-      const { data } = await supabase
-        .from('servicios')
+      const { data } = await supabase.from('servicios')
         .select('*, usuarios(nombre, calificacion, foto_url, email)')
         .eq('id', servicioId).single();
       servicio = data;
     } else {
-      const { data } = await supabase
-        .from('servicios')
+      const { data } = await supabase.from('servicios')
         .select('*, usuarios(nombre, calificacion, foto_url, email)')
-        .eq('estado', 'activo')
-        .neq('cliente_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .eq('estado', 'activo').neq('cliente_id', user.id)
+        .order('created_at', { ascending: false }).limit(1);
       servicio = data?.[0] || null;
     }
-
     if (servicio) {
       setTrabajo(servicio);
       setMiPrecio(servicio.presupuesto?.toString() || '');
-      const { data: appExistente } = await supabase
-        .from('aplicaciones').select('id')
-        .eq('servicio_id', servicio.id)
-        .eq('prestador_id', user.id).single();
+      const { data: appExistente } = await supabase.from('aplicaciones').select('id')
+        .eq('servicio_id', servicio.id).eq('prestador_id', user.id).single();
       if (appExistente) setYaAplico(true);
     }
-
     setCargandoPagina(false);
   };
 
@@ -75,7 +63,6 @@ function DetalleTrabajoContent() {
         estado: 'pendiente',
       });
       if (dbError) throw dbError;
-
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -95,7 +82,6 @@ function DetalleTrabajoContent() {
           }),
         });
       } catch (e) {}
-
       setAplicado(true);
       setYaAplico(true);
     } catch (err: any) {
@@ -106,9 +92,8 @@ function DetalleTrabajoContent() {
   };
 
   const categoriaEmoji: any = {
-    hogar: '🔧', limpieza: '🧹', eventos: '🍽️',
-    mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️',
-    cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
+    hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
+    interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
     cerrajeria: '🔑', estetica: '💅', otro: '✨'
   };
 
@@ -130,17 +115,14 @@ function DetalleTrabajoContent() {
           <p className="text-4xl mb-4">🔍</p>
           <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
           <p className="text-gray-400 text-sm mb-6">Vuelve más tarde</p>
-          <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">
-            Volver al inicio
-          </a>
+          <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">Volver al inicio</a>
         </div>
       </main>
     );
   }
 
-  // Calcular lo que recibirá el flekser
   const precioBase = Number(miPrecio) || trabajo.presupuesto;
-  const desgloseFlekser = calcularPagoFlekser(precioBase);
+  const ganancia = calcularPagoFlekser(precioBase);
 
   if (aplicado) {
     return (
@@ -150,25 +132,15 @@ function DetalleTrabajoContent() {
             <span className="text-4xl">✅</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Aplicación enviada!</h1>
-          <p className="text-gray-400 mb-8 font-light">
-            {trabajo.usuarios?.nombre} recibirá tu solicitud y te contactará pronto.
-          </p>
+          <p className="text-gray-400 mb-8 font-light">{trabajo.usuarios?.nombre} recibirá tu solicitud y te contactará pronto.</p>
           <div className="bg-white rounded-2xl p-4 mb-6 text-left border border-gray-100">
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Trabajo</span>
               <span className="font-semibold text-sm text-gray-900">{trabajo.titulo}</span>
             </div>
             <div className="flex justify-between mb-2">
-              <span className="text-gray-400 text-sm">Tu precio</span>
-              <span className="font-semibold text-sm text-gray-500 line-through">${miPrecio} MXN</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="text-gray-400 text-sm">Comisión Fleksi (10%)</span>
-              <span className="font-semibold text-sm text-orange-500">-${calcularPagoFlekser(Number(miPrecio)).comision} MXN</span>
-            </div>
-            <div className="flex justify-between mb-2 pt-1 border-t border-gray-100">
-              <span className="font-bold text-gray-900 text-sm">💰 Recibirás</span>
-              <span className="font-extrabold text-green-600 text-sm">${calcularPagoFlekser(Number(miPrecio)).total} MXN</span>
+              <span className="text-gray-400 text-sm">💰 Recibirás</span>
+              <span className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400 text-sm">Estado</span>
@@ -216,32 +188,15 @@ function DetalleTrabajoContent() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
               <p className="text-xs text-green-600 font-semibold mb-1">💰 Tú recibirás</p>
-              <p className="font-extrabold text-green-700 text-xl">${desgloseFlekser.total} MXN</p>
-              <p className="text-xs text-green-500 mt-0.5">Después de comisión (10%)</p>
+              <p className="font-extrabold text-green-700 text-xl">${ganancia.total} MXN</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-1">📅 Cuándo</p>
               <p className="font-bold text-gray-900 text-sm">{trabajo.fecha}</p>
               {trabajo.hora && <p className="text-xs text-gray-400">{trabajo.hora.slice(0,5)}</p>}
-            </div>
-          </div>
-
-          {/* Desglose transparente */}
-          <div className="bg-gray-50 rounded-xl p-3 text-xs">
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-400">Precio del trabajo</span>
-              <span className="text-gray-600 font-semibold">${trabajo.presupuesto} MXN</span>
-            </div>
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-400">Comisión Fleksi (10%)</span>
-              <span className="text-orange-500 font-semibold">-${calcularPagoFlekser(trabajo.presupuesto).comision} MXN</span>
-            </div>
-            <div className="flex justify-between pt-1 border-t border-gray-200">
-              <span className="font-bold text-gray-700">Tu ganancia</span>
-              <span className="font-extrabold text-green-600">${desgloseFlekser.total} MXN</span>
             </div>
           </div>
         </div>
@@ -329,7 +284,7 @@ function DetalleTrabajoContent() {
               </button>
               <button onClick={handleAplicar} disabled={cargando}
                 className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                {cargando ? 'Enviando...' : `✋ Aplicar — $${desgloseFlekser.total}`}
+                {cargando ? 'Enviando...' : `✋ Aplicar — $${ganancia.total}`}
               </button>
             </>
           ) : (
