@@ -326,7 +326,7 @@ export default function CheckIn() {
         )}
       </div>
 
-      <Nav activo="checkin" />
+      <Nav activo="inicio" />
 
     </main>
   );
