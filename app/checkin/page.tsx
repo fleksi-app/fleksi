@@ -21,18 +21,14 @@ export default function CheckIn() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
-
     const { data: apps } = await supabase
       .from('aplicaciones')
       .select('*, servicios(*, usuarios(id, nombre, telefono, email))')
       .eq('prestador_id', user.id)
       .in('estado', ['aceptado', 'completado'])
       .order('created_at', { ascending: false });
-
     setTrabajos(apps || []);
     setCargando(false);
   };
@@ -57,9 +53,7 @@ export default function CheckIn() {
     for (const foto of fotos) {
       const ext = foto.name.split('.').pop();
       const nombre = `${appId}/${tipo}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage
-        .from('fotos-trabajo')
-        .upload(nombre, foto, { contentType: foto.type });
+      const { error } = await supabase.storage.from('fotos-trabajo').upload(nombre, foto, { contentType: foto.type });
       if (error) { console.error('Error subiendo foto:', error); continue; }
       const { data: urlData } = supabase.storage.from('fotos-trabajo').getPublicUrl(nombre);
       urls.push(urlData.publicUrl);
@@ -132,15 +126,26 @@ export default function CheckIn() {
     }
   };
 
-  const getMapsUrl = (direccion: string) => {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
-  };
+  const getMapsUrl = (direccion: string) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+
+  const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
+  const esEmpresa = rol === 'empresa';
+  const esViajero = rol === 'viajero';
+
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
+  const precioBg = esEmpresa ? 'from-slate-50 to-blue-50' : esViajero ? 'from-sky-50 to-teal-50' : 'from-blue-50 to-purple-50';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
+  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
 
   if (cargando) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
           <p className="text-gray-400">Cargando...</p>
         </div>
       </main>
@@ -148,12 +153,12 @@ export default function CheckIn() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
+    <main className={`min-h-screen ${bgFondo} pb-32`}>
 
-      <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
+      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
         <div className="max-w-md mx-auto">
-          <h1 className="font-extrabold text-gray-900 text-xl mb-1">Mis turnos activos</h1>
-          <p className="text-gray-400 text-sm">Registra tu entrada y salida de cada trabajo</p>
+          <h1 className="font-extrabold text-white text-xl mb-1">Mis turnos activos</h1>
+          <p className="text-white/70 text-sm">Registra tu entrada y salida de cada trabajo</p>
         </div>
       </div>
 
@@ -163,7 +168,7 @@ export default function CheckIn() {
             <p className="text-4xl mb-4">📋</p>
             <p className="font-bold text-gray-900 mb-2">Sin turnos activos</p>
             <p className="text-gray-400 text-sm mb-6">Cuando te acepten en un trabajo aparecerá aquí</p>
-            <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+            <a href="/home" className={`inline-block px-6 py-3 bg-gradient-to-r ${ctaGradient} text-white rounded-2xl font-bold text-sm`}>
               Ver trabajos disponibles
             </a>
           </div>
@@ -175,11 +180,8 @@ export default function CheckIn() {
                   <h3 className="font-extrabold text-gray-900 mb-1">{app.servicios?.titulo}</h3>
                   <p className="text-sm text-gray-400">Cliente: {app.servicios?.usuarios?.nombre}</p>
                   <p className="text-sm text-gray-400">📅 {app.servicios?.fecha} {app.servicios?.hora?.slice(0,5)}</p>
-
-                  {/* Link de ubicación */}
                   {app.servicios?.direccion && (
-                    <a href={getMapsUrl(app.servicios.direccion)}
-                      target="_blank" rel="noopener noreferrer"
+                    <a href={getMapsUrl(app.servicios.direccion)} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 mt-2 p-3 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition">
                       <span className="text-lg">📍</span>
                       <div className="flex-1 min-w-0">
@@ -191,9 +193,9 @@ export default function CheckIn() {
                   )}
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 mb-4 flex justify-between items-center">
+                <div className={`bg-gradient-to-r ${precioBg} rounded-xl p-3 mb-4 flex justify-between items-center`}>
                   <span className="text-sm text-gray-600">Tu pago</span>
-                  <span className="font-extrabold text-purple-600 text-lg">${app.precio_ofrecido || app.servicios?.presupuesto} MXN</span>
+                  <span className={`font-extrabold ${precioColor} text-lg`}>${app.precio_ofrecido || app.servicios?.presupuesto} MXN</span>
                 </div>
 
                 {!app.checkin_at && app.estado === 'aceptado' && (
@@ -225,7 +227,7 @@ export default function CheckIn() {
                     </div>
                     <button onClick={() => handleCheckin(app.id, app.servicios?.id)}
                       disabled={procesando === app.id}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                      className={`w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50`}>
                       {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '📍 Check-in — Llegué'}
                     </button>
                   </div>
@@ -277,7 +279,7 @@ export default function CheckIn() {
                     </div>
                     <button onClick={() => handleCheckout(app.id, app.servicios?.id)}
                       disabled={procesando === app.id}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+                      className={`w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50`}>
                       {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '✅ Check-out — Terminé'}
                     </button>
                   </div>
@@ -327,7 +329,6 @@ export default function CheckIn() {
       </div>
 
       <Nav activo="inicio" />
-
     </main>
   );
 }

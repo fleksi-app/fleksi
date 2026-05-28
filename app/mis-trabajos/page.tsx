@@ -14,18 +14,14 @@ export default function MisTrabajos() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
-
     const { data: apps } = await supabase
       .from('aplicaciones')
       .select('*, servicios(id, titulo, fecha, hora, presupuesto, urgente, estado, metodo_pago, usuarios!cliente_id(nombre, foto_url))')
       .eq('prestador_id', user.id)
       .order('created_at', { ascending: false });
     setAplicaciones(apps || []);
-
     setCargando(false);
   };
 
@@ -57,11 +53,34 @@ export default function MisTrabajos() {
     todos: aplicaciones.length,
   };
 
+  const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
+  const esEmpresa = rol === 'empresa';
+  const esViajero = rol === 'viajero';
+
+  const headerGradient = esEmpresa
+    ? 'from-slate-700 to-blue-900'
+    : esViajero
+    ? 'from-sky-500 to-teal-500'
+    : 'from-blue-600 to-purple-600';
+
+  const filtroActivo = esEmpresa
+    ? 'from-slate-700 to-blue-900'
+    : esViajero
+    ? 'from-sky-500 to-teal-500'
+    : 'from-blue-600 to-purple-600';
+
+  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
+  const calificarColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
+  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
+
   if (cargando) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
           <p className="text-gray-400">Cargando trabajos...</p>
         </div>
       </main>
@@ -69,9 +88,9 @@ export default function MisTrabajos() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
+    <main className={`min-h-screen ${bgFondo} pb-32`}>
 
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-8">
+      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-8`}>
         <div className="max-w-md mx-auto">
           <h1 className="text-white font-extrabold text-xl mb-1">Mis Trabajos</h1>
           <p className="text-white/70 text-sm">Historial de tus aplicaciones</p>
@@ -89,7 +108,7 @@ export default function MisTrabajos() {
             <button key={f.id} onClick={() => setFiltro(f.id as any)}
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition ${
                 filtro === f.id
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
+                  ? `bg-gradient-to-r ${filtroActivo} text-white shadow-sm`
                   : 'text-gray-500 hover:text-gray-700'
               }`}>
               {f.label}
@@ -109,7 +128,7 @@ export default function MisTrabajos() {
               {filtro === 'activos' ? 'Aplica a trabajos disponibles cerca de ti' : 'Completa trabajos para verlos aquí'}
             </p>
             <a href="/home"
-              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
+              className={`inline-block px-6 py-3 bg-gradient-to-r ${ctaGradient} text-white rounded-2xl font-bold text-sm`}>
               Ver trabajos disponibles
             </a>
           </div>
@@ -125,9 +144,7 @@ export default function MisTrabajos() {
                 <div key={app.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition ${
                   esAceptado ? 'border-green-200' : esCompletado ? 'border-gray-200' : 'border-gray-100'
                 }`}>
-                  <a href={esAceptado ? '/checkin' : `/trabajo?id=${servicio?.id}`}
-                    className="block p-4">
-
+                  <a href={esAceptado ? '/checkin' : `/trabajo?id=${servicio?.id}`} className="block p-4">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
                         {servicio?.titulo || 'Trabajo'}
@@ -138,7 +155,7 @@ export default function MisTrabajos() {
                     </div>
 
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <div className={`w-7 h-7 rounded-full overflow-hidden bg-gradient-to-r ${avatarGradient} flex items-center justify-center flex-shrink-0`}>
                         {servicio?.usuarios?.foto_url ? (
                           <img src={servicio.usuarios.foto_url} className="w-full h-full object-cover"/>
                         ) : (
@@ -156,12 +173,10 @@ export default function MisTrabajos() {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-xs text-gray-400">📅 {servicio?.fecha} {servicio?.hora?.slice(0,5)}</p>
-                        {servicio?.urgente && (
-                          <span className="text-xs text-red-500 font-bold">🔴 Urgente</span>
-                        )}
+                        {servicio?.urgente && <span className="text-xs text-red-500 font-bold">🔴 Urgente</span>}
                       </div>
                       <div className="text-right">
-                        <p className="font-extrabold text-purple-600 text-base">
+                        <p className={`font-extrabold ${precioColor} text-base`}>
                           ${app.precio_ofrecido || servicio?.presupuesto} MXN
                         </p>
                         <p className="text-xs text-gray-400">tu oferta</p>
@@ -186,8 +201,7 @@ export default function MisTrabajos() {
                   {esCompletado && (
                     <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 flex items-center justify-between">
                       <p className="text-gray-500 text-xs font-semibold">🏁 Trabajo completado</p>
-                      <a href={`/calificar`}
-                        className="text-xs text-purple-600 font-bold hover:underline">
+                      <a href="/calificar" className={`text-xs ${calificarColor} font-bold hover:underline`}>
                         ⭐ Calificar →
                       </a>
                     </div>
@@ -197,7 +211,6 @@ export default function MisTrabajos() {
             })}
           </div>
         )}
-
       </div>
 
       <Nav activo="inicio" />

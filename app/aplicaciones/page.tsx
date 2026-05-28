@@ -18,31 +18,24 @@ function AplicacionesContent() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-
-    const { data: perfil } = await supabase
-      .from('usuarios').select('*').eq('id', user.id).single();
+    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario({ ...perfil, authId: user.id });
-
     const { data: svcs } = await supabase
       .from('servicios')
       .select('*')
       .eq('cliente_id', user.id)
       .order('created_at', { ascending: false });
-
     setServicios(svcs || []);
-
     const servicioId = searchParams.get('servicio');
     if (servicioId && svcs) {
       const svc = svcs.find(s => s.id === servicioId);
       if (svc) await verAplicaciones(svc);
     }
-
     setCargando(false);
   };
 
   const verAplicaciones = async (servicio: any) => {
-    const { data: svcFresco } = await supabase
-      .from('servicios').select('*').eq('id', servicio.id).single();
+    const { data: svcFresco } = await supabase.from('servicios').select('*').eq('id', servicio.id).single();
     setServicioActivo(svcFresco || servicio);
     const { data } = await supabase
       .from('aplicaciones')
@@ -65,13 +58,8 @@ function AplicacionesContent() {
   const iniciarChat = async (prestadorId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !servicioActivo) return;
-
     const { data: existente } = await supabase
-      .from('mensajes')
-      .select('id')
-      .eq('servicio_id', servicioActivo.id)
-      .limit(1);
-
+      .from('mensajes').select('id').eq('servicio_id', servicioActivo.id).limit(1);
     if (!existente || existente.length === 0) {
       await supabase.from('mensajes').insert({
         servicio_id: servicioActivo.id,
@@ -80,7 +68,6 @@ function AplicacionesContent() {
         contenido: `Hola, te contacto por el trabajo: ${servicioActivo.titulo}`,
       });
     }
-
     window.location.href = '/chat';
   };
 
@@ -96,11 +83,23 @@ function AplicacionesContent() {
     rechazado: '❌ Rechazado',
   };
 
+  const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
+  const esEmpresa = rol === 'empresa';
+  const esViajero = rol === 'viajero';
+
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const chatBorder = esEmpresa ? 'border-blue-200 text-blue-700 hover:bg-blue-50' : esViajero ? 'border-teal-200 text-teal-600 hover:bg-teal-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
+
   if (cargando) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
           <p className="text-gray-400">Cargando...</p>
         </div>
       </main>
@@ -112,17 +111,17 @@ function AplicacionesContent() {
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
 
     return (
-      <main className="min-h-screen bg-gray-50 pb-32">
-        <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
+      <main className={`min-h-screen ${bgFondo} pb-32`}>
+        <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
           <div className="max-w-md mx-auto">
             <div className="flex items-center gap-4 mb-2">
               <button onClick={() => setServicioActivo(null)}
-                className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
+                className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
                 ←
               </button>
               <div>
-                <h1 className="font-extrabold text-gray-900 text-lg">Aplicaciones recibidas</h1>
-                <p className="text-gray-400 text-xs truncate max-w-xs">{servicioActivo.titulo}</p>
+                <h1 className="font-extrabold text-white text-lg">Aplicaciones recibidas</h1>
+                <p className="text-white/70 text-xs truncate max-w-xs">{servicioActivo.titulo}</p>
               </div>
             </div>
           </div>
@@ -146,7 +145,7 @@ function AplicacionesContent() {
 
           {puedeConfirmar && (
             <a href={`/confirmar?id=${servicioActivo.id}`}
-              className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4">
+              className={`block w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4`}>
               🎉 Confirmar trabajo y liberar pago
             </a>
           )}
@@ -162,7 +161,7 @@ function AplicacionesContent() {
               {aplicaciones.map((app) => (
                 <div key={app.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r ${avatarGradient} flex items-center justify-center flex-shrink-0`}>
                       {app.usuarios?.foto_url ? (
                         <img src={app.usuarios.foto_url} alt={app.usuarios.nombre} className="w-full h-full object-cover"/>
                       ) : (
@@ -192,7 +191,7 @@ function AplicacionesContent() {
                   <div className="bg-gray-50 rounded-xl p-3 mb-4">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-gray-500">Precio ofrecido</span>
-                      <span className="font-extrabold text-purple-600">${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
+                      <span className={`font-extrabold ${precioColor}`}>${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
                     </div>
                     {servicioActivo.seguro && (
                       <div className="flex justify-between items-center">
@@ -223,9 +222,8 @@ function AplicacionesContent() {
                           className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
                           ❌ Rechazar
                         </button>
-                        <button
-                          onClick={() => window.location.href = `/pago?aplicacion=${app.id}`}
-                          className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition">
+                        <button onClick={() => window.location.href = `/pago?aplicacion=${app.id}`}
+                          className={`flex-1 py-3 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition`}>
                           ✅ Aceptar y pagar
                         </button>
                       </div>
@@ -241,7 +239,7 @@ function AplicacionesContent() {
                         </p>
                       </div>
                       <button onClick={() => iniciarChat(app.usuarios?.id)}
-                        className="w-full py-3 border-2 border-purple-200 text-purple-600 rounded-2xl font-bold hover:bg-purple-50 transition flex items-center justify-center gap-2">
+                        className={`w-full py-3 border-2 ${chatBorder} rounded-2xl font-bold transition flex items-center justify-center gap-2`}>
                         💬 Enviar mensaje
                       </button>
                     </div>
@@ -258,17 +256,17 @@ function AplicacionesContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
-      <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
+    <main className={`min-h-screen ${bgFondo} pb-32`}>
+      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
         <div className="max-w-md mx-auto">
-          <h1 className="font-extrabold text-gray-900 text-xl mb-1">Mis solicitudes</h1>
-          <p className="text-gray-400 text-sm">Gestiona las aplicaciones que has recibido</p>
+          <h1 className="font-extrabold text-white text-xl mb-1">Mis solicitudes</h1>
+          <p className="text-white/70 text-sm">Gestiona las aplicaciones que has recibido</p>
         </div>
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
         <a href="/publicar"
-          className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition mb-4">
+          className={`block w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition mb-4`}>
           + Publicar nueva solicitud
         </a>
 
@@ -300,7 +298,7 @@ function AplicacionesContent() {
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                  <p className="font-extrabold text-purple-600 text-sm">${svc.presupuesto} MXN</p>
+                  <p className={`font-extrabold ${precioColor} text-sm`}>${svc.presupuesto} MXN</p>
                 </div>
                 {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
                   <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
