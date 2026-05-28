@@ -54,11 +54,10 @@ export default function HomeWorker() {
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
-    const { data: servicios, error: serviciosError } = await supabase.from('servicios')
-      .select('*, usuarios(nombre, calificacion, ciudad)')
+    const { data: servicios } = await supabase.from('servicios')
+      .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
       .eq('estado', 'activo').neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
-    console.log('SERVICIOS:', servicios, 'ERROR:', serviciosError, 'USER:', user.id);
     setTrabajos(servicios || []);
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
