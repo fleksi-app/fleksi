@@ -128,6 +128,43 @@ function FondoFlekser() {
         <circle cx="8" cy="23" r="4" fill="#7C3AED"/>
         <circle cx="30" cy="23" r="4" fill="#7C3AED"/>
       </g>
+      <g transform="translate(30,550) rotate(-20)">
+        <line x1="8" y1="0" x2="0" y2="20" stroke="#2563EB" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="8" y1="0" x2="16" y2="20" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
+        <circle cx="8" cy="0" r="3" fill="#7C3AED"/>
+      </g>
+      <g transform="translate(120,540)">
+        <rect x="2" y="0" width="6" height="12" rx="3" fill="#7C3AED"/>
+        <rect x="10" y="2" width="6" height="10" rx="3" fill="#2563EB"/>
+        <rect x="18" y="1" width="6" height="11" rx="3" fill="#7C3AED"/>
+      </g>
+      <g transform="translate(200,545) rotate(-10)">
+        <rect x="8" y="0" width="3" height="20" rx="1.5" fill="#2563EB"/>
+        <rect x="0" y="4" width="18" height="10" rx="3" fill="#7C3AED"/>
+        <rect x="13" y="8" width="3" height="16" rx="1.5" fill="#2563EB"/>
+      </g>
+      <g transform="translate(265,535) rotate(35)">
+        <rect x="5" y="0" width="4" height="24" rx="2" fill="#7C3AED"/>
+        <rect x="3" y="22" width="8" height="5" rx="1" fill="#2563EB"/>
+      </g>
+      <g transform="translate(20,640) rotate(-30)">
+        <rect x="0" y="3" width="28" height="6" rx="3" fill="#7C3AED"/>
+        <circle cx="4" cy="6" r="6" fill="none" stroke="#7C3AED" strokeWidth="3"/>
+      </g>
+      <g transform="translate(100,630)">
+        <rect x="8" y="0" width="3" height="30" rx="1.5" fill="#2563EB"/>
+        <path d="M2,30 Q9.5,35 17,30 L14,50 Q9.5,52 5,50 Z" fill="#2563EB"/>
+      </g>
+      <g transform="translate(180,635)">
+        <rect x="0" y="8" width="35" height="16" rx="3" fill="#7C3AED"/>
+        <path d="M6,10 Q10,2 28,2 Q34,2 36,10 Z" fill="#2563EB"/>
+        <circle cx="8" cy="23" r="4" fill="#7C3AED"/>
+        <circle cx="27" cy="23" r="4" fill="#7C3AED"/>
+      </g>
+      <g transform="translate(260,625) rotate(20)">
+        <rect x="5" y="0" width="4" height="20" rx="2" fill="#7C3AED"/>
+        <path d="M3,20 Q7,28 11,20 L10,26 Q7,29 4,26 Z" fill="#2563EB"/>
+      </g>
     </svg>
   );
 }
@@ -150,7 +187,6 @@ function FondoEmpresa() {
       <g transform="translate(110,25) rotate(30)">
         <path d="M6,0 Q12,8 8,20 L4,20 Q0,8 6,0 Z" fill="#1e3a8a"/>
         <rect x="4" y="20" width="4" height="8" rx="1" fill="#334155"/>
-        <path d="M5,26 L7,32" stroke="#1e3a8a" strokeWidth="1.5" strokeLinecap="round"/>
       </g>
       <g transform="translate(170,20)">
         <ellipse cx="20" cy="5" rx="20" ry="4" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
@@ -277,6 +313,51 @@ function FondoEmpresa() {
         <line x1="14" y1="14" x2="14" y2="5" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
         <line x1="14" y1="14" x2="20" y2="18" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round"/>
       </g>
+      <g transform="translate(15,560)">
+        <rect x="0" y="0" width="28" height="50" rx="2" fill="#1e3a8a"/>
+        {[0,1,2,3].map(i=>[0,1,2].map(j=>(
+          <rect key={`${i}-${j}`} x={3+j*8} y={4+i*11} width="5" height="7" rx="1" fill="#334155"/>
+        )))}
+      </g>
+      <g transform="translate(90,570)">
+        <rect x="0" y="6" width="28" height="20" rx="3" fill="#1e3a8a"/>
+        <rect x="8" y="0" width="12" height="8" rx="2" fill="none" stroke="#334155" strokeWidth="2.5"/>
+        <line x1="0" y1="14" x2="28" y2="14" stroke="#334155" strokeWidth="1.5"/>
+      </g>
+      <g transform="translate(170,565) rotate(-25)">
+        <rect x="4" y="0" width="6" height="26" rx="1" fill="#334155"/>
+        <polygon points="4,26 10,26 7,34" fill="#1e3a8a"/>
+      </g>
+      <g transform="translate(230,560)">
+        <ellipse cx="20" cy="5" rx="20" ry="4" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
+        <rect x="18" y="5" width="4" height="12" rx="2" fill="#334155"/>
+        <ellipse cx="20" cy="17" rx="8" ry="2" fill="#1e3a8a"/>
+      </g>
+      <g transform="translate(280,565)">
+        <circle cx="14" cy="14" r="13" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
+        <line x1="14" y1="14" x2="14" y2="5" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="14" y1="14" x2="20" y2="18" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(80,660)">
+        <circle cx="10" cy="4" r="5" fill="#1e3a8a"/>
+        <rect x="6" y="9" width="8" height="14" rx="2" fill="#334155"/>
+        <line x1="4" y1="12" x2="0" y2="22" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="16" y1="12" x2="20" y2="8" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
+        <ellipse cx="22" cy="7" rx="6" ry="2" fill="none" stroke="#334155" strokeWidth="2"/>
+        <line x1="10" y1="23" x2="7" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="10" y1="23" x2="13" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(160,655)">
+        <rect x="0" y="14" width="6" height="14" rx="1" fill="#1e3a8a"/>
+        <rect x="8" y="8" width="6" height="20" rx="1" fill="#334155"/>
+        <rect x="16" y="2" width="6" height="26" rx="1" fill="#1e3a8a"/>
+        <line x1="0" y1="28" x2="22" y2="28" stroke="#334155" strokeWidth="1.5"/>
+      </g>
+      <g transform="translate(225,650)">
+        <rect x="0" y="0" width="30" height="20" rx="3" fill="#334155"/>
+        <rect x="2" y="2" width="26" height="16" rx="2" fill="#1e3a8a"/>
+        <rect x="10" y="20" width="10" height="4" rx="1" fill="#334155"/>
+      </g>
     </svg>
   );
 }
@@ -311,8 +392,6 @@ function FondoViajero() {
         <path d="M2,12 Q15,20 28,12 L24,18 Q15,22 6,18 Z" fill="#0369a1"/>
         <rect x="10" y="4" width="4" height="10" rx="2" fill="#0e7490"/>
         <polygon points="14,4 14,12 22,8" fill="#0369a1"/>
-        <path d="M0,12 Q4,8 8,12" fill="none" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M20,12 Q24,8 28,12" fill="none" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
       </g>
       <g transform="translate(20,120)">
         <circle cx="8" cy="8" r="8" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
@@ -392,7 +471,7 @@ function FondoViajero() {
         <polygon points="14,4 11,14 14,12 17,14" fill="#0e7490"/>
         <polygon points="14,24 11,14 14,16 17,14" fill="#0369a1"/>
       </g>
-      <g transform="translate(30,430)">
+      <g transform="translate(30,440)">
         <circle cx="14" cy="14" r="9" fill="#0369a1"/>
         {[0,45,90,135,180,225,270,315].map((deg,i)=>(
           <line key={i}
@@ -413,6 +492,52 @@ function FondoViajero() {
       <g transform="translate(270,430)">
         <path d="M0,10 Q8,2 16,10 Q24,18 32,10" fill="none" stroke="#0369a1" strokeWidth="3" strokeLinecap="round"/>
         <path d="M0,18 Q8,10 16,18 Q24,26 32,18" fill="none" stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(20,550) rotate(-15)">
+        <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
+        <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
+        <rect x="8" y="2" width="16" height="6" rx="3" fill="#0e7490"/>
+      </g>
+      <g transform="translate(90,540)">
+        <rect x="8" y="30" width="5" height="12" rx="2" fill="#0e7490"/>
+        <polygon points="10,0 0,16 20,16" fill="#0369a1"/>
+        <polygon points="10,8 -2,26 22,26" fill="#0e7490"/>
+      </g>
+      <g transform="translate(160,545)">
+        <rect x="0" y="6" width="26" height="20" rx="4" fill="#0369a1"/>
+        <rect x="7" y="0" width="12" height="8" rx="2" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
+        <line x1="13" y1="6" x2="13" y2="26" stroke="#0e7490" strokeWidth="1.5"/>
+      </g>
+      <g transform="translate(215,540)">
+        <rect x="8" y="0" width="4" height="22" rx="2" fill="#0e7490"/>
+        <polygon points="12,6 20,10 20,20 12,24 4,20 4,10" fill="#0369a1"/>
+      </g>
+      <g transform="translate(260,545)">
+        <path d="M0,10 Q8,2 16,10 Q24,18 32,10" fill="none" stroke="#0369a1" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M0,18 Q8,10 16,18 Q24,26 32,18" fill="none" stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(30,650)">
+        <circle cx="14" cy="14" r="9" fill="#0369a1"/>
+        {[0,45,90,135,180,225,270,315].map((deg,i)=>(
+          <line key={i}
+            x1={14+11*Math.cos(deg*Math.PI/180)} y1={14+11*Math.sin(deg*Math.PI/180)}
+            x2={14+15*Math.cos(deg*Math.PI/180)} y2={14+15*Math.sin(deg*Math.PI/180)}
+            stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
+        ))}
+      </g>
+      <g transform="translate(110,645)">
+        <rect x="2" y="4" width="20" height="24" rx="4" fill="#0369a1"/>
+        <rect x="6" y="0" width="12" height="6" rx="3" fill="#0e7490"/>
+        <rect x="6" y="14" width="12" height="8" rx="2" fill="#0e7490"/>
+      </g>
+      <g transform="translate(195,640) rotate(-15)">
+        <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
+        <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
+      </g>
+      <g transform="translate(270,650)">
+        <rect x="0" y="6" width="26" height="20" rx="4" fill="#0369a1"/>
+        <rect x="7" y="0" width="12" height="8" rx="2" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
+        <line x1="13" y1="6" x2="13" y2="26" stroke="#0e7490" strokeWidth="1.5"/>
       </g>
     </svg>
   );
@@ -558,7 +683,9 @@ export default function Chat() {
     const otroUsuario = getOtroUsuario(conversacionActiva);
     return (
       <main className={`min-h-screen ${bgFondo} flex flex-col pb-16 relative`}>
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+
+        {/* Fondo fijo que no hace scroll */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <Fondo />
         </div>
 
@@ -640,7 +767,9 @@ export default function Chat() {
 
   return (
     <main className={`min-h-screen ${bgFondo} pb-32 relative`}>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+
+      {/* Fondo fijo que no hace scroll */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <Fondo />
       </div>
 
