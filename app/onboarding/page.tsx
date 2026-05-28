@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -287,9 +287,7 @@ const slides: Record<string, any[]> = {
         <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
           <path d="M60 80 Q80 60 120 65 Q160 55 190 70 Q220 75 240 95 Q250 120 235 145 Q215 165 190 155 Q170 170 150 160 Q120 175 100 165 Q70 155 55 130 Q45 105 60 80 Z"
             fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="2"/>
-          {[
-            [150,95],[100,85],[175,80],[120,130],[200,120],
-          ].map(([x,y],i) => (
+          {[[150,95],[100,85],[175,80],[120,130],[200,120]].map(([x,y],i) => (
             <g key={i}>
               <circle cx={x} cy={y-5} r="8" fill="rgba(255,80,80,0.8)"/>
               <circle cx={x} cy={y-5} r="3" fill="rgba(255,255,255,0.9)"/>
@@ -319,20 +317,20 @@ function OnboardingContent() {
   const [paso, setPaso] = useState(0);
   const [rol, setRol] = useState('flekser');
   const [cargando, setCargando] = useState(true);
+  const [animando, setAnimando] = useState(false);
+  const [direccion, setDireccion] = useState<'left' | 'right'>('right');
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const verificar = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
-
       const { data: perfil } = await supabase
         .from('usuarios').select('rol, onboarding_completado').eq('id', user.id).single();
-
       if (perfil?.onboarding_completado) {
         redirigir(perfil.rol);
         return;
       }
-
       setRol(perfil?.rol || searchParams.get('rol') || 'flekser');
       setCargando(false);
     };
@@ -349,10 +347,34 @@ function OnboardingContent() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('usuarios')
-        .update({ onboarding_completado: true })
+        .update({ onboarding_completado: true, rol_activo: rol })
         .eq('id', user.id);
     }
     redirigir(rol);
+  };
+
+  const irAPaso = (nuevoPaso: number, dir: 'left' | 'right') => {
+    if (animando) return;
+    setDireccion(dir);
+    setAnimando(true);
+    setTimeout(() => {
+      setPaso(nuevoPaso);
+      setAnimando(false);
+    }, 200);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && paso < slidesList.length - 1) irAPaso(paso + 1, 'right');
+      if (diff < 0 && paso > 0) irAPaso(paso - 1, 'left');
+    }
+    touchStartX.current = null;
   };
 
   if (cargando) {
@@ -368,55 +390,66 @@ function OnboardingContent() {
   const esUltimo = paso === slidesList.length - 1;
 
   return (
-    <main className={`min-h-screen bg-gradient-to-br ${slide.bg} flex flex-col transition-all duration-500`}>
-
+    <main
+      className={`min-h-screen bg-gradient-to-br ${slide.bg} flex flex-col transition-colors duration-500`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="flex justify-end px-6 pt-12">
-        <button onClick={completarOnboarding}
-          className="text-white/60 text-sm font-semibold hover:text-white transition">
+        <button onClick={completarOnboarding} className="text-white/60 text-sm font-semibold hover:text-white transition">
           Saltar
         </button>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-4">
-        <div className="w-full max-w-xs">
+        <div
+          className="w-full max-w-xs"
+          style={{
+            opacity: animando ? 0 : 1,
+            transform: animando
+              ? `translateX(${direccion === 'right' ? '-20px' : '20px'})`
+              : 'translateX(0)',
+            transition: 'opacity 0.2s ease, transform 0.2s ease',
+          }}
+        >
           {slide.ilustracion}
         </div>
       </div>
 
-      <div className="px-8 pb-4">
-        <h1 className="text-3xl font-extrabold text-white text-center mb-2">
-          {slide.titulo}
-        </h1>
-        <p className="text-white/70 text-sm font-semibold text-center mb-2">
-          {slide.subtitulo}
-        </p>
-        <p className="text-white/80 text-base text-center font-light leading-relaxed">
-          {slide.descripcion}
-        </p>
+      <div
+        className="px-8 pb-4"
+        style={{
+          opacity: animando ? 0 : 1,
+          transform: animando
+            ? `translateX(${direccion === 'right' ? '-20px' : '20px'})`
+            : 'translateX(0)',
+          transition: 'opacity 0.2s ease, transform 0.2s ease',
+        }}
+      >
+        <h1 className="text-3xl font-extrabold text-white text-center mb-2">{slide.titulo}</h1>
+        <p className="text-white/70 text-sm font-semibold text-center mb-2">{slide.subtitulo}</p>
+        <p className="text-white/80 text-base text-center font-light leading-relaxed">{slide.descripcion}</p>
       </div>
 
       <div className="flex justify-center gap-2 py-4">
         {slidesList.map((_: any, i: number) => (
-          <button key={i} onClick={() => setPaso(i)}
-            className={`rounded-full transition-all duration-300 ${
-              i === paso ? 'w-6 h-2.5 bg-white' : 'w-2.5 h-2.5 bg-white/35'
-            }`}/>
+          <button key={i} onClick={() => irAPaso(i, i > paso ? 'right' : 'left')}
+            className={`rounded-full transition-all duration-300 ${i === paso ? 'w-6 h-2.5 bg-white' : 'w-2.5 h-2.5 bg-white/35'}`}/>
         ))}
       </div>
 
       <div className="px-8 pb-12 flex gap-3">
         {paso > 0 && (
-          <button onClick={() => setPaso(paso - 1)}
+          <button onClick={() => irAPaso(paso - 1, 'left')}
             className="flex-1 py-4 bg-white/20 text-white rounded-2xl font-bold text-lg hover:bg-white/30 transition">
             ←
           </button>
         )}
-        <button onClick={() => esUltimo ? completarOnboarding() : setPaso(paso + 1)}
+        <button onClick={() => esUltimo ? completarOnboarding() : irAPaso(paso + 1, 'right')}
           className="flex-1 py-4 bg-white text-gray-900 rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition">
           {esUltimo ? '¡Empezar! 🚀' : 'Siguiente →'}
         </button>
       </div>
-
     </main>
   );
 }
