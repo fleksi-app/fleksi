@@ -37,20 +37,17 @@ export default function Admin() {
     if (user.email !== ADMIN_EMAIL) { window.location.href = '/home'; return; }
     setUsuario(user);
 
-    // Cargar verificaciones antiguas
     const { data: verifs } = await supabase
       .from('verificaciones')
       .select('*, usuarios(nombre, foto_url, rol, ciudad, telefono)')
       .order('created_at', { ascending: false });
     setVerificaciones(verifs || []);
 
-    // Cargar documentos nuevos agrupados por usuario
     const { data: docs } = await supabase
       .from('documentos')
       .select('*, usuarios(id, nombre, foto_url, rol, ciudad, email)')
       .order('updated_at', { ascending: false });
 
-    // Agrupar por usuario
     const agrupados: Record<string, any> = {};
     (docs || []).forEach((doc: any) => {
       const uid = doc.usuario_id;
@@ -72,7 +69,23 @@ export default function Admin() {
     setCargando(false);
   };
 
-  // ── Documentos — aprobar individual ──────────────────────
+  const verDocumento = async (url: string, usuarioId: string, tipo: string) => {
+    if (url.includes('token=')) {
+      window.open(url, '_blank');
+      return;
+    }
+    try {
+      const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
+      const path = `${usuarioId}/${tipo}.${ext}`;
+      const { data } = await supabase.storage
+        .from('documentos-verificacion')
+        .createSignedUrl(path, 60 * 60);
+      if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
+
   const aprobarDoc = async (docId: string, usuarioId: string, nombreUsuario: string, tipoDoc: string) => {
     setProcesandoDoc(docId);
     try {
@@ -82,11 +95,8 @@ export default function Admin() {
         updated_at: new Date().toISOString(),
       }).eq('id', docId);
 
-      // Verificar si TODOS los docs requeridos están aprobados
       const { data: todosLosDocs } = await supabase
-        .from('documentos')
-        .select('*')
-        .eq('usuario_id', usuarioId);
+        .from('documentos').select('*').eq('usuario_id', usuarioId);
 
       const { data: usuarioData } = await supabase
         .from('usuarios').select('rol').eq('id', usuarioId).single();
@@ -110,7 +120,6 @@ export default function Admin() {
           { usuario_id: usuarioId, tipo: 'verificado' },
           { onConflict: 'usuario_id,tipo' }
         );
-        // Notificar usuario
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: usuarioId,
@@ -121,12 +130,11 @@ export default function Admin() {
           });
         } catch (e) {}
       } else {
-        // Notificar doc aprobado individualmente
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: usuarioId,
             tipo: 'documento_aprobado',
-            titulo: `✅ Documento aprobado`,
+            titulo: '✅ Documento aprobado',
             mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado.`,
             link: '/documentos',
           });
@@ -139,7 +147,6 @@ export default function Admin() {
     }
   };
 
-  // ── Documentos — rechazar individual ─────────────────────
   const rechazarDoc = async (docId: string, usuarioId: string, tipoDoc: string) => {
     if (!motivoDoc.trim()) { alert('Escribe el motivo del rechazo'); return; }
     setProcesandoDoc(docId);
@@ -154,7 +161,7 @@ export default function Admin() {
         await supabase.from('notificaciones').insert({
           usuario_id: usuarioId,
           tipo: 'documento_rechazado',
-          titulo: `❌ Documento rechazado`,
+          titulo: '❌ Documento rechazado',
           mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue rechazado: ${motivoDoc}`,
           link: '/documentos',
         });
@@ -168,7 +175,6 @@ export default function Admin() {
     }
   };
 
-  // ── Verificaciones antiguas — aprobar ────────────────────
   const aprobar = async (id: string, usuarioId: string, nombreUsuario: string) => {
     setProcesando(id);
     try {
@@ -179,12 +185,10 @@ export default function Admin() {
       }).eq('id', id);
 
       await supabase.from('usuarios').update({ verificado: true }).eq('id', usuarioId);
-
       await supabase.from('badges').upsert(
         { usuario_id: usuarioId, tipo: 'verificado' },
         { onConflict: 'usuario_id,tipo' }
       );
-
       await cargarDatos();
     } finally { setProcesando(''); }
   };
@@ -224,16 +228,12 @@ export default function Admin() {
     todas: verificaciones.length,
   };
 
-  // Stats documentos
   const totalDocsSubidos = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'subido').length, 0
-  );
+    acc + u.documentos.filter((d: any) => d.estado === 'subido').length, 0);
   const totalDocsAprobados = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'aprobado').length, 0
-  );
+    acc + u.documentos.filter((d: any) => d.estado === 'aprobado').length, 0);
   const totalDocsRechazados = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'rechazado').length, 0
-  );
+    acc + u.documentos.filter((d: any) => d.estado === 'rechazado').length, 0);
 
   if (cargando) {
     return (
@@ -279,7 +279,6 @@ export default function Admin() {
         {/* ── TAB DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
                 <p className="text-2xl font-extrabold text-yellow-600">{totalDocsSubidos}</p>
@@ -309,7 +308,6 @@ export default function Admin() {
                   return (
                     <div key={grupo.usuario_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-                      {/* Header usuario */}
                       <button
                         onClick={() => setUsuarioExpandido(expandido ? null : grupo.usuario_id)}
                         className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition">
@@ -339,7 +337,6 @@ export default function Admin() {
                         </div>
                       </button>
 
-                      {/* Documentos expandidos */}
                       {expandido && (
                         <div className="border-t border-gray-100 p-5">
                           <div className="flex flex-col gap-3">
@@ -366,18 +363,19 @@ export default function Admin() {
                                   </div>
                                 )}
 
-                                <div className="flex items-center gap-2 mt-2">
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
                                   {doc.url && (
-                                    <a href={doc.url} target="_blank"
+                                    <button
+                                      onClick={() => verDocumento(doc.url, grupo.usuario_id, doc.tipo)}
                                       className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition">
                                       👁️ Ver documento
-                                    </a>
+                                    </button>
                                   )}
 
                                   {doc.estado === 'subido' && (
                                     <>
                                       {rechazandoDoc === doc.id ? (
-                                        <div className="flex-1 flex flex-col gap-2 mt-2">
+                                        <div className="w-full flex flex-col gap-2 mt-2">
                                           <textarea
                                             value={motivoDoc}
                                             onChange={(e) => setMotivoDoc(e.target.value)}
@@ -415,9 +413,7 @@ export default function Admin() {
                                   )}
 
                                   {doc.estado === 'aprobado' && (
-                                    <span className="text-xs text-green-600 font-semibold ml-auto">
-                                      Aprobado ✓
-                                    </span>
+                                    <span className="text-xs text-green-600 font-semibold ml-auto">Aprobado ✓</span>
                                   )}
                                 </div>
 
@@ -439,7 +435,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── TAB VERIFICACIONES (legacy) ── */}
+        {/* ── TAB VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">

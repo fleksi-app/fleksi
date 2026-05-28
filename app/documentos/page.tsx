@@ -64,7 +64,6 @@ export default function Documentos() {
       (docs || []).forEach((d: any) => { docsMap[d.tipo] = d; });
       setDocumentos(docsMap);
 
-      // Cargar datos de factura si existen
       if (usuarioData?.datos_factura) {
         setFormularioFactura(usuarioData.datos_factura);
       }
@@ -87,15 +86,18 @@ export default function Documentos() {
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // URL firmada por 1 año
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documentos-verificacion')
-        .getPublicUrl(path);
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signedError) throw signedError;
 
-      // Verificar si ya existe el documento
+      const url = signedData.signedUrl;
+
       const existe = documentos[tipo];
       if (existe) {
         await supabase.from('documentos').update({
-          url: urlData.publicUrl,
+          url,
           estado: 'subido',
           motivo_rechazo: null,
           updated_at: new Date().toISOString(),
@@ -105,11 +107,10 @@ export default function Documentos() {
           usuario_id: usuario.id,
           tipo,
           estado: 'subido',
-          url: urlData.publicUrl,
+          url,
         });
       }
 
-      // Notificar al admin
       try {
         await fetch('/api/push', {
           method: 'POST',
@@ -118,7 +119,7 @@ export default function Documentos() {
             usuario_id: 'fernando.najera.nm@gmail.com',
             titulo: '📄 Nuevo documento subido',
             mensaje: `${usuario.nombre} subió: ${tipo}`,
-            link: '/admin/verificaciones',
+            link: '/admin',
           }),
         });
       } catch (e) {}
@@ -173,7 +174,7 @@ export default function Documentos() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"/>
           <p className="text-gray-400">Cargando documentos...</p>
         </div>
       </main>
@@ -188,7 +189,6 @@ export default function Documentos() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20">
         <div className="max-w-md mx-auto">
           <button onClick={() => window.history.back()}
@@ -221,7 +221,7 @@ export default function Documentos() {
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full transition-all duration-500"
-                  style={{ width: `${progreso}%` }} />
+                  style={{ width: `${progreso}%` }}/>
               </div>
               <p className="text-xs text-gray-400 mt-2">
                 {listaDocumentos.filter(d => !d.opcional && documentos[d.tipo]?.estado === 'aprobado').length} de {listaDocumentos.filter(d => !d.opcional).length} documentos requeridos aprobados
@@ -230,7 +230,7 @@ export default function Documentos() {
           )}
         </div>
 
-        {/* Info general */}
+        {/* Info */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
           <p className="text-sm text-blue-700 font-semibold mb-1">📌 ¿Por qué necesitamos tus documentos?</p>
           <p className="text-xs text-blue-600 font-light leading-relaxed">
@@ -238,7 +238,7 @@ export default function Documentos() {
           </p>
         </div>
 
-        {/* Lista de documentos */}
+        {/* Lista documentos */}
         <div className="flex flex-col gap-3 mb-4">
           {listaDocumentos.map((doc) => {
             const docData = documentos[doc.tipo];
@@ -249,7 +249,6 @@ export default function Documentos() {
             return (
               <div key={doc.tipo}
                 className={`bg-white rounded-2xl p-4 shadow-sm border transition ${estado === 'rechazado' ? 'border-red-200' : estado === 'aprobado' ? 'border-green-200' : 'border-gray-100'}`}>
-
                 <div className="flex items-start gap-3">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${estado === 'aprobado' ? 'bg-green-100' : estado === 'rechazado' ? 'bg-red-100' : estado === 'subido' ? 'bg-yellow-100' : 'bg-gray-100'}`}>
                     {doc.emoji}
@@ -298,7 +297,7 @@ export default function Documentos() {
                       type="file"
                       accept="image/jpeg,image/png,image/webp,application/pdf"
                       onChange={(e) => handleFileChange(doc.tipo, e)}
-                      className="hidden" />
+                      className="hidden"/>
                   </div>
                 </div>
               </div>
@@ -306,44 +305,36 @@ export default function Documentos() {
           })}
         </div>
 
-        {/* Formulario facturación — solo empresas */}
+        {/* Formulario facturación empresa */}
         {rol === 'empresa' && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-1">🧾 Datos de facturación</h3>
             <p className="text-xs text-gray-400 mb-4">Necesitamos estos datos para emitirte facturas por los servicios contratados</p>
-
             <div className="flex flex-col gap-3">
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block uppercase tracking-wide">Nombre o Razón Social</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Servicios Limpios SA de CV"
+                <input type="text" placeholder="Ej. Servicios Limpios SA de CV"
                   value={formularioFactura.nombre_fiscal}
                   onChange={(e) => setFormularioFactura(p => ({ ...p, nombre_fiscal: e.target.value }))}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm" />
+                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block uppercase tracking-wide">RFC</label>
-                <input
-                  type="text"
-                  placeholder="Ej. SLI900101AAA"
+                <input type="text" placeholder="Ej. SLI900101AAA"
                   value={formularioFactura.rfc}
                   onChange={(e) => setFormularioFactura(p => ({ ...p, rfc: e.target.value.toUpperCase() }))}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm" />
+                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block uppercase tracking-wide">Dirección fiscal</label>
-                <input
-                  type="text"
-                  placeholder="Calle, número, colonia, CP, ciudad"
+                <input type="text" placeholder="Calle, número, colonia, CP, ciudad"
                   value={formularioFactura.direccion_fiscal}
                   onChange={(e) => setFormularioFactura(p => ({ ...p, direccion_fiscal: e.target.value }))}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm" />
+                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block uppercase tracking-wide">Régimen fiscal</label>
-                <select
-                  value={formularioFactura.regimen_fiscal}
+                <select value={formularioFactura.regimen_fiscal}
                   onChange={(e) => setFormularioFactura(p => ({ ...p, regimen_fiscal: e.target.value }))}
                   className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm bg-white">
                   <option value="">Selecciona tu régimen</option>
@@ -351,8 +342,6 @@ export default function Documentos() {
                   <option value="603">603 — Personas Morales con Fines no Lucrativos</option>
                   <option value="605">605 — Sueldos y Salarios</option>
                   <option value="606">606 — Arrendamiento</option>
-                  <option value="607">607 — Régimen de Enajenación o Adquisición de Bienes</option>
-                  <option value="608">608 — Demás ingresos</option>
                   <option value="612">612 — Personas Físicas con Actividades Empresariales</option>
                   <option value="616">616 — Sin obligaciones fiscales</option>
                   <option value="621">621 — Incorporación Fiscal</option>
@@ -362,8 +351,7 @@ export default function Documentos() {
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block uppercase tracking-wide">Uso de CFDI</label>
-                <select
-                  value={formularioFactura.uso_cfdi}
+                <select value={formularioFactura.uso_cfdi}
                   onChange={(e) => setFormularioFactura(p => ({ ...p, uso_cfdi: e.target.value }))}
                   className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm bg-white">
                   <option value="">Selecciona el uso</option>
@@ -371,15 +359,11 @@ export default function Documentos() {
                   <option value="G03">G03 — Gastos en general</option>
                   <option value="I01">I01 — Construcciones</option>
                   <option value="I04">I04 — Equipo de computo y accesorios</option>
-                  <option value="I08">I08 — Otra maquinaria y equipo</option>
                   <option value="S01">S01 — Sin efectos fiscales</option>
                   <option value="CP01">CP01 — Pagos</option>
                 </select>
               </div>
-
-              <button
-                onClick={guardarFactura}
-                disabled={guardandoFactura}
+              <button onClick={guardarFactura} disabled={guardandoFactura}
                 className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold hover:opacity-90 transition disabled:opacity-50">
                 {guardandoFactura ? 'Guardando...' : facturaGuardada ? '✅ Guardado' : 'Guardar datos de facturación'}
               </button>
