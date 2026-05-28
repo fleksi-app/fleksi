@@ -21,7 +21,7 @@ export default function MisTrabajos() {
 
     const { data: apps } = await supabase
       .from('aplicaciones')
-      .select('*, servicios(id, titulo, fecha, hora, presupuesto, urgente, estado, metodo_pago, usuarios(nombre, foto_url))')
+      .select('*, servicios(id, titulo, fecha, hora, presupuesto, urgente, estado, metodo_pago, usuarios!cliente_id(nombre, foto_url))')
       .eq('prestador_id', user.id)
       .order('created_at', { ascending: false });
     setAplicaciones(apps || []);
@@ -80,7 +80,6 @@ export default function MisTrabajos() {
 
       <div className="max-w-md mx-auto px-6 -mt-4">
 
-        {/* Filtros */}
         <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100 mb-4">
           {[
             { id: 'activos', label: `Activos ${conteos.activos > 0 ? `(${conteos.activos})` : ''}` },
@@ -138,7 +137,6 @@ export default function MisTrabajos() {
                       </span>
                     </div>
 
-                    {/* Cliente */}
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
                         {servicio?.usuarios?.foto_url ? (
@@ -171,7 +169,6 @@ export default function MisTrabajos() {
                     </div>
                   </a>
 
-                  {/* Banner estados */}
                   {esAceptado && (
                     <div className="bg-green-50 border-t border-green-100 px-4 py-3">
                       <p className="text-green-700 text-xs font-bold text-center">

@@ -29,12 +29,12 @@ function DetalleTrabajoContent() {
     let servicio = null;
     if (servicioId) {
       const { data } = await supabase.from('servicios')
-        .select('*, usuarios(nombre, calificacion, foto_url, email)')
+        .select('*, usuarios!cliente_id(nombre, calificacion, foto_url, email)')
         .eq('id', servicioId).single();
       servicio = data;
     } else {
       const { data } = await supabase.from('servicios')
-        .select('*, usuarios(nombre, calificacion, foto_url, email)')
+        .select('*, usuarios!cliente_id(nombre, calificacion, foto_url, email)')
         .eq('estado', 'activo').neq('cliente_id', user.id)
         .order('created_at', { ascending: false }).limit(1);
       servicio = data?.[0] || null;

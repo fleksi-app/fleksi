@@ -43,7 +43,7 @@ export default function HomeViajero() {
     setBusquedaCiudad(perfil?.ciudad || '');
     setCiudadFiltro(perfil?.ciudad || '');
     const { data: servicios } = await supabase.from('servicios')
-      .select('*, usuarios(nombre, calificacion, ciudad)')
+      .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
       .eq('estado', 'activo').neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
     setTrabajos(servicios || []);
@@ -144,7 +144,6 @@ export default function HomeViajero() {
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-4">{usuario?.nombre?.split(' ')[0] || 'Viajero'} 🌍</h1>
 
-          {/* Ciudad actual */}
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-3 border border-white/25">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
@@ -183,7 +182,6 @@ export default function HomeViajero() {
             </div>
           )}
 
-          {/* Búsqueda por ciudad */}
           <div className="relative mb-2">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
             <input
@@ -201,7 +199,6 @@ export default function HomeViajero() {
             )}
           </div>
 
-          {/* Búsqueda por texto */}
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
             <input type="text" placeholder="Buscar trabajos..."
