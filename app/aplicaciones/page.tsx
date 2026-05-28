@@ -252,7 +252,7 @@ function AplicacionesContent() {
           )}
         </div>
 
-        <Nav activo="trabajos" />
+        <Nav activo="inicio" />
       </main>
     );
   }
@@ -313,7 +313,7 @@ function AplicacionesContent() {
         )}
       </div>
 
-      <Nav activo="trabajos" />
+      <Nav activo="inicio" />
     </main>
   );
 }
