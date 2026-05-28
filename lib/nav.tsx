@@ -111,7 +111,6 @@ export default function Nav({ activo }: { activo: string }) {
   const inicio = esEmpresa ? '/home-empresa' : esViajero ? '/home-viajero' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
 
-  // Color activo según rol
   const colorActivo = esEmpresa ? 'text-blue-900' : esViajero ? 'text-teal-600' : 'text-purple-600';
   const colorPlus = esEmpresa
     ? 'from-slate-700 to-blue-900'
@@ -139,7 +138,7 @@ export default function Nav({ activo }: { activo: string }) {
                 {noLeidas > 0 && (
                   <button onClick={marcarLeidas}
                     className="text-xs text-purple-600 font-semibold hover:underline">
-                    Marcar todas como leídas
+                    Marcar todas leídas
                   </button>
                 )}
                 <button onClick={() => setMostrarNotifs(false)}
@@ -268,7 +267,7 @@ export default function Nav({ activo }: { activo: string }) {
               return (
                 <button key={item.id} onClick={() => setMostrarModal(true)}
                   className="flex flex-col items-center gap-0.5 px-3">
-                  <div className={`w-13 h-13 bg-gradient-to-r ${colorPlus} rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14`}>
+                  <div className={`bg-gradient-to-r ${colorPlus} rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14`}>
                     <span className="text-white text-3xl font-bold leading-none">+</span>
                   </div>
                   <span className="text-xs text-gray-400 mt-1 font-semibold">{item.label}</span>
@@ -279,14 +278,7 @@ export default function Nav({ activo }: { activo: string }) {
             return (
               <a key={item.id} href={item.href}
                 className="relative flex flex-col items-center gap-0.5 px-3 py-1">
-                {item.id === 'perfil' && noLeidas > 0 ? (
-                  <div className="relative">
-                    <span className="text-xl">{item.emoji}</span>
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
-                      {noLeidas > 9 ? '9+' : noLeidas}
-                    </span>
-                  </div>
-                ) : item.badge > 0 ? (
+                {item.badge > 0 ? (
                   <div className="relative">
                     <span className="text-xl">{item.emoji}</span>
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
