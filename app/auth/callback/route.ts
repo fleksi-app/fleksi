@@ -13,15 +13,11 @@ export async function GET(request: NextRequest) {
     );
 
     await supabase.auth.exchangeCodeForSession(code);
-
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
       const { data: usuario } = await supabase
-        .from('usuarios')
-        .select('id, rol')
-        .eq('id', user.id)
-        .single();
+        .from('usuarios').select('id, rol').eq('id', user.id).single();
 
       if (!usuario) {
         return NextResponse.redirect(`${requestUrl.origin}/registro?social=true`);
