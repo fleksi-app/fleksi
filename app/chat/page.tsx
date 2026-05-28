@@ -19,98 +19,114 @@ function contienetelefono(texto: string): boolean {
 
 function FondoFlekser() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.07}}>
-      {/* Llave inglesa */}
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
       <g transform="translate(20,40) rotate(-30)">
         <rect x="0" y="3" width="28" height="6" rx="3" fill="#7C3AED"/>
         <circle cx="4" cy="6" r="6" fill="none" stroke="#7C3AED" strokeWidth="3"/>
         <circle cx="24" cy="6" r="4" fill="none" stroke="#7C3AED" strokeWidth="2.5"/>
       </g>
-      {/* Trapeador */}
       <g transform="translate(80,20)">
         <rect x="8" y="0" width="3" height="30" rx="1.5" fill="#2563EB"/>
         <path d="M2,30 Q9.5,35 17,30 L14,50 Q9.5,52 5,50 Z" fill="#2563EB"/>
       </g>
-      {/* Brocha de pintura */}
       <g transform="translate(150,50) rotate(20)">
         <rect x="5" y="0" width="4" height="20" rx="2" fill="#7C3AED"/>
         <path d="M3,20 Q7,28 11,20 L10,26 Q7,29 4,26 Z" fill="#2563EB"/>
       </g>
-      {/* Camión */}
       <g transform="translate(220,30)">
         <rect x="0" y="8" width="35" height="16" rx="3" fill="#7C3AED"/>
         <rect x="25" y="4" width="10" height="12" rx="2" fill="#2563EB"/>
         <circle cx="8" cy="25" r="4" fill="#7C3AED"/>
         <circle cx="27" cy="25" r="4" fill="#7C3AED"/>
       </g>
-      {/* Martillo */}
       <g transform="translate(30,120) rotate(45)">
         <rect x="6" y="0" width="4" height="22" rx="2" fill="#2563EB"/>
         <rect x="0" y="0" width="16" height="8" rx="2" fill="#7C3AED"/>
       </g>
-      {/* Escoba */}
       <g transform="translate(100,100) rotate(-15)">
         <rect x="7" y="0" width="3" height="28" rx="1.5" fill="#7C3AED"/>
         <path d="M0,28 L14,28 L11,38 L3,38 Z" fill="#2563EB"/>
       </g>
-      {/* Llave de tubo */}
       <g transform="translate(180,110) rotate(20)">
         <rect x="4" y="0" width="4" height="24" rx="2" fill="#2563EB"/>
         <ellipse cx="6" cy="4" rx="6" ry="4" fill="none" stroke="#7C3AED" strokeWidth="2.5"/>
         <ellipse cx="6" cy="22" rx="5" ry="3" fill="none" stroke="#7C3AED" strokeWidth="2"/>
       </g>
-      {/* Coche ejecutivo */}
       <g transform="translate(250,105)">
         <rect x="0" y="10" width="38" height="12" rx="4" fill="#7C3AED"/>
         <path d="M6,10 Q10,2 28,2 Q34,2 36,10 Z" fill="#2563EB"/>
         <circle cx="8" cy="23" r="4" fill="#7C3AED"/>
         <circle cx="30" cy="23" r="4" fill="#7C3AED"/>
       </g>
-      {/* Tijeras */}
       <g transform="translate(55,200) rotate(-20)">
         <line x1="8" y1="0" x2="0" y2="20" stroke="#2563EB" strokeWidth="3" strokeLinecap="round"/>
         <line x1="8" y1="0" x2="16" y2="20" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
         <circle cx="8" cy="0" r="3" fill="#7C3AED"/>
       </g>
-      {/* Cubeta */}
       <g transform="translate(140,190)">
         <path d="M4,0 L16,0 L14,18 L6,18 Z" fill="#2563EB"/>
         <path d="M4,0 Q10,-5 16,0" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round"/>
       </g>
-      {/* Destornillador */}
       <g transform="translate(210,185) rotate(35)">
         <rect x="5" y="0" width="4" height="24" rx="2" fill="#7C3AED"/>
         <rect x="3" y="22" width="8" height="5" rx="1" fill="#2563EB"/>
         <rect x="6" y="27" width="2" height="6" rx="1" fill="#7C3AED"/>
       </g>
-      {/* Rodillo de pintura */}
       <g transform="translate(270,180) rotate(-10)">
         <rect x="8" y="0" width="3" height="20" rx="1.5" fill="#2563EB"/>
         <rect x="0" y="4" width="18" height="10" rx="3" fill="#7C3AED"/>
         <rect x="13" y="8" width="3" height="16" rx="1.5" fill="#2563EB"/>
       </g>
-      {/* Jardinera / pala */}
       <g transform="translate(20,280) rotate(15)">
         <rect x="6" y="0" width="4" height="22" rx="2" fill="#7C3AED"/>
         <path d="M2,22 Q8,30 14,22 L12,28 Q8,31 4,28 Z" fill="#2563EB"/>
       </g>
-      {/* Uñas / estética */}
       <g transform="translate(100,270)">
         <rect x="2" y="0" width="6" height="12" rx="3" fill="#7C3AED"/>
         <rect x="10" y="2" width="6" height="10" rx="3" fill="#2563EB"/>
         <rect x="18" y="1" width="6" height="11" rx="3" fill="#7C3AED"/>
       </g>
-      {/* Caja de mudanza */}
       <g transform="translate(180,265)">
         <rect x="0" y="4" width="24" height="18" rx="2" fill="#2563EB"/>
         <rect x="0" y="4" width="24" height="5" rx="2" fill="#7C3AED"/>
         <line x1="12" y1="4" x2="12" y2="22" stroke="white" strokeWidth="1.5"/>
         <line x1="0" y1="11" x2="24" y2="11" stroke="white" strokeWidth="1"/>
       </g>
-      {/* Sartén */}
       <g transform="translate(255,260) rotate(-20)">
         <circle cx="12" cy="12" r="10" fill="none" stroke="#7C3AED" strokeWidth="3"/>
         <rect x="22" y="10" width="14" height="4" rx="2" fill="#2563EB"/>
+      </g>
+      <g transform="translate(20,380) rotate(-30)">
+        <rect x="0" y="3" width="28" height="6" rx="3" fill="#7C3AED"/>
+        <circle cx="4" cy="6" r="6" fill="none" stroke="#7C3AED" strokeWidth="3"/>
+      </g>
+      <g transform="translate(100,370)">
+        <rect x="8" y="0" width="3" height="30" rx="1.5" fill="#2563EB"/>
+        <path d="M2,30 Q9.5,35 17,30 L14,50 Q9.5,52 5,50 Z" fill="#2563EB"/>
+      </g>
+      <g transform="translate(200,375) rotate(20)">
+        <rect x="5" y="0" width="4" height="20" rx="2" fill="#7C3AED"/>
+        <path d="M3,20 Q7,28 11,20 L10,26 Q7,29 4,26 Z" fill="#2563EB"/>
+      </g>
+      <g transform="translate(270,365)">
+        <rect x="0" y="8" width="35" height="16" rx="3" fill="#7C3AED"/>
+        <rect x="25" y="4" width="10" height="12" rx="2" fill="#2563EB"/>
+        <circle cx="8" cy="25" r="4" fill="#7C3AED"/>
+        <circle cx="27" cy="25" r="4" fill="#7C3AED"/>
+      </g>
+      <g transform="translate(50,460) rotate(45)">
+        <rect x="6" y="0" width="4" height="22" rx="2" fill="#2563EB"/>
+        <rect x="0" y="0" width="16" height="8" rx="2" fill="#7C3AED"/>
+      </g>
+      <g transform="translate(150,450) rotate(-15)">
+        <rect x="7" y="0" width="3" height="28" rx="1.5" fill="#7C3AED"/>
+        <path d="M0,28 L14,28 L11,38 L3,38 Z" fill="#2563EB"/>
+      </g>
+      <g transform="translate(240,455)">
+        <rect x="0" y="10" width="38" height="12" rx="4" fill="#7C3AED"/>
+        <path d="M6,10 Q10,2 28,2 Q34,2 36,10 Z" fill="#2563EB"/>
+        <circle cx="8" cy="23" r="4" fill="#7C3AED"/>
+        <circle cx="30" cy="23" r="4" fill="#7C3AED"/>
       </g>
     </svg>
   );
@@ -118,34 +134,29 @@ function FondoFlekser() {
 
 function FondoEmpresa() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.07}}>
-      {/* Edificio alto */}
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
       <g transform="translate(15,20)">
         <rect x="0" y="0" width="28" height="50" rx="2" fill="#1e3a8a"/>
         {[0,1,2,3].map(i=>[0,1,2].map(j=>(
           <rect key={`${i}-${j}`} x={3+j*8} y={4+i*11} width="5" height="7" rx="1" fill="#334155"/>
         )))}
       </g>
-      {/* Edificio mediano */}
       <g transform="translate(60,35)">
         <rect x="0" y="0" width="20" height="35" rx="2" fill="#334155"/>
         {[0,1,2].map(i=>[0,1].map(j=>(
           <rect key={`${i}-${j}`} x={3+j*9} y={4+i*10} width="5" height="6" rx="1" fill="#1e3a8a"/>
         )))}
       </g>
-      {/* Pluma fuente */}
       <g transform="translate(110,25) rotate(30)">
         <path d="M6,0 Q12,8 8,20 L4,20 Q0,8 6,0 Z" fill="#1e3a8a"/>
         <rect x="4" y="20" width="4" height="8" rx="1" fill="#334155"/>
         <path d="M5,26 L7,32" stroke="#1e3a8a" strokeWidth="1.5" strokeLinecap="round"/>
       </g>
-      {/* Charola de mesero */}
       <g transform="translate(170,20)">
         <ellipse cx="20" cy="5" rx="20" ry="4" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
         <rect x="18" y="5" width="4" height="12" rx="2" fill="#334155"/>
         <ellipse cx="20" cy="17" rx="8" ry="2" fill="#1e3a8a"/>
       </g>
-      {/* Cubiertos */}
       <g transform="translate(230,15)">
         <rect x="0" y="0" width="4" height="28" rx="2" fill="#334155"/>
         <ellipse cx="2" cy="4" rx="4" ry="6" fill="none" stroke="#1e3a8a" strokeWidth="2"/>
@@ -154,20 +165,16 @@ function FondoEmpresa() {
         <rect x="20" y="0" width="4" height="10" rx="2" fill="#1e3a8a"/>
         <path d="M20,10 Q22,18 22,28" stroke="#334155" strokeWidth="3" strokeLinecap="round" fill="none"/>
       </g>
-      {/* Portafolio */}
       <g transform="translate(280,25)">
         <rect x="0" y="6" width="28" height="20" rx="3" fill="#1e3a8a"/>
         <rect x="8" y="0" width="12" height="8" rx="2" fill="none" stroke="#334155" strokeWidth="2.5"/>
         <line x1="0" y1="14" x2="28" y2="14" stroke="#334155" strokeWidth="1.5"/>
       </g>
-      {/* Lápiz */}
       <g transform="translate(30,110) rotate(-25)">
         <rect x="4" y="0" width="6" height="26" rx="1" fill="#334155"/>
         <polygon points="4,26 10,26 7,34" fill="#1e3a8a"/>
         <rect x="4" y="0" width="6" height="5" rx="1" fill="#1e3a8a"/>
-        <line x1="7" y1="32" x2="7" y2="34" stroke="#334155" strokeWidth="1.5"/>
       </g>
-      {/* Edificio con antena */}
       <g transform="translate(90,95)">
         <rect x="0" y="10" width="22" height="40" rx="2" fill="#334155"/>
         {[0,1,2].map(i=>[0,1].map(j=>(
@@ -176,7 +183,6 @@ function FondoEmpresa() {
         <rect x="10" y="0" width="2" height="12" rx="1" fill="#1e3a8a"/>
         <circle cx="11" cy="0" r="2" fill="#334155"/>
       </g>
-      {/* Silla de oficina */}
       <g transform="translate(160,100)">
         <rect x="5" y="0" width="14" height="12" rx="3" fill="#1e3a8a"/>
         <rect x="9" y="12" width="6" height="10" rx="2" fill="#334155"/>
@@ -184,14 +190,12 @@ function FondoEmpresa() {
         <rect x="9" y="23" width="3" height="6" rx="1.5" fill="#334155"/>
         <rect x="4" y="29" width="16" height="2" rx="1" fill="#1e3a8a"/>
       </g>
-      {/* Computadora */}
       <g transform="translate(225,95)">
         <rect x="0" y="0" width="30" height="20" rx="3" fill="#334155"/>
         <rect x="2" y="2" width="26" height="16" rx="2" fill="#1e3a8a"/>
         <rect x="10" y="20" width="10" height="4" rx="1" fill="#334155"/>
         <rect x="6" y="24" width="18" height="2" rx="1" fill="#1e3a8a"/>
       </g>
-      {/* Documento */}
       <g transform="translate(280,100) rotate(5)">
         <rect x="0" y="0" width="20" height="26" rx="2" fill="#1e3a8a"/>
         <rect x="3" y="5" width="14" height="2" rx="1" fill="#334155"/>
@@ -199,13 +203,11 @@ function FondoEmpresa() {
         <rect x="3" y="15" width="10" height="2" rx="1" fill="#334155"/>
         <rect x="3" y="20" width="12" height="2" rx="1" fill="#334155"/>
       </g>
-      {/* Taza de café */}
       <g transform="translate(20,210)">
         <path d="M2,0 L18,0 L16,20 L4,20 Z" fill="#334155"/>
         <path d="M18,5 Q26,5 26,12 Q26,18 18,16" fill="none" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
         <ellipse cx="10" cy="0" rx="8" ry="2" fill="#1e3a8a"/>
       </g>
-      {/* Mesero caminando */}
       <g transform="translate(80,200)">
         <circle cx="10" cy="4" r="5" fill="#1e3a8a"/>
         <rect x="6" y="9" width="8" height="14" rx="2" fill="#334155"/>
@@ -215,14 +217,12 @@ function FondoEmpresa() {
         <line x1="10" y1="23" x2="7" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
         <line x1="10" y1="23" x2="13" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
       </g>
-      {/* Grafica de barras */}
       <g transform="translate(160,205)">
         <rect x="0" y="14" width="6" height="14" rx="1" fill="#1e3a8a"/>
         <rect x="8" y="8" width="6" height="20" rx="1" fill="#334155"/>
         <rect x="16" y="2" width="6" height="26" rx="1" fill="#1e3a8a"/>
         <line x1="0" y1="28" x2="22" y2="28" stroke="#334155" strokeWidth="1.5"/>
       </g>
-      {/* Edificio pequeño */}
       <g transform="translate(220,200)">
         <rect x="0" y="5" width="16" height="24" rx="2" fill="#334155"/>
         <rect x="6" y="0" width="4" height="6" rx="1" fill="#1e3a8a"/>
@@ -230,8 +230,49 @@ function FondoEmpresa() {
           <rect key={`${i}-${j}`} x={2+j*8} y={8+i*9} width="4" height="5" rx="1" fill="#1e3a8a"/>
         )))}
       </g>
-      {/* Reloj */}
       <g transform="translate(270,205)">
+        <circle cx="14" cy="14" r="13" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
+        <line x1="14" y1="14" x2="14" y2="5" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="14" y1="14" x2="20" y2="18" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(15,340)">
+        <rect x="0" y="0" width="28" height="50" rx="2" fill="#1e3a8a"/>
+        {[0,1,2,3].map(i=>[0,1,2].map(j=>(
+          <rect key={`${i}-${j}`} x={3+j*8} y={4+i*11} width="5" height="7" rx="1" fill="#334155"/>
+        )))}
+      </g>
+      <g transform="translate(90,350)">
+        <rect x="0" y="6" width="28" height="20" rx="3" fill="#1e3a8a"/>
+        <rect x="8" y="0" width="12" height="8" rx="2" fill="none" stroke="#334155" strokeWidth="2.5"/>
+        <line x1="0" y1="14" x2="28" y2="14" stroke="#334155" strokeWidth="1.5"/>
+      </g>
+      <g transform="translate(170,345) rotate(30)">
+        <path d="M6,0 Q12,8 8,20 L4,20 Q0,8 6,0 Z" fill="#1e3a8a"/>
+        <rect x="4" y="20" width="4" height="8" rx="1" fill="#334155"/>
+      </g>
+      <g transform="translate(230,340)">
+        <ellipse cx="20" cy="5" rx="20" ry="4" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
+        <rect x="18" y="5" width="4" height="12" rx="2" fill="#334155"/>
+        <ellipse cx="20" cy="17" rx="8" ry="2" fill="#1e3a8a"/>
+      </g>
+      <g transform="translate(30,440)">
+        <rect x="0" y="0" width="4" height="28" rx="2" fill="#334155"/>
+        <ellipse cx="2" cy="4" rx="4" ry="6" fill="none" stroke="#1e3a8a" strokeWidth="2"/>
+        <rect x="10" y="0" width="3" height="28" rx="1.5" fill="#1e3a8a"/>
+        <path d="M9,0 Q9,8 12,10 Q15,8 15,0" fill="#334155"/>
+      </g>
+      <g transform="translate(140,435)">
+        <rect x="5" y="0" width="14" height="12" rx="3" fill="#1e3a8a"/>
+        <rect x="9" y="12" width="6" height="10" rx="2" fill="#334155"/>
+        <rect x="3" y="20" width="18" height="3" rx="1.5" fill="#1e3a8a"/>
+      </g>
+      <g transform="translate(220,440) rotate(5)">
+        <rect x="0" y="0" width="20" height="26" rx="2" fill="#1e3a8a"/>
+        <rect x="3" y="5" width="14" height="2" rx="1" fill="#334155"/>
+        <rect x="3" y="10" width="14" height="2" rx="1" fill="#334155"/>
+        <rect x="3" y="15" width="10" height="2" rx="1" fill="#334155"/>
+      </g>
+      <g transform="translate(270,435)">
         <circle cx="14" cy="14" r="13" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
         <line x1="14" y1="14" x2="14" y2="5" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
         <line x1="14" y1="14" x2="20" y2="18" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round"/>
@@ -242,35 +283,30 @@ function FondoEmpresa() {
 
 function FondoViajero() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.07}}>
-      {/* Avión */}
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
       <g transform="translate(20,30) rotate(-15)">
         <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
         <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
         <rect x="8" y="2" width="16" height="6" rx="3" fill="#0e7490"/>
         <rect x="12" y="12" width="8" height="4" rx="2" fill="#0369a1"/>
       </g>
-      {/* Palmera */}
       <g transform="translate(75,15)">
         <rect x="7" y="20" width="5" height="30" rx="2.5" fill="#0e7490"/>
         <path d="M9,20 Q0,10 -8,15 Q-2,8 9,14" fill="#0369a1"/>
         <path d="M9,20 Q18,8 26,12 Q20,6 9,14" fill="#0369a1"/>
         <path d="M9,20 Q4,5 8,0 Q10,6 10,14" fill="#0e7490"/>
       </g>
-      {/* Maleta */}
       <g transform="translate(140,20)">
         <rect x="0" y="6" width="26" height="20" rx="4" fill="#0369a1"/>
         <rect x="7" y="0" width="12" height="8" rx="2" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
         <line x1="13" y1="6" x2="13" y2="26" stroke="#0e7490" strokeWidth="1.5"/>
         <line x1="0" y1="14" x2="26" y2="14" stroke="#0e7490" strokeWidth="1"/>
       </g>
-      {/* Señal de carretera */}
       <g transform="translate(200,15)">
         <rect x="8" y="0" width="4" height="28" rx="2" fill="#0e7490"/>
         <rect x="0" y="4" width="20" height="14" rx="2" fill="#0369a1"/>
         <polygon points="20,4 28,11 20,18" fill="#0369a1"/>
       </g>
-      {/* Barco */}
       <g transform="translate(255,25)">
         <path d="M2,12 Q15,20 28,12 L24,18 Q15,22 6,18 Z" fill="#0369a1"/>
         <rect x="10" y="4" width="4" height="10" rx="2" fill="#0e7490"/>
@@ -278,79 +314,103 @@ function FondoViajero() {
         <path d="M0,12 Q4,8 8,12" fill="none" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
         <path d="M20,12 Q24,8 28,12" fill="none" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
       </g>
-      {/* Lentes de sol */}
       <g transform="translate(20,120)">
         <circle cx="8" cy="8" r="8" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
         <circle cx="26" cy="8" r="8" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
         <line x1="16" y1="8" x2="18" y2="8" stroke="#0e7490" strokeWidth="2"/>
-        <line x1="0" y1="5" x2="-4" y2="3" stroke="#0369a1" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="34" y1="5" x2="38" y2="3" stroke="#0369a1" strokeWidth="2" strokeLinecap="round"/>
         <ellipse cx="8" cy="8" rx="5" ry="5" fill="#0e7490" fillOpacity="0.3"/>
         <ellipse cx="26" cy="8" rx="5" ry="5" fill="#0e7490" fillOpacity="0.3"/>
       </g>
-      {/* Árbol de pino */}
       <g transform="translate(90,105)">
         <rect x="8" y="30" width="5" height="12" rx="2" fill="#0e7490"/>
         <polygon points="10,0 0,16 20,16" fill="#0369a1"/>
         <polygon points="10,8 -2,26 22,26" fill="#0e7490"/>
       </g>
-      {/* Brújula */}
       <g transform="translate(155,110)">
         <circle cx="14" cy="14" r="13" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
         <polygon points="14,4 11,14 14,12 17,14" fill="#0e7490"/>
         <polygon points="14,24 11,14 14,16 17,14" fill="#0369a1"/>
         <circle cx="14" cy="14" r="2" fill="#0369a1"/>
       </g>
-      {/* Carretera */}
       <g transform="translate(210,108)">
         <rect x="0" y="0" width="36" height="22" rx="2" fill="#0369a1"/>
         <line x1="18" y1="0" x2="18" y2="22" stroke="white" strokeWidth="2" strokeDasharray="4,3"/>
         <line x1="0" y1="0" x2="36" y2="0" stroke="#0e7490" strokeWidth="1.5"/>
         <line x1="0" y1="22" x2="36" y2="22" stroke="#0e7490" strokeWidth="1.5"/>
       </g>
-      {/* Cámara */}
       <g transform="translate(275,110)">
         <rect x="0" y="4" width="28" height="20" rx="4" fill="#0369a1"/>
         <rect x="8" y="0" width="12" height="6" rx="2" fill="#0e7490"/>
         <circle cx="14" cy="14" r="6" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
         <circle cx="14" cy="14" r="3" fill="#0369a1"/>
-        <circle cx="22" cy="7" r="2" fill="#0e7490"/>
       </g>
-      {/* Palmera pequeña */}
       <g transform="translate(30,220)">
         <rect x="5" y="16" width="4" height="22" rx="2" fill="#0e7490"/>
         <path d="M7,16 Q0,8 -6,12 Q-1,6 7,12" fill="#0369a1"/>
         <path d="M7,16 Q14,6 20,10 Q15,4 7,12" fill="#0369a1"/>
       </g>
-      {/* Mochila */}
       <g transform="translate(85,215)">
         <rect x="2" y="4" width="20" height="24" rx="4" fill="#0369a1"/>
         <rect x="6" y="0" width="12" height="6" rx="3" fill="#0e7490"/>
         <rect x="6" y="14" width="12" height="8" rx="2" fill="#0e7490"/>
         <line x1="12" y1="14" x2="12" y2="22" stroke="#0369a1" strokeWidth="1.5"/>
-        <line x1="0" y1="10" x2="2" y2="10" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="22" y1="10" x2="24" y2="10" stroke="#0e7490" strokeWidth="2" strokeLinecap="round"/>
       </g>
-      {/* Sol */}
       <g transform="translate(155,215)">
         <circle cx="14" cy="14" r="9" fill="#0369a1"/>
         {[0,45,90,135,180,225,270,315].map((deg,i)=>(
           <line key={i}
-            x1={14+11*Math.cos(deg*Math.PI/180)}
-            y1={14+11*Math.sin(deg*Math.PI/180)}
-            x2={14+15*Math.cos(deg*Math.PI/180)}
-            y2={14+15*Math.sin(deg*Math.PI/180)}
+            x1={14+11*Math.cos(deg*Math.PI/180)} y1={14+11*Math.sin(deg*Math.PI/180)}
+            x2={14+15*Math.cos(deg*Math.PI/180)} y2={14+15*Math.sin(deg*Math.PI/180)}
             stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
         ))}
       </g>
-      {/* Señal de stop */}
       <g transform="translate(215,210)">
         <rect x="8" y="0" width="4" height="22" rx="2" fill="#0e7490"/>
         <polygon points="12,6 20,10 20,20 12,24 4,20 4,10" fill="#0369a1"/>
-        <text x="12" y="18" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">STOP</text>
       </g>
-      {/* Ola / playa */}
       <g transform="translate(260,215)">
+        <path d="M0,10 Q8,2 16,10 Q24,18 32,10" fill="none" stroke="#0369a1" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M0,18 Q8,10 16,18 Q24,26 32,18" fill="none" stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
+      </g>
+      <g transform="translate(20,340) rotate(-15)">
+        <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
+        <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
+        <rect x="8" y="2" width="16" height="6" rx="3" fill="#0e7490"/>
+      </g>
+      <g transform="translate(90,330)">
+        <rect x="7" y="20" width="5" height="30" rx="2.5" fill="#0e7490"/>
+        <path d="M9,20 Q0,10 -8,15 Q-2,8 9,14" fill="#0369a1"/>
+        <path d="M9,20 Q18,8 26,12 Q20,6 9,14" fill="#0369a1"/>
+      </g>
+      <g transform="translate(160,335)">
+        <rect x="0" y="6" width="26" height="20" rx="4" fill="#0369a1"/>
+        <rect x="7" y="0" width="12" height="8" rx="2" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
+        <line x1="13" y1="6" x2="13" y2="26" stroke="#0e7490" strokeWidth="1.5"/>
+      </g>
+      <g transform="translate(225,325)">
+        <circle cx="14" cy="14" r="13" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
+        <polygon points="14,4 11,14 14,12 17,14" fill="#0e7490"/>
+        <polygon points="14,24 11,14 14,16 17,14" fill="#0369a1"/>
+      </g>
+      <g transform="translate(30,430)">
+        <circle cx="14" cy="14" r="9" fill="#0369a1"/>
+        {[0,45,90,135,180,225,270,315].map((deg,i)=>(
+          <line key={i}
+            x1={14+11*Math.cos(deg*Math.PI/180)} y1={14+11*Math.sin(deg*Math.PI/180)}
+            x2={14+15*Math.cos(deg*Math.PI/180)} y2={14+15*Math.sin(deg*Math.PI/180)}
+            stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
+        ))}
+      </g>
+      <g transform="translate(110,425)">
+        <rect x="2" y="4" width="20" height="24" rx="4" fill="#0369a1"/>
+        <rect x="6" y="0" width="12" height="6" rx="3" fill="#0e7490"/>
+        <rect x="6" y="14" width="12" height="8" rx="2" fill="#0e7490"/>
+      </g>
+      <g transform="translate(195,420) rotate(-15)">
+        <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
+        <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
+      </g>
+      <g transform="translate(270,430)">
         <path d="M0,10 Q8,2 16,10 Q24,18 32,10" fill="none" stroke="#0369a1" strokeWidth="3" strokeLinecap="round"/>
         <path d="M0,18 Q8,10 16,18 Q24,26 32,18" fill="none" stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
       </g>
@@ -473,30 +533,21 @@ export default function Chat() {
   const esEmpresa = rol === 'empresa';
   const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa
-    ? 'from-slate-700 to-blue-900'
-    : esViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
-
-  const bubbleGradient = esEmpresa
-    ? 'from-slate-700 to-blue-900'
-    : esViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
-
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const bubbleGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
   const focusBorder = esEmpresa ? 'focus:border-blue-700' : esViajero ? 'focus:border-teal-400' : 'focus:border-purple-400';
   const dotColor = esEmpresa ? 'bg-blue-800' : esViajero ? 'bg-teal-500' : 'bg-purple-600';
   const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const bgFondo = esEmpresa ? 'bg-slate-100' : esViajero ? 'bg-sky-100' : 'bg-purple-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
 
-  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
-  const bgMensajes = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50/50' : 'bg-gray-50';
+  const Fondo = esEmpresa ? FondoEmpresa : esViajero ? FondoViajero : FondoFlekser;
 
   if (cargando) {
     return (
       <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
         <div className="text-center">
-          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600'}`}></div>
+          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
           <p className="text-gray-400">Cargando mensajes...</p>
         </div>
       </main>
@@ -506,11 +557,9 @@ export default function Chat() {
   if (conversacionActiva) {
     const otroUsuario = getOtroUsuario(conversacionActiva);
     return (
-      <main className={`min-h-screen ${bgMensajes} flex flex-col pb-16 relative`}>
-
-        {/* Fondo temático por rol */}
+      <main className={`min-h-screen ${bgFondo} flex flex-col pb-16 relative`}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {esEmpresa ? <FondoEmpresa /> : esViajero ? <FondoViajero /> : <FondoFlekser />}
+          <Fondo />
         </div>
 
         <div className="bg-white/95 backdrop-blur-sm px-6 pt-12 pb-4 shadow-sm flex-shrink-0 relative z-10">
@@ -591,10 +640,8 @@ export default function Chat() {
 
   return (
     <main className={`min-h-screen ${bgFondo} pb-32 relative`}>
-
-      {/* Fondo temático sutil en lista de conversaciones */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {esEmpresa ? <FondoEmpresa /> : esViajero ? <FondoViajero /> : <FondoFlekser />}
+        <Fondo />
       </div>
 
       <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm relative z-10`}>
@@ -621,7 +668,7 @@ export default function Chat() {
               const noLeido = !conv.leido && conv.destinatario_id === usuario?.authId;
               return (
                 <button key={conv.id} onClick={() => cargarMensajes(conv)}
-                  className="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-gray-100 text-left w-full active:scale-95 transition">
+                  className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/80 text-left w-full active:scale-95 transition backdrop-blur-sm">
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 bg-gradient-to-r ${avatarGradient} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden`}>
                       {otro?.foto_url ? <img src={otro.foto_url} className="w-full h-full object-cover"/> : otro?.nombre?.charAt(0) || '?'}
