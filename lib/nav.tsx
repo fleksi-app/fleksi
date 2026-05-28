@@ -34,7 +34,8 @@ export default function Nav({ activo }: { activo: string }) {
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase.channel('notificaciones-nav')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `usuario_id=eq.${usuarioId}` }, () => { cargarNotificaciones(usuarioId); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `usuario_id=eq.${usuarioId}` },
+        () => { cargarNotificaciones(usuarioId); })
       .subscribe();
     let bc: BroadcastChannel | null = null;
     try {
@@ -47,26 +48,32 @@ export default function Nav({ activo }: { activo: string }) {
   useEffect(() => {
     if (!usuarioId) return;
     const canal = supabase.channel('mensajes-nav')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` }, () => { cargarMensajesNoLeidos(usuarioId); })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` }, () => { cargarMensajesNoLeidos(usuarioId); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` },
+        () => { cargarMensajesNoLeidos(usuarioId); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes', filter: `destinatario_id=eq.${usuarioId}` },
+        () => { cargarMensajesNoLeidos(usuarioId); })
       .subscribe();
     return () => { supabase.removeChannel(canal); };
   }, [usuarioId]);
 
   const cargarNotificaciones = async (uid: string) => {
-    const { data } = await supabase.from('notificaciones').select('*').eq('usuario_id', uid).order('created_at', { ascending: false }).limit(20);
+    const { data } = await supabase.from('notificaciones').select('*')
+      .eq('usuario_id', uid).order('created_at', { ascending: false }).limit(20);
     setNotificaciones(data || []);
     setNoLeidas((data || []).filter(n => !n.leida).length);
   };
 
   const cargarMensajesNoLeidos = async (uid: string) => {
-    const { count } = await supabase.from('mensajes').select('*', { count: 'exact', head: true }).eq('destinatario_id', uid).eq('leido', false);
+    const { count } = await supabase.from('mensajes')
+      .select('*', { count: 'exact', head: true })
+      .eq('destinatario_id', uid).eq('leido', false);
     setMensajesNoLeidos(count || 0);
   };
 
   const marcarLeidas = async () => {
     if (!usuarioId) return;
-    await supabase.from('notificaciones').update({ leida: true }).eq('usuario_id', usuarioId).eq('leida', false);
+    await supabase.from('notificaciones').update({ leida: true })
+      .eq('usuario_id', usuarioId).eq('leida', false);
     setNoLeidas(0);
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
@@ -88,7 +95,9 @@ export default function Nav({ activo }: { activo: string }) {
 
   const notifEmoji: any = {
     nueva_aplicacion: '✋', aplicacion_aceptada: '✅', aplicacion_rechazada: '❌',
-    trabajo_completado: '🎉', nuevo_trabajo: '🔔', pago_liberado: '💰', mensaje_nuevo: '💬',
+    trabajo_completado: '🎉', nuevo_trabajo: '🔔', pago_liberado: '💰',
+    mensaje_nuevo: '💬', nueva_calificacion: '⭐', solicitud_directa: '🎯',
+    documento_aprobado: '✅', documento_rechazado: '❌', verificacion_aprobada: '🏆',
   };
 
   const rolInfo: any = {
@@ -98,16 +107,23 @@ export default function Nav({ activo }: { activo: string }) {
   };
 
   const esEmpresa = rol === 'empresa';
-  const inicio = esEmpresa ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
+  const esViajero = rol === 'viajero';
+  const inicio = esEmpresa ? '/home-empresa' : esViajero ? '/home-viajero' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
-  const trabajos = esEmpresa ? '/aplicaciones' : '/mis-trabajos';
+
+  // Color activo según rol
+  const colorActivo = esEmpresa ? 'text-blue-900' : esViajero ? 'text-teal-600' : 'text-purple-600';
+  const colorPlus = esEmpresa
+    ? 'from-slate-700 to-blue-900'
+    : esViajero
+    ? 'from-sky-500 to-teal-500'
+    : 'from-blue-600 to-purple-600';
 
   const items = [
     { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio' },
-    { href: trabajos, emoji: '📋', label: 'Trabajos', id: 'trabajos' },
-    { href: null, emoji: '➕', label: 'Nuevo', id: 'nuevo' },
-    { href: '/checkin', emoji: '📍', label: 'Check-in', id: 'checkin' },
-    { href: '/chat', emoji: '💬', label: 'Mensajes', id: 'chat', badge: mensajesNoLeidos },
+    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo' },
+    { href: null, emoji: '+', label: 'Nuevo', id: 'nuevo' },
+    { href: '/chat', emoji: '💬', label: 'Chat', id: 'chat', badge: mensajesNoLeidos },
     { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil' },
   ];
 
@@ -119,7 +135,16 @@ export default function Nav({ activo }: { activo: string }) {
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
               <h3 className="font-extrabold text-gray-900 text-lg">Notificaciones</h3>
-              <button onClick={() => setMostrarNotifs(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+              <div className="flex items-center gap-2">
+                {noLeidas > 0 && (
+                  <button onClick={marcarLeidas}
+                    className="text-xs text-purple-600 font-semibold hover:underline">
+                    Marcar todas como leídas
+                  </button>
+                )}
+                <button onClick={() => setMostrarNotifs(false)}
+                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+              </div>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-3">
               {notificaciones.length === 0 ? (
@@ -204,18 +229,28 @@ export default function Nav({ activo }: { activo: string }) {
             <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"/>
             <h3 className="font-extrabold text-gray-900 text-lg mb-4 text-center">¿Qué quieres hacer?</h3>
             <div className="flex flex-col gap-3">
-              <a href="/publicar" className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">
+              <a href="/publicar"
+                className={`flex items-center gap-4 p-4 bg-gradient-to-r ${colorPlus} text-white rounded-2xl font-bold`}>
                 <span className="text-2xl">📋</span>
                 <div>
                   <p className="font-extrabold">Publicar solicitud</p>
                   <p className="text-white/70 text-sm font-normal">Necesito que alguien me ayude</p>
                 </div>
               </a>
-              <a href="/home" className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold hover:border-purple-400 transition">
+              <a href={inicio}
+                className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold hover:border-purple-400 transition">
                 <span className="text-2xl">🔍</span>
                 <div>
                   <p className="font-extrabold text-gray-900">Buscar trabajo</p>
-                  <p className="text-gray-400 text-sm font-normal">Ver trabajos disponibles cerca de ti</p>
+                  <p className="text-gray-400 text-sm font-normal">Ver trabajos disponibles</p>
+                </div>
+              </a>
+              <a href="/checkin"
+                className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold hover:border-purple-400 transition">
+                <span className="text-2xl">📍</span>
+                <div>
+                  <p className="font-extrabold text-gray-900">Check-in / Check-out</p>
+                  <p className="text-gray-400 text-sm font-normal">Registrar entrada o salida</p>
                 </div>
               </a>
             </div>
@@ -223,30 +258,50 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
-      {/* Nav inferior */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-30">
+      {/* Nav inferior — 5 items */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around items-center">
           {items.map((item: any) => {
             const estaActivo = activo === item.id;
+
             if (item.href === null) {
               return (
-                <button key={item.id} onClick={() => setMostrarModal(true)} className="flex flex-col items-center gap-0.5 px-2">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg -mt-5">
-                    <span className="text-white text-2xl font-bold">+</span>
+                <button key={item.id} onClick={() => setMostrarModal(true)}
+                  className="flex flex-col items-center gap-0.5 px-3">
+                  <div className={`w-13 h-13 bg-gradient-to-r ${colorPlus} rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14`}>
+                    <span className="text-white text-3xl font-bold leading-none">+</span>
                   </div>
-                  <span className="text-xs text-gray-400 mt-1">{item.label}</span>
+                  <span className="text-xs text-gray-400 mt-1 font-semibold">{item.label}</span>
                 </button>
               );
             }
+
             return (
-              <a key={item.id} href={item.href} className="relative flex flex-col items-center gap-0.5 px-2">
-                <span className="text-xl">{item.emoji}</span>
-                {item.badge > 0 && (
-                  <span className="absolute -top-1 -right-0 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center">
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </span>
+              <a key={item.id} href={item.href}
+                className="relative flex flex-col items-center gap-0.5 px-3 py-1">
+                {item.id === 'perfil' && noLeidas > 0 ? (
+                  <div className="relative">
+                    <span className="text-xl">{item.emoji}</span>
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
+                      {noLeidas > 9 ? '9+' : noLeidas}
+                    </span>
+                  </div>
+                ) : item.badge > 0 ? (
+                  <div className="relative">
+                    <span className="text-xl">{item.emoji}</span>
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xl">{item.emoji}</span>
                 )}
-                <span className={`text-xs font-semibold ${estaActivo ? 'text-purple-600' : 'text-gray-400'}`}>{item.label}</span>
+                <span className={`text-xs font-semibold ${estaActivo ? colorActivo : 'text-gray-400'}`}>
+                  {item.label}
+                </span>
+                {estaActivo && (
+                  <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gradient-to-r ${colorPlus}`}/>
+                )}
               </a>
             );
           })}
