@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 const categorias = [
@@ -23,7 +24,10 @@ const horas = [
   '19:00', '20:00', '21:00',
 ];
 
-export default function Publicar() {
+function PublicarForm() {
+  const searchParams = useSearchParams();
+  const paraId = searchParams.get('para');
+
   const [paso, setPaso] = useState(1);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [titulo, setTitulo] = useState('');
@@ -40,17 +44,28 @@ export default function Publicar() {
   const [error, setError] = useState('');
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [cargandoWallet, setCargandoWallet] = useState(true);
+  const [flekserSugerido, setFlekserSugerido] = useState<any>(null);
 
   useEffect(() => {
-    const cargarWallet = async () => {
+    const cargarDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase.from('usuarios').select('wallet_saldo').eq('id', user.id).single();
       setWalletSaldo(data?.wallet_saldo || 0);
       setCargandoWallet(false);
+
+      // Cargar flekser sugerido si viene con ?para=ID
+      if (paraId) {
+        const { data: flekser } = await supabase
+          .from('usuarios')
+          .select('id, nombre, foto_url, calificacion, habilidades')
+          .eq('id', paraId)
+          .single();
+        if (flekser) setFlekserSugerido(flekser);
+      }
     };
-    cargarWallet();
-  }, []);
+    cargarDatos();
+  }, [paraId]);
 
   const efectivoHabilitado = walletSaldo >= 50;
 
@@ -65,22 +80,41 @@ export default function Publicar() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
 
-      const { error: dbError } = await supabase.from('servicios').insert({
-        cliente_id: user.id,
-        titulo,
-        descripcion,
-        categoria: categoriaSeleccionada,
-        fecha,
-        hora: hora || null,
-        presupuesto: Number(presupuesto),
-        direccion: direccion || null,
-        urgente,
-        seguro,
-        metodo_pago: metodoPago,
-        estado: 'activo',
-      });
+      const { data: servicioCreado, error: dbError } = await supabase
+        .from('servicios')
+        .insert({
+          cliente_id: user.id,
+          titulo,
+          descripcion,
+          categoria: categoriaSeleccionada,
+          fecha,
+          hora: hora || null,
+          presupuesto: Number(presupuesto),
+          direccion: direccion || null,
+          urgente,
+          seguro,
+          metodo_pago: metodoPago,
+          estado: 'activo',
+          flekser_sugerido_id: flekserSugerido?.id || null,
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
+
+      // Si hay flekser sugerido, notificarlo directamente
+      if (flekserSugerido?.id && servicioCreado) {
+        try {
+          await supabase.from('notificaciones').insert({
+            usuario_id: flekserSugerido.id,
+            tipo: 'solicitud_directa',
+            titulo: '🎯 ¡Te enviaron una solicitud directa!',
+            mensaje: `Alguien quiere contratarte para: "${titulo}" el ${fecha}. ¡Aplica antes que nadie!`,
+            link: `/trabajo?id=${servicioCreado.id}`,
+          });
+        } catch (e) {}
+      }
+
       setPublicado(true);
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
@@ -94,13 +128,32 @@ export default function Publicar() {
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
           <div className="w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl">🎉</span>
+            <span className="text-4xl">{flekserSugerido ? '🎯' : '🎉'}</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Publicado con éxito!</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
+            {flekserSugerido ? `¡Solicitud enviada a ${flekserSugerido.nombre?.split(' ')[0]}!` : '¡Publicado con éxito!'}
+          </h1>
           <p className="text-gray-400 mb-8 font-light">
-            Tu solicitud ya está visible para los fleksers cerca de ti.
+            {flekserSugerido
+              ? `${flekserSugerido.nombre?.split(' ')[0]} recibió una notificación y podrá aplicar directamente.`
+              : 'Tu solicitud ya está visible para los fleksers cerca de ti.'}
           </p>
           <div className="bg-white rounded-2xl p-4 mb-6 text-left border border-gray-100">
+            {flekserSugerido && (
+              <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  {flekserSugerido.foto_url ? (
+                    <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/>
+                  ) : (
+                    <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">{flekserSugerido.nombre}</p>
+                  <p className="text-xs text-purple-600 font-semibold">🎯 Solicitud directa enviada</p>
+                </div>
+              </div>
+            )}
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Servicio</span>
               <span className="font-semibold text-sm text-gray-900">{titulo}</span>
@@ -130,10 +183,12 @@ export default function Publicar() {
               <span className="font-semibold text-sm text-green-600">✅ Activo</span>
             </div>
           </div>
-          <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
+          <a href="/aplicaciones"
+            className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis solicitudes
           </a>
-          <a href="/home" className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
+          <a href="/home"
+            className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
             Volver al inicio
           </a>
         </div>
@@ -147,7 +202,8 @@ export default function Publicar() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href="/home" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
+            <a href="/home"
+              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
               ←
             </a>
             <div>
@@ -164,6 +220,26 @@ export default function Publicar() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-6">
+
+        {/* Banner flekser sugerido */}
+        {flekserSugerido && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+              {flekserSugerido.foto_url ? (
+                <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/>
+              ) : (
+                <span className="text-white font-bold text-lg">{flekserSugerido.nombre?.charAt(0)}</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="font-extrabold text-purple-800 text-sm">🎯 Solicitud directa a</p>
+              <p className="font-bold text-gray-900">{flekserSugerido.nombre}</p>
+              <p className="text-xs text-purple-600">Recibirá una notificación especial al publicar</p>
+            </div>
+            <button onClick={() => setFlekserSugerido(null)}
+              className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          </div>
+        )}
 
         {/* PASO 1 — Categoría */}
         {paso === 1 && (
@@ -193,9 +269,7 @@ export default function Publicar() {
             <p className="text-gray-400 mb-6 font-light">Mientras más detalle des, mejores propuestas recibirás</p>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
-                {error}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
             )}
 
             <div className="flex flex-col gap-4">
@@ -211,7 +285,6 @@ export default function Publicar() {
                   value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
                   rows={4} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
               </div>
-
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección del trabajo</label>
                 <input type="text" placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX"
@@ -219,29 +292,24 @@ export default function Publicar() {
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
                 <p className="text-xs text-gray-400 mt-1">Solo visible para el flekser que aceptes</p>
               </div>
-
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
                 <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
-
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <div className="grid grid-cols-4 gap-2">
                   {horas.map((h) => (
                     <button key={h} onClick={() => setHora(hora === h ? '' : h)}
                       className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${
-                        hora === h
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
+                        hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
                       }`}>
                       {h}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">💰 Tu presupuesto (MXN)</label>
                 <input type="number" placeholder="Ej. 500" value={presupuesto}
@@ -249,18 +317,14 @@ export default function Publicar() {
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
 
-              {/* Método de pago */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">💳 Método de pago</label>
                 <div className="flex flex-col gap-2">
-                  {/* Stripe */}
                   <button onClick={() => setMetodoPago('stripe')}
                     className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
                       metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
                     }`}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'
-                    }`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'}`}>
                       {metodoPago === 'stripe' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
                     </div>
                     <div className="flex-1">
@@ -270,16 +334,13 @@ export default function Publicar() {
                     <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Recomendado</span>
                   </button>
 
-                  {/* Efectivo */}
                   <button
                     onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
                     className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
                       !efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' :
                       metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
                     }`}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'
-                    }`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'}`}>
                       {metodoPago === 'efectivo' && efectivoHabilitado && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full"/>}
                     </div>
                     <div className="flex-1">
@@ -292,9 +353,7 @@ export default function Publicar() {
                       ) : (
                         <p className="text-xs text-amber-600 font-semibold">
                           Necesitas $50 en tu wallet.{' '}
-                          <a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>
-                            Recargar →
-                          </a>
+                          <a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>Recargar →</a>
                         </p>
                       )}
                     </div>
@@ -331,8 +390,24 @@ export default function Publicar() {
             <p className="text-gray-400 mb-6 font-light">Revisa los detalles antes de publicar</p>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
-                {error}
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
+            )}
+
+            {/* Banner flekser sugerido en confirmación */}
+            {flekserSugerido && (
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  {flekserSugerido.foto_url ? (
+                    <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/>
+                  ) : (
+                    <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-purple-600 font-bold">🎯 Solicitud directa</p>
+                  <p className="font-extrabold text-gray-900 text-sm">{flekserSugerido.nombre}</p>
+                  <p className="text-xs text-gray-400">Recibirá notificación al publicar</p>
+                </div>
               </div>
             )}
 
@@ -377,7 +452,6 @@ export default function Publicar() {
               </div>
             </div>
 
-            {/* Fleksi Protege solo aplica en pagos con Stripe */}
             {metodoPago === 'stripe' && (
               <div onClick={() => setSeguro(!seguro)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition mb-4 ${seguro ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white'}`}>
@@ -394,7 +468,6 @@ export default function Publicar() {
               </div>
             )}
 
-            {/* Resumen de cobro */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-500 text-sm">Tu presupuesto</span>
@@ -421,8 +494,7 @@ export default function Publicar() {
                 <span className="font-extrabold text-purple-600">
                   {metodoPago === 'stripe'
                     ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN`
-                    : `$${presupuesto} MXN en efectivo`
-                  }
+                    : `$${presupuesto} MXN en efectivo`}
                 </span>
               </div>
             </div>
@@ -456,12 +528,24 @@ export default function Publicar() {
           ) : (
             <button onClick={handlePublicar} disabled={cargando}
               className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-              {cargando ? 'Publicando...' : '🚀 Publicar solicitud'}
+              {cargando ? 'Publicando...' : flekserSugerido ? `🎯 Enviar solicitud a ${flekserSugerido.nombre?.split(' ')[0]}` : '🚀 Publicar solicitud'}
             </button>
           )}
         </div>
       </div>
 
     </main>
+  );
+}
+
+export default function Publicar() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <PublicarForm />
+    </Suspense>
   );
 }

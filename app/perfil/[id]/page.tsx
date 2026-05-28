@@ -32,7 +32,8 @@ export default function PerfilPublico() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: perfActual } = await supabase.from('usuarios').select('id, nombre').eq('id', user.id).single();
+        const { data: perfActual } = await supabase
+          .from('usuarios').select('id, nombre').eq('id', user.id).single();
         setUsuarioActual(perfActual);
       }
 
@@ -53,7 +54,8 @@ export default function PerfilPublico() {
         .order('created_at', { ascending: false });
       setReseñas(reseñasData || []);
 
-      const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', id);
+      const { data: badgesData } = await supabase
+        .from('badges').select('*').eq('usuario_id', id);
       setBadges(badgesData || []);
 
       const { data: appsData } = await supabase
@@ -106,7 +108,7 @@ export default function PerfilPublico() {
   return (
     <main className="min-h-screen bg-gray-50 pb-10">
 
-      {/* Header */}
+      {/* Header con foto dentro del gradiente */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-8">
         <div className="max-w-md mx-auto flex justify-between items-center mb-6">
           <button onClick={() => window.history.back()}
@@ -121,7 +123,6 @@ export default function PerfilPublico() {
           )}
         </div>
 
-        {/* Perfil en el header */}
         <div className="max-w-md mx-auto flex items-center gap-4">
           <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/40 flex items-center justify-center flex-shrink-0">
             {perfil.foto_url ? (
@@ -170,7 +171,6 @@ export default function PerfilPublico() {
               <p className="text-xs text-gray-400">Reseñas</p>
             </div>
           </div>
-
           {perfil.descripcion && (
             <p className="text-gray-600 text-sm leading-relaxed">{perfil.descripcion}</p>
           )}
@@ -217,7 +217,6 @@ export default function PerfilPublico() {
               <span className="text-xs text-gray-400 ml-1">({reseñas.length})</span>
             </div>
           </div>
-
           {reseñas.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-3xl mb-2">💬</p>
@@ -294,11 +293,11 @@ export default function PerfilPublico() {
         {usuarioActual && usuarioActual.id !== id && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <p className="font-extrabold text-gray-900 text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
-            <p className="text-gray-400 text-sm mb-4">Publica un trabajo y {nombreCorto} podrá aplicar, o envíale un mensaje directo.</p>
+            <p className="text-gray-400 text-sm mb-4">Envíale una solicitud directa o un mensaje para hablar primero.</p>
             <div className="flex flex-col gap-2">
-              <a href={`/publicar`}
+              <a href={`/publicar?para=${id}`}
                 className="block w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center hover:opacity-90 transition">
-                📋 Publicar trabajo
+                🎯 Enviar solicitud a {nombreCorto}
               </a>
               <button onClick={iniciarChat}
                 className="w-full py-3.5 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
