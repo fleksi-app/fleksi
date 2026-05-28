@@ -30,14 +30,12 @@ export default function PerfilPublico() {
 
   const cargar = async () => {
     try {
-      // Usuario actual (puede no estar logueado)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: perfActual } = await supabase.from('usuarios').select('id, nombre').eq('id', user.id).single();
         setUsuarioActual(perfActual);
       }
 
-      // Perfil público
       const { data } = await supabase
         .from('usuarios')
         .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, ciudades_visitadas, verificado')
@@ -47,7 +45,6 @@ export default function PerfilPublico() {
       if (!data) { window.location.href = '/'; return; }
       setPerfil(data);
 
-      // Reseñas recibidas
       const { data: reseñasData } = await supabase
         .from('reseñas')
         .select('*, usuarios!reseñas_cliente_id_fkey(nombre, foto_url)')
@@ -56,12 +53,9 @@ export default function PerfilPublico() {
         .order('created_at', { ascending: false });
       setReseñas(reseñasData || []);
 
-      // Badges
-      const { data: badgesData } = await supabase
-        .from('badges').select('*').eq('usuario_id', id);
+      const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', id);
       setBadges(badgesData || []);
 
-      // Portafolio
       const { data: appsData } = await supabase
         .from('aplicaciones')
         .select('fotos_despues, servicios(titulo)')
@@ -107,57 +101,61 @@ export default function PerfilPublico() {
     ? (reseñas.reduce((acc, r) => acc + r.estrellas, 0) / reseñas.length).toFixed(1)
     : perfil.calificacion || '5.0';
 
+  const nombreCorto = perfil.nombre?.split(' ')[0];
+
   return (
     <main className="min-h-screen bg-gray-50 pb-10">
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20 relative">
-        <div className="max-w-md mx-auto flex justify-between items-center">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-8">
+        <div className="max-w-md mx-auto flex justify-between items-center mb-6">
           <button onClick={() => window.history.back()}
             className="text-white/70 text-sm hover:text-white transition flex items-center gap-1">
             ← Regresar
           </button>
           {usuarioActual && usuarioActual.id !== id && (
             <button onClick={iniciarChat}
-              className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition">
+              className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition border border-white/30">
               💬 Enviar mensaje
             </button>
           )}
         </div>
-      </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-12">
-
-        {/* Card principal */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-              {perfil.foto_url ? (
-                <img src={perfil.foto_url} alt={perfil.nombre} className="w-full h-full object-cover"/>
-              ) : (
-                <span className="text-white font-extrabold text-3xl">{perfil.nombre?.charAt(0)?.toUpperCase()}</span>
+        {/* Perfil en el header */}
+        <div className="max-w-md mx-auto flex items-center gap-4">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/40 flex items-center justify-center flex-shrink-0">
+            {perfil.foto_url ? (
+              <img src={perfil.foto_url} alt={perfil.nombre} className="w-full h-full object-cover"/>
+            ) : (
+              <span className="text-white font-extrabold text-3xl">{perfil.nombre?.charAt(0)?.toUpperCase()}</span>
+            )}
+          </div>
+          <div>
+            <h1 className="font-extrabold text-white text-2xl">{perfil.nombre}</h1>
+            <div className="flex items-center gap-2 flex-wrap mt-1">
+              <span className="text-xs bg-white/20 text-white font-semibold px-2 py-0.5 rounded-full border border-white/30">
+                {perfil.rol === 'empresa' ? '🏢 Empresa' : perfil.rol === 'viajero' ? '✈️ Viajero' : '⚡ Flekser'}
+              </span>
+              {perfil.ciudad && (
+                <span className="text-xs text-white/70">📍 {perfil.ciudad}</span>
               )}
             </div>
-            <div className="flex-1">
-              <h1 className="font-extrabold text-gray-900 text-xl">{perfil.nombre}</h1>
-              <div className="flex items-center gap-2 flex-wrap mt-1">
-                <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
-                  {perfil.rol === 'empresa' ? '🏢 Empresa' : perfil.rol === 'viajero' ? '✈️ Viajero' : '⚡ Flekser'}
-                </span>
-                {perfil.ciudad && (
-                  <span className="text-xs text-gray-400">📍 {perfil.ciudad}</span>
-                )}
-                {tieneBadge('verificado') && (
-                  <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>
-                )}
-                {tieneBadge('perfil_completo') && (
-                  <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>
-                )}
-              </div>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {tieneBadge('verificado') && (
+                <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">✅ Verificado</span>
+              )}
+              {tieneBadge('perfil_completo') && (
+                <span className="text-xs bg-yellow-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-yellow-300/40">🏆 Perfil completo</span>
+              )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Stats */}
+      <div className="max-w-md mx-auto px-6 mt-5">
+
+        {/* Stats */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-2xl font-extrabold text-yellow-500">{promedioEstrellas}</p>
@@ -168,12 +166,11 @@ export default function PerfilPublico() {
               <p className="text-xs text-gray-400">Trabajos</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-extrabold text-gray-900">{reseñas.length}</p>
+              <p className="text-2xl font-extrabold text-purple-600">{reseñas.length}</p>
               <p className="text-xs text-gray-400">Reseñas</p>
             </div>
           </div>
 
-          {/* Descripción */}
           {perfil.descripcion && (
             <p className="text-gray-600 text-sm leading-relaxed">{perfil.descripcion}</p>
           )}
@@ -225,6 +222,7 @@ export default function PerfilPublico() {
             <div className="text-center py-6">
               <p className="text-3xl mb-2">💬</p>
               <p className="text-gray-400 text-sm">Sin reseñas todavía</p>
+              <p className="text-gray-300 text-xs mt-1">Las reseñas aparecen después de completar trabajos</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -280,7 +278,7 @@ export default function PerfilPublico() {
           </div>
         )}
 
-        {/* Ciudades visitadas */}
+        {/* Ciudades */}
         {perfil.ciudades_visitadas?.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde ha trabajado</h3>
@@ -292,26 +290,39 @@ export default function PerfilPublico() {
           </div>
         )}
 
-        {/* CTA contactar */}
+        {/* CTA — usuario logueado */}
         {usuarioActual && usuarioActual.id !== id && (
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 mb-4">
-            <p className="text-white font-extrabold text-lg mb-1">¿Quieres contratar a {perfil.nombre?.split(' ')[0]}?</p>
-            <p className="text-white/70 text-sm mb-4">Publica un trabajo y será de los primeros en verlo</p>
-            <a href="/publicar"
-              className="block w-full py-3 bg-white text-purple-600 rounded-xl font-extrabold text-center hover:opacity-90 transition">
-              Publicar trabajo →
-            </a>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <p className="font-extrabold text-gray-900 text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
+            <p className="text-gray-400 text-sm mb-4">Publica un trabajo y {nombreCorto} podrá aplicar, o envíale un mensaje directo.</p>
+            <div className="flex flex-col gap-2">
+              <a href={`/publicar`}
+                className="block w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center hover:opacity-90 transition">
+                📋 Publicar trabajo
+              </a>
+              <button onClick={iniciarChat}
+                className="w-full py-3.5 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
+                💬 Enviar mensaje directo
+              </button>
+            </div>
           </div>
         )}
 
+        {/* CTA — no logueado */}
         {!usuarioActual && (
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 mb-4">
-            <p className="text-white font-extrabold text-lg mb-1">¿Quieres contratar a {perfil.nombre?.split(' ')[0]}?</p>
-            <p className="text-white/70 text-sm mb-4">Únete a Fleksi gratis y publica tu primer trabajo</p>
-            <a href="/registro"
-              className="block w-full py-3 bg-white text-purple-600 rounded-xl font-extrabold text-center hover:opacity-90 transition">
-              Crear cuenta gratis →
-            </a>
+            <p className="text-white font-extrabold text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
+            <p className="text-white/70 text-sm mb-4">Únete a Fleksi gratis y publica tu primer trabajo en minutos.</p>
+            <div className="flex flex-col gap-2">
+              <a href="/registro"
+                className="block w-full py-3.5 bg-white text-purple-600 rounded-2xl font-extrabold text-center hover:opacity-90 transition">
+                Crear cuenta gratis →
+              </a>
+              <a href="/login"
+                className="block w-full py-3.5 bg-white/20 text-white rounded-2xl font-bold text-center hover:bg-white/30 transition border border-white/30">
+                Ya tengo cuenta → Iniciar sesión
+              </a>
+            </div>
           </div>
         )}
 
