@@ -110,6 +110,12 @@ function AplicacionesContent() {
     const prestadorTermino = aplicaciones.some(a => a.checkout_at);
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
 
+    // Visitas de la última semana
+    const hace7dias = new Date();
+    hace7dias.setDate(hace7dias.getDate() - 7);
+    const visitasSemana = (servicioActivo.visitas_semana || [])
+      .filter((v: string) => new Date(v) > hace7dias).length;
+
     return (
       <main className={`min-h-screen ${bgFondo} pb-32`}>
         <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
@@ -119,9 +125,24 @@ function AplicacionesContent() {
                 className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
                 ←
               </button>
-              <div>
+              <div className="flex-1">
                 <h1 className="font-extrabold text-white text-lg">Aplicaciones recibidas</h1>
                 <p className="text-white/70 text-xs truncate max-w-xs">{servicioActivo.titulo}</p>
+              </div>
+            </div>
+            {/* Estadísticas de visitas — solo para el dueño */}
+            <div className="flex gap-3 mt-3">
+              <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
+                <span className="text-white/70 text-xs">👁️ Total</span>
+                <span className="text-white font-extrabold text-sm">{servicioActivo.visitas || 0}</span>
+              </div>
+              <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
+                <span className="text-white/70 text-xs">📅 Esta semana</span>
+                <span className="text-white font-extrabold text-sm">{visitasSemana}</span>
+              </div>
+              <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
+                <span className="text-white/70 text-xs">✋ Aplicaciones</span>
+                <span className="text-white font-extrabold text-sm">{aplicaciones.filter(a => a.estado !== 'rechazado').length}</span>
               </div>
             </div>
           </div>
@@ -278,35 +299,50 @@ function AplicacionesContent() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {servicios.map((svc) => (
-              <button key={svc.id} onClick={() => verAplicaciones(svc)}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left w-full active:scale-95 transition">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
-                    svc.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
-                    svc.estado === 'en_proceso' ? 'bg-purple-100 text-purple-600' :
-                    svc.estado === 'completado' ? 'bg-orange-100 text-orange-600' :
-                    svc.estado === 'pagado' ? 'bg-green-100 text-green-600' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {svc.estado === 'activo' ? '🟢 Activo' :
-                     svc.estado === 'en_proceso' ? '🔄 En proceso' :
-                     svc.estado === 'completado' ? '⏳ Por confirmar' :
-                     svc.estado === 'pagado' ? '💰 Pagado' : svc.estado}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                  <p className={`font-extrabold ${precioColor} text-sm`}>${svc.presupuesto} MXN</p>
-                </div>
-                {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
-                  <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
-                    <p className="text-orange-600 text-xs font-bold">⏳ Toca para ver y confirmar el trabajo</p>
+            {servicios.map((svc) => {
+              const hace7dias = new Date();
+              hace7dias.setDate(hace7dias.getDate() - 7);
+              const visitasSemana = (svc.visitas_semana || [])
+                .filter((v: string) => new Date(v) > hace7dias).length;
+              return (
+                <button key={svc.id} onClick={() => verAplicaciones(svc)}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left w-full active:scale-95 transition">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
+                      svc.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
+                      svc.estado === 'en_proceso' ? 'bg-purple-100 text-purple-600' :
+                      svc.estado === 'completado' ? 'bg-orange-100 text-orange-600' :
+                      svc.estado === 'pagado' ? 'bg-green-100 text-green-600' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {svc.estado === 'activo' ? '🟢 Activo' :
+                       svc.estado === 'en_proceso' ? '🔄 En proceso' :
+                       svc.estado === 'completado' ? '⏳ Por confirmar' :
+                       svc.estado === 'pagado' ? '💰 Pagado' : svc.estado}
+                    </span>
                   </div>
-                )}
-              </button>
-            ))}
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
+                    <p className={`font-extrabold ${precioColor} text-sm`}>${svc.presupuesto} MXN</p>
+                  </div>
+                  {/* Visitas — solo para el dueño */}
+                  <div className="flex items-center gap-3 mt-1">
+                    {svc.visitas > 0 && (
+                      <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''} totales</span>
+                    )}
+                    {visitasSemana > 0 && (
+                      <span className="text-xs text-purple-500 font-semibold">📅 {visitasSemana} esta semana</span>
+                    )}
+                  </div>
+                  {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
+                    <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
+                      <p className="text-orange-600 text-xs font-bold">⏳ Toca para ver y confirmar el trabajo</p>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

@@ -45,6 +45,20 @@ function DetalleTrabajoContent() {
       const { data: appExistente } = await supabase.from('aplicaciones').select('id')
         .eq('servicio_id', servicio.id).eq('prestador_id', user.id).single();
       if (appExistente) setYaAplico(true);
+
+      // Registrar visita solo si no es el dueño
+      if (servicio.cliente_id !== user.id) {
+        const hoy = new Date().toISOString();
+        const hace7dias = new Date();
+        hace7dias.setDate(hace7dias.getDate() - 7);
+        const visitasSemana = (servicio.visitas_semana || [])
+          .filter((v: string) => new Date(v) > hace7dias);
+        visitasSemana.push(hoy);
+        await supabase.from('servicios').update({
+          visitas: (servicio.visitas || 0) + 1,
+          visitas_semana: visitasSemana,
+        }).eq('id', servicio.id);
+      }
     }
     setCargandoPagina(false);
   };
@@ -124,9 +138,14 @@ function DetalleTrabajoContent() {
   const precioBase = Number(miPrecio) || trabajo.presupuesto;
   const ganancia = calcularPagoFlekser(precioBase);
   const esPropioServicio = trabajo.cliente_id === usuario?.id;
-
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const homeUrl = rol === 'empresa' ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
+
+  const visitasSemana = (trabajo.visitas_semana || []).filter((v: string) => {
+    const hace7dias = new Date();
+    hace7dias.setDate(hace7dias.getDate() - 7);
+    return new Date(v) > hace7dias;
+  }).length;
 
   if (aplicado) {
     return (
@@ -164,7 +183,6 @@ function DetalleTrabajoContent() {
 
   return (
     <main className="min-h-screen bg-gray-50 pb-44">
-
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
@@ -175,7 +193,6 @@ function DetalleTrabajoContent() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
-
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-14 h-14 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
@@ -184,11 +201,13 @@ function DetalleTrabajoContent() {
             <div className="flex-1">
               <div className="flex items-start justify-between gap-2">
                 <h2 className="font-extrabold text-gray-900 text-lg leading-tight">{trabajo.titulo}</h2>
-                {trabajo.urgente && (
-                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">🔴 Urgente</span>
-                )}
+                {trabajo.urgente && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">🔴 Urgente</span>}
               </div>
               <p className="text-gray-400 text-sm mt-1">{trabajo.categoria}</p>
+              {/* Visitas de la última semana — público */}
+              {visitasSemana > 0 && (
+                <p className="text-xs text-gray-400 mt-1">👁️ {visitasSemana} vista{visitasSemana !== 1 ? 's' : ''} esta semana</p>
+              )}
             </div>
           </div>
 
@@ -275,7 +294,6 @@ function DetalleTrabajoContent() {
             </div>
           </div>
         )}
-
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 z-20">

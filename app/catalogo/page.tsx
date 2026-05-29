@@ -167,10 +167,15 @@ export default function Catalogo() {
                           <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">✅</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         <span className="text-xs text-yellow-500 font-bold">⭐ {f.calificacion || '5.0'}</span>
-                        <span className="text-xs text-gray-400">{f.trabajos_completados || 0} trabajos</span>
                         {f.ciudad && <span className="text-xs text-gray-400">📍 {f.ciudad}</span>}
+                      </div>
+                      {/* Experiencia — trabajos completados */}
+                      <div className="mt-1">
+                        <span className="text-xs font-semibold text-gray-500">
+                          💼 Experiencia: <span className="text-gray-800">{f.trabajos_completados || 0}</span> trabajo{(f.trabajos_completados || 0) !== 1 ? 's' : ''} completado{(f.trabajos_completados || 0) !== 1 ? 's' : ''}
+                        </span>
                       </div>
                     </div>
                   </div>
