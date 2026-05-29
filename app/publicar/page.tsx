@@ -47,6 +47,9 @@ function PublicarForm() {
   const [cargandoWallet, setCargandoWallet] = useState(true);
   const [flekserSugerido, setFlekserSugerido] = useState<any>(null);
   const [rolUsuario, setRolUsuario] = useState('flekser');
+  const [horaMinima, setHoraMinima] = useState('');
+
+  const hoyStr = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -68,9 +71,29 @@ function PublicarForm() {
     cargarDatos();
   }, [paraId]);
 
+  // Actualizar hora mínima cuando cambia urgente o fecha
+  useEffect(() => {
+    if (urgente && fecha === hoyStr) {
+      const ahora = new Date();
+      ahora.setHours(ahora.getHours() + 3);
+      const hh = String(ahora.getHours()).padStart(2, '0');
+      const mm = String(ahora.getMinutes()).padStart(2, '0');
+      setHoraMinima(`${hh}:${mm}`);
+      // Si la hora seleccionada es menor a la mínima, limpiarla
+      if (hora && hora < `${hh}:${mm}`) setHora('');
+    } else {
+      setHoraMinima('');
+    }
+  }, [urgente, fecha]);
+
   const efectivoHabilitado = walletSaldo >= 50;
   const esEmpresa = rolUsuario === 'empresa';
   const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : rolUsuario === 'viajero' ? '/home-viajero' : '/home';
+
+  const horasFiltradas = horas.filter(h => {
+    if (!horaMinima) return true;
+    return h >= horaMinima.slice(0, 5);
+  });
 
   const handlePublicar = async () => {
     if (!titulo || !fecha || !presupuesto) {
@@ -79,6 +102,28 @@ function PublicarForm() {
     }
     setCargando(true);
     setError('');
+
+    // Validar que la fecha no sea en el pasado
+    const ahora = new Date();
+    const fechaSeleccionada = new Date(`${fecha}T${hora || '23:59'}`);
+    if (fechaSeleccionada < ahora) {
+      setError('La fecha y hora del trabajo no puede ser en el pasado');
+      setCargando(false);
+      return;
+    }
+
+    // Validar urgente — mínimo 3 horas de anticipación
+    if (urgente) {
+      const tresHorasDesdeAhora = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
+      if (fechaSeleccionada < tresHorasDesdeAhora) {
+        setError('Para trabajos urgentes necesitas al menos 3 horas de anticipación. Si son las ' +
+          `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}, ` +
+          `el trabajo más temprano es a las ${String(tresHorasDesdeAhora.getHours()).padStart(2,'0')}:${String(tresHorasDesdeAhora.getMinutes()).padStart(2,'0')}.`);
+        setCargando(false);
+        return;
+      }
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
@@ -289,12 +334,19 @@ function PublicarForm() {
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
                 <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
+                  min={hoyStr}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                {fecha && fecha === hoyStr && (
+                  <p className="text-xs text-amber-600 font-semibold mt-1">📅 Estás publicando para hoy</p>
+                )}
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span>
+                  {horaMinima && <span className="text-amber-600 font-semibold ml-2">— mínimo {horaMinima.slice(0,5)} por trabajo urgente</span>}
+                </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {horas.map((h) => (
+                  {horasFiltradas.map((h) => (
                     <button key={h} onClick={() => setHora(hora === h ? '' : h)}
                       className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${
                         hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
@@ -302,6 +354,12 @@ function PublicarForm() {
                       {h}
                     </button>
                   ))}
+                  {horasFiltradas.length === 0 && (
+                    <div className="col-span-4 text-center py-3 bg-amber-50 rounded-xl border border-amber-200">
+                      <p className="text-amber-700 text-xs font-semibold">⚠️ No hay horas disponibles para hoy con trabajo urgente</p>
+                      <p className="text-amber-600 text-xs mt-1">Cambia la fecha a mañana o desactiva "urgente"</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
@@ -311,7 +369,6 @@ function PublicarForm() {
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
 
-              {/* Cupos — solo para empresa */}
               {esEmpresa && (
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">👥 ¿Cuántas personas necesitas?</label>
@@ -389,7 +446,7 @@ function PublicarForm() {
                   <span className="text-xl">🔴</span>
                   <div>
                     <p className="font-semibold text-gray-900">Marcar como urgente</p>
-                    <p className="text-xs text-gray-400">Aparece primero y atrae más fleksers</p>
+                    <p className="text-xs text-gray-400">Mínimo 3 horas de anticipación · Aparece primero</p>
                   </div>
                 </div>
                 <div className={`w-12 h-6 rounded-full transition-all ${urgente ? 'bg-red-500' : 'bg-gray-300'}`}>
@@ -467,7 +524,7 @@ function PublicarForm() {
                   <span className="text-xl">🛡️</span>
                   <div>
                     <p className="font-semibold text-gray-900">Fleksi Protege</p>
-                    <p className="text-xs text-gray-400">Seguro por daños accidentales +$45 MXN</p>
+                    <p className="text-xs text-gray-400">Seguro por daños accidentales +$45 MXN{esEmpresa && cupos > 1 ? ` × ${cupos} = $${45 * cupos}` : ''}</p>
                   </div>
                 </div>
                 <div className={`w-12 h-6 rounded-full transition-all ${seguro ? 'bg-purple-500' : 'bg-gray-300'}`}>
@@ -490,7 +547,7 @@ function PublicarForm() {
               {metodoPago === 'stripe' && seguro && (
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
-                  <span className="font-semibold text-sm">$45 MXN</span>
+                  <span className="font-semibold text-sm">${45 * (esEmpresa ? cupos : 1)} MXN</span>
                 </div>
               )}
               {metodoPago === 'efectivo' && (
@@ -507,7 +564,7 @@ function PublicarForm() {
                 </span>
                 <span className="font-extrabold text-purple-600">
                   {metodoPago === 'stripe'
-                    ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN`
+                    ? `$${Number(presupuesto) + (seguro ? 45 * (esEmpresa ? cupos : 1) : 0)} MXN`
                     : `$${presupuesto} MXN en efectivo`}
                 </span>
               </div>
