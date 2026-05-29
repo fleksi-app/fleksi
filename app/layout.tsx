@@ -8,6 +8,17 @@ export const metadata: Metadata = {
   title: 'Fleksi — Tu trabajo, tus reglas',
   description: 'Conectamos personas que necesitan un servicio con quienes pueden hacerlo. Rápido, seguro y flexible.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/icon-512.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -20,6 +31,7 @@ export const metadata: Metadata = {
     type: 'website',
     title: 'Fleksi — Tu trabajo, tus reglas',
     description: 'Conectamos personas que necesitan un servicio con quienes pueden hacerlo.',
+    images: [{ url: '/icon-512.png', width: 512, height: 512 }],
   },
 };
 
@@ -40,7 +52,10 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="manifest" href="/manifest.json"/>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+        <link rel="icon" href="/icon-512.png" type="image/png"/>
+        <link rel="shortcut icon" href="/icon-512.png" type="image/png"/>
+        <link rel="apple-touch-icon" href="/icon-192.png"/>
+        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png"/>
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
         <meta name="apple-mobile-web-app-title" content="Fleksi"/>
