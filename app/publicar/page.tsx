@@ -39,6 +39,7 @@ function PublicarForm() {
   const [urgente, setUrgente] = useState(false);
   const [seguro, setSeguro] = useState(true);
   const [metodoPago, setMetodoPago] = useState<'stripe' | 'efectivo'>('stripe');
+  const [cupos, setCupos] = useState(1);
   const [publicado, setPublicado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -68,6 +69,7 @@ function PublicarForm() {
   }, [paraId]);
 
   const efectivoHabilitado = walletSaldo >= 50;
+  const esEmpresa = rolUsuario === 'empresa';
   const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : rolUsuario === 'viajero' ? '/home-viajero' : '/home';
 
   const handlePublicar = async () => {
@@ -96,6 +98,8 @@ function PublicarForm() {
           metodo_pago: metodoPago,
           estado: 'activo',
           flekser_sugerido_id: flekserSugerido?.id || null,
+          cupos: esEmpresa ? cupos : 1,
+          cupos_tomados: 0,
         })
         .select()
         .single();
@@ -162,6 +166,12 @@ function PublicarForm() {
               <span className="text-gray-400 text-sm">Fecha</span>
               <span className="font-semibold text-sm text-gray-900">{fecha} {hora}</span>
             </div>
+            {esEmpresa && cupos > 1 && (
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400 text-sm">Cupos</span>
+                <span className="font-semibold text-sm text-gray-900">{cupos} personas</span>
+              </div>
+            )}
             {direccion && (
               <div className="flex justify-between mb-2">
                 <span className="text-gray-400 text-sm">Dirección</span>
@@ -240,7 +250,9 @@ function PublicarForm() {
             <div className="grid grid-cols-2 gap-3">
               {categorias.map((cat) => (
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
-                  className={`p-4 rounded-2xl border-2 text-left transition ${categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
+                  className={`p-4 rounded-2xl border-2 text-left transition ${
+                    categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'
+                  }`}>
                   <span className="text-2xl mb-2 block">{cat.emoji}</span>
                   <span className="text-sm font-semibold text-gray-900">{cat.nombre}</span>
                 </button>
@@ -284,23 +296,54 @@ function PublicarForm() {
                 <div className="grid grid-cols-4 gap-2">
                   {horas.map((h) => (
                     <button key={h} onClick={() => setHora(hora === h ? '' : h)}
-                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'}`}>
+                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${
+                        hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
+                      }`}>
                       {h}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">💰 Tu presupuesto (MXN)</label>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">💰 Tu presupuesto por persona (MXN)</label>
                 <input type="number" placeholder="Ej. 500" value={presupuesto}
                   onChange={(e) => setPresupuesto(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
+
+              {/* Cupos — solo para empresa */}
+              {esEmpresa && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">👥 ¿Cuántas personas necesitas?</label>
+                  <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
+                    <button onClick={() => setCupos(Math.max(1, cupos - 1))}
+                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">
+                      −
+                    </button>
+                    <div className="flex-1 text-center">
+                      <p className="text-3xl font-extrabold text-gray-900">{cupos}</p>
+                      <p className="text-xs text-gray-400">{cupos === 1 ? 'persona' : 'personas'}</p>
+                    </div>
+                    <button onClick={() => setCupos(Math.min(50, cupos + 1))}
+                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">
+                      +
+                    </button>
+                  </div>
+                  {cupos > 1 && (
+                    <p className="text-xs text-purple-600 font-semibold mt-2 text-center">
+                      💰 Total estimado: ${Number(presupuesto || 0) * cupos} MXN ({cupos} × ${presupuesto || 0})
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">💳 Método de pago</label>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => setMetodoPago('stripe')}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
+                      metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
+                    }`}>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'}`}>
                       {metodoPago === 'stripe' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
                     </div>
@@ -311,7 +354,10 @@ function PublicarForm() {
                     <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Recomendado</span>
                   </button>
                   <button onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${!efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' : metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'}`}>
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
+                      !efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' :
+                      metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
+                    }`}>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'}`}>
                       {metodoPago === 'efectivo' && efectivoHabilitado && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full"/>}
                     </div>
@@ -328,10 +374,15 @@ function PublicarForm() {
                         </p>
                       )}
                     </div>
-                    {efectivoHabilitado && <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">Saldo: ${walletSaldo.toFixed(0)}</span>}
+                    {efectivoHabilitado && (
+                      <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">
+                        Saldo: ${walletSaldo.toFixed(0)}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
+
               <div onClick={() => setUrgente(!urgente)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}>
                 <div className="flex items-center gap-3">
@@ -387,9 +438,15 @@ function PublicarForm() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm">Presupuesto</span>
+                  <span className="text-gray-400 text-sm">Presupuesto por persona</span>
                   <span className="font-extrabold text-sm text-purple-600">${presupuesto} MXN</span>
                 </div>
+                {esEmpresa && cupos > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">👥 Cupos</span>
+                    <span className="font-semibold text-sm text-gray-900">{cupos} personas</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Método de pago</span>
                   <span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span>
@@ -402,6 +459,7 @@ function PublicarForm() {
                 )}
               </div>
             </div>
+
             {metodoPago === 'stripe' && (
               <div onClick={() => setSeguro(!seguro)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition mb-4 ${seguro ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white'}`}>
@@ -417,11 +475,18 @@ function PublicarForm() {
                 </div>
               </div>
             )}
+
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
               <div className="flex justify-between mb-2">
-                <span className="text-gray-500 text-sm">Tu presupuesto</span>
+                <span className="text-gray-500 text-sm">Presupuesto por persona</span>
                 <span className="font-semibold text-sm">${presupuesto} MXN</span>
               </div>
+              {esEmpresa && cupos > 1 && (
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-500 text-sm">× {cupos} personas</span>
+                  <span className="font-semibold text-sm">${Number(presupuesto) * cupos} MXN</span>
+                </div>
+              )}
               {metodoPago === 'stripe' && seguro && (
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
@@ -431,17 +496,28 @@ function PublicarForm() {
               {metodoPago === 'efectivo' && (
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-500 text-sm">📊 Comisión efectivo (5%)</span>
-                  <span className="font-semibold text-sm text-orange-600">${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)</span>
+                  <span className="font-semibold text-sm text-orange-600">
+                    ${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)
+                  </span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-2 flex justify-between">
-                <span className="font-extrabold text-gray-900">{metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}</span>
-                <span className="font-extrabold text-purple-600">{metodoPago === 'stripe' ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN` : `$${presupuesto} MXN en efectivo`}</span>
+                <span className="font-extrabold text-gray-900">
+                  {metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}
+                </span>
+                <span className="font-extrabold text-purple-600">
+                  {metodoPago === 'stripe'
+                    ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN`
+                    : `$${presupuesto} MXN en efectivo`}
+                </span>
               </div>
             </div>
+
             {metodoPago === 'efectivo' && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
-                <p className="text-amber-800 text-xs font-semibold">💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.</p>
+                <p className="text-amber-800 text-xs font-semibold">
+                  💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.
+                </p>
               </div>
             )}
           </div>
