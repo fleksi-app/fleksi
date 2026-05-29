@@ -53,7 +53,7 @@ export default function Calificar() {
 
     const { data: appsP } = await supabase
       .from('aplicaciones')
-      .select('*, servicios(*, usuarios(id, nombre, calificacion, foto_url))')
+      .select('*, servicios(*, usuarios!cliente_id(id, nombre, calificacion, foto_url))')
       .eq('prestador_id', user.id)
       .eq('estado', 'completado')
       .order('created_at', { ascending: false });
@@ -101,14 +101,14 @@ export default function Calificar() {
             .eq('id', calificando.aplicacion.prestador_id);
         }
 
-        // Notificar al prestador que fue calificado
+        // Notificar al prestador e invitarlo a calificar al cliente
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: calificando.aplicacion.prestador_id,
             tipo: 'nueva_calificacion',
-            titulo: `⭐ Nueva reseña de ${usuario.nombre}`,
-            mensaje: `Te dieron ${estrellas} estrella${estrellas !== 1 ? 's' : ''} por "${calificando.servicio.titulo}"${comentario ? `: "${comentario.slice(0, 60)}${comentario.length > 60 ? '...' : ''}"` : ''}`,
-            link: '/perfil',
+            titulo: `⭐ ${usuario.nombre} te calificó con ${estrellas} estrella${estrellas !== 1 ? 's' : ''}`,
+            mensaje: `Por "${calificando.servicio.titulo}". ¡Califícalo tú también para cerrar el ciclo!`,
+            link: '/calificar',
           });
         } catch (e) {}
 
@@ -139,8 +139,8 @@ export default function Calificar() {
           await supabase.from('notificaciones').insert({
             usuario_id: calificando.servicio.cliente_id,
             tipo: 'nueva_calificacion',
-            titulo: `⭐ Nueva reseña de ${usuario.nombre}`,
-            mensaje: `Te dieron ${estrellas} estrella${estrellas !== 1 ? 's' : ''} por "${calificando.servicio.titulo}"${comentario ? `: "${comentario.slice(0, 60)}${comentario.length > 60 ? '...' : ''}"` : ''}`,
+            titulo: `⭐ ${usuario.nombre} te calificó con ${estrellas} estrella${estrellas !== 1 ? 's' : ''}`,
+            mensaje: `Por "${calificando.servicio.titulo}".`,
             link: '/perfil',
           });
         } catch (e) {}
