@@ -125,6 +125,9 @@ function DetalleTrabajoContent() {
   const ganancia = calcularPagoFlekser(precioBase);
   const esPropioServicio = trabajo.cliente_id === usuario?.id;
 
+  const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
+  const homeUrl = rol === 'empresa' ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
+
   if (aplicado) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -151,7 +154,7 @@ function DetalleTrabajoContent() {
           <a href="/mis-trabajos" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis aplicaciones
           </a>
-          <a href="/home" className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
+          <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
             Volver al inicio
           </a>
         </div>
@@ -165,7 +168,7 @@ function DetalleTrabajoContent() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href="/home" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</a>
+            <a href={homeUrl} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</a>
             <h1 className="font-extrabold text-gray-900 text-lg">Detalle del trabajo</h1>
           </div>
         </div>
