@@ -25,6 +25,7 @@ export default function Calificar() {
 
     const items: any[] = [];
 
+    // Servicios donde el usuario es CLIENTE — califica al prestador
     const { data: svcsCliente } = await supabase
       .from('servicios')
       .select('*, aplicaciones(*, usuarios(id, nombre, calificacion, trabajos_completados, foto_url))')
@@ -39,7 +40,10 @@ export default function Calificar() {
       if (!appAceptada) continue;
       const { data: reseñaExistente } = await supabase
         .from('reseñas').select('id')
-        .eq('servicio_id', svc.id).eq('cliente_id', user.id).single();
+        .eq('servicio_id', svc.id)
+        .eq('cliente_id', user.id)
+        .neq('es_del_prestador', true)
+        .single();
       if (!reseñaExistente) {
         items.push({
           tipo: 'cliente_a_prestador',
@@ -51,6 +55,7 @@ export default function Calificar() {
       }
     }
 
+    // Aplicaciones donde el usuario es PRESTADOR — califica al cliente
     const { data: appsP } = await supabase
       .from('aplicaciones')
       .select('*, servicios(*, usuarios!cliente_id(id, nombre, calificacion, foto_url))')
@@ -61,7 +66,10 @@ export default function Calificar() {
     for (const app of appsP || []) {
       const { data: reseñaExistente } = await supabase
         .from('reseñas').select('id')
-        .eq('servicio_id', app.servicio_id).eq('prestador_id', user.id).single();
+        .eq('servicio_id', app.servicio_id)
+        .eq('prestador_id', user.id)
+        .eq('es_del_prestador', true)
+        .single();
       if (!reseñaExistente) {
         items.push({
           tipo: 'prestador_a_cliente',
@@ -88,12 +96,14 @@ export default function Calificar() {
           prestador_id: calificando.aplicacion.prestador_id,
           estrellas,
           comentario,
+          es_del_prestador: false,
         });
         if (error) throw error;
 
         const { data: reseñas } = await supabase
           .from('reseñas').select('estrellas')
-          .eq('prestador_id', calificando.aplicacion.prestador_id);
+          .eq('prestador_id', calificando.aplicacion.prestador_id)
+          .eq('es_del_prestador', false);
         if (reseñas) {
           const promedio = reseñas.reduce((acc, r) => acc + r.estrellas, 0) / reseñas.length;
           await supabase.from('usuarios')
