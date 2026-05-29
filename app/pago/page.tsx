@@ -19,7 +19,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
   const desglose = calcularPagoCliente(precio, servicio?.seguro);
   const desgloseFlekser = calcularPagoFlekser(precio);
 
-  // Fleksi Protege se multiplica por cupos
   const totalSeguro = servicio?.seguro ? 45 * cupos : 0;
   const totalCliente = desglose.total - (servicio?.seguro ? 45 : 0) + totalSeguro;
 
@@ -61,7 +60,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         throw new Error('Pago no completado');
       }
 
-      // Actualizar la aplicación aceptada
       await supabase.from('aplicaciones').update({
         estado: 'aceptado',
         payment_intent_id: paymentIntentId,
@@ -70,18 +68,15 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         monto_flekser: desgloseFlekser.total,
       }).eq('id', aplicacionId);
 
-      // Incrementar cupos_tomados
       const nuevosCuposTomados = (servicio.cupos_tomados || 0) + 1;
       const cuposLlenos = nuevosCuposTomados >= (servicio.cupos || 1);
 
       await supabase.from('servicios').update({
         cupos_tomados: nuevosCuposTomados,
         pago_retenido: true,
-        // Solo pasar a en_proceso si todos los cupos están llenos
         estado: cuposLlenos ? 'en_proceso' : 'activo',
       }).eq('id', servicio.id);
 
-      // Solo rechazar otras aplicaciones si los cupos están llenos
       if (cuposLlenos) {
         await supabase.from('aplicaciones')
           .update({ estado: 'rechazado' })
@@ -90,7 +85,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
           .neq('id', aplicacionId);
       }
 
-      // Enviar mensaje al flekser aceptado
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: existente } = await supabase.from('mensajes').select('id').eq('servicio_id', servicio.id).eq('destinatario_id', aplicacion.prestador_id).limit(1);
@@ -134,6 +128,8 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
 
   return (
     <div className="flex flex-col gap-4">
+
+      {/* Resumen del servicio */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen</h3>
         <div className="flex flex-col gap-2">
@@ -146,47 +142,59 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
             <span className="font-semibold text-sm text-gray-900">{aplicacion?.usuarios?.nombre}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Precio del servicio</span>
-            <span className="font-semibold text-sm">${precio} MXN</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Comisión de plataforma</span>
-            <span className="font-semibold text-sm">${desglose.comision} MXN</span>
+            <span className="text-gray-500 text-sm">Fecha</span>
+            <span className="font-semibold text-sm text-gray-900">{servicio?.fecha} {servicio?.hora?.slice(0,5)}</span>
           </div>
           {servicio?.seguro && (
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
-              <span className="font-semibold text-sm">${totalSeguro} MXN {cupos > 1 ? `(${cupos} × $45)` : ''}</span>
+              <span className="font-semibold text-sm text-gray-900">
+                ${totalSeguro} MXN {cupos > 1 ? `(${cupos} × $45)` : ''}
+              </span>
+            </div>
+          )}
+          {cupos > 1 && (
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">👥 Cupos</span>
+              <span className="font-semibold text-sm text-gray-900">{cupos} personas</span>
             </div>
           )}
           <div className="border-t border-gray-100 pt-2 flex justify-between">
-            <span className="font-extrabold text-gray-900">Total</span>
+            <span className="font-extrabold text-gray-900">Total a pagar</span>
             <span className="font-extrabold text-purple-600 text-lg">${totalCliente} MXN</span>
           </div>
         </div>
       </div>
 
+      {/* Lo que recibirá el flekser */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4">
         <p className="text-green-700 text-xs font-semibold mb-1">💰 El flekser recibirá</p>
         <p className="text-green-800 font-extrabold text-xl">${desgloseFlekser.total} MXN</p>
-        <p className="text-green-600 text-xs mt-0.5">Después de comisión de plataforma (10%)</p>
+        <p className="text-green-600 text-xs mt-0.5">Pago garantizado al completar el trabajo</p>
       </div>
 
+      {/* Info de cupos si aplica */}
       {servicio?.cupos > 1 && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <p className="text-blue-700 text-xs font-semibold">
-            👥 Cupos: {servicio.cupos_tomados || 0} de {servicio.cupos} ocupados. 
+            👥 Cupos: {servicio.cupos_tomados || 0} de {servicio.cupos} ocupados.
             Quedan {servicio.cupos - (servicio.cupos_tomados || 0) - 1} después de este.
           </p>
         </div>
       )}
 
+      {/* Tarjeta */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-extrabold text-gray-900 mb-4">💳 Datos de tu tarjeta</h3>
         <div className="p-4 border-2 border-gray-200 rounded-2xl focus-within:border-purple-400 transition">
           <CardElement options={{
             style: {
-              base: { fontSize: '16px', color: '#0D0D1A', fontFamily: 'system-ui, sans-serif', '::placeholder': { color: '#94a3b8' } },
+              base: {
+                fontSize: '16px',
+                color: '#0D0D1A',
+                fontFamily: 'system-ui, sans-serif',
+                '::placeholder': { color: '#94a3b8' },
+              },
               invalid: { color: '#ef4444' },
             },
             hidePostalCode: true,
@@ -257,7 +265,9 @@ function PagoContent() {
             <span className="text-4xl">🎉</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Pago realizado!</h1>
-          <p className="text-gray-400 mb-8 font-light">El pago está retenido de forma segura. Se liberará cuando confirmes el trabajo.</p>
+          <p className="text-gray-400 mb-8 font-light">
+            El pago está retenido de forma segura. Se liberará cuando confirmes el trabajo.
+          </p>
           <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis solicitudes
           </a>
