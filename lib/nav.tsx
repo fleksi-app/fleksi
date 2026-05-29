@@ -243,6 +243,14 @@ export default function Nav({ activo }: { activo: string }) {
                   <p className="text-gray-400 text-sm font-normal">Ver tus aplicaciones activas</p>
                 </div>
               </a>
+              <a href="/aplicaciones"
+                className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold hover:border-purple-400 transition">
+                <span className="text-2xl">📩</span>
+                <div>
+                  <p className="font-extrabold text-gray-900">Mis solicitudes</p>
+                  <p className="text-gray-400 text-sm font-normal">Ver aplicaciones recibidas</p>
+                </div>
+              </a>
               <a href="/checkin"
                 className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold hover:border-purple-400 transition">
                 <span className="text-2xl">📍</span>
