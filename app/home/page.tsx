@@ -126,6 +126,11 @@ export default function HomeWorker() {
     .filter(t => !aplicacionesRechazadas.includes(t.id))
     .filter(t => !aplicacionesUsuario.includes(t.id))
     .filter(t => {
+      // Filtrar trabajos sin cupos disponibles
+      if (t.cupos > 1) {
+        const disponibles = t.cupos - (t.cupos_tomados || 0);
+        if (disponibles <= 0) return false;
+      }
       const matchCat = categoriaActiva === 'Todos' || t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
       const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
       const matchCiudad = !filtroCiudad || t.usuarios?.ciudad?.toLowerCase().includes(filtroCiudad.toLowerCase()) || t.direccion?.toLowerCase().includes(filtroCiudad.toLowerCase());
@@ -142,6 +147,14 @@ export default function HomeWorker() {
     flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
     empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
     viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
+  };
+
+  const getCuposLabel = (trabajo: any) => {
+    if (!trabajo.cupos || trabajo.cupos <= 1) return null;
+    const disponibles = trabajo.cupos - (trabajo.cupos_tomados || 0);
+    if (disponibles <= 1) return <span className="text-xs font-bold text-red-500">🔥 ¡Solo queda {disponibles} cupo!</span>;
+    if (disponibles <= 3) return <span className="text-xs font-bold text-amber-500">🟡 Quedan {disponibles} cupos</span>;
+    return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
   };
 
   if (cargando) {
@@ -278,6 +291,7 @@ export default function HomeWorker() {
           <div className="flex flex-col gap-3">
             {trabajosFiltrados.map((trabajo) => {
               const ganancia = calcularPagoFlekser(trabajo.presupuesto);
+              const cuposLabel = getCuposLabel(trabajo);
               return (
                 <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
                   <div className="flex gap-3">
@@ -294,7 +308,10 @@ export default function HomeWorker() {
                         {trabajo.usuarios?.ciudad && <span className="text-xs bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded-full font-semibold">📍 {trabajo.usuarios.ciudad}</span>}
                       </div>
                       <div className="flex items-center justify-between mt-2">
-                        <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
+                        <div>
+                          <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
+                          {cuposLabel && <div className="mt-0.5">{cuposLabel}</div>}
+                        </div>
                         <div className="text-right">
                           <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
                           <span className="mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white">
