@@ -26,18 +26,15 @@ function calcularProgresoEmpresa(usuario: any, documentos: any[]) {
   if (usuario?.ciudad?.trim()) puntos += 10;
   if (usuario?.descripcion?.trim()) puntos += 10;
   if (usuario?.datos_factura?.nombre_fiscal && usuario?.datos_factura?.rfc) puntos += 10;
-
   const docsRequeridos = ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes'];
   const docsSubidos = documentos.filter(d =>
     docsRequeridos.includes(d.tipo) && (d.estado === 'subido' || d.estado === 'aprobado')
   ).length;
   if (docsSubidos > 0) puntos += Math.round((docsSubidos / docsRequeridos.length) * 15);
-
   const docsAprobados = documentos.filter(d =>
     docsRequeridos.includes(d.tipo) && d.estado === 'aprobado'
   ).length;
   if (docsAprobados > 0) puntos += Math.round((docsAprobados / docsRequeridos.length) * 25);
-
   return Math.min(puntos, 100);
 }
 
@@ -103,10 +100,12 @@ export default function PerfilEmpresa() {
     const { count } = await supabase.from('servicios').select('id', { count: 'exact' }).eq('cliente_id', user.id);
     setTotalServicios(count || 0);
 
+    // Solo reseñas que prestadores hicieron a la empresa (es_del_prestador = true)
     const { data: reseñasData } = await supabase
       .from('reseñas')
       .select('*, usuarios!reseñas_prestador_id_fkey(nombre, foto_url)')
       .eq('cliente_id', user.id)
+      .eq('es_del_prestador', true)
       .order('created_at', { ascending: false })
       .limit(5);
     setReseñas(reseñasData || []);
@@ -236,7 +235,6 @@ export default function PerfilEmpresa() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Card principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
@@ -267,7 +265,6 @@ export default function PerfilEmpresa() {
             </div>
           </div>
 
-          {/* Barra de progreso */}
           {!perfilCompleto && (
             <div className="mb-4 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-2">
@@ -275,17 +272,11 @@ export default function PerfilEmpresa() {
                 <span className="text-sm font-extrabold text-blue-700">{progresoPerfil}%</span>
               </div>
               <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
+                <div className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${progresoPerfil}%`,
-                    background: progresoPerfil < 40
-                      ? '#EF4444'
-                      : progresoPerfil < 70
-                      ? '#F59E0B'
-                      : 'linear-gradient(90deg, #334155, #1e3a8a)',
-                  }}
-                />
+                    background: progresoPerfil < 40 ? '#EF4444' : progresoPerfil < 70 ? '#F59E0B' : 'linear-gradient(90deg, #334155, #1e3a8a)',
+                  }}/>
               </div>
               {faltantes.length > 0 && (
                 <div className="flex flex-col gap-1">
@@ -303,7 +294,6 @@ export default function PerfilEmpresa() {
             </div>
           )}
 
-          {/* Badge perfil completo */}
           {perfilCompleto && (
             <div className="mb-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-2xl p-4 border border-blue-100 flex items-center gap-3">
               <span className="text-3xl">🏆</span>
@@ -345,7 +335,6 @@ export default function PerfilEmpresa() {
           )}
         </div>
 
-        {/* Banner verificación */}
         <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -361,7 +350,6 @@ export default function PerfilEmpresa() {
           </div>
         </a>
 
-        {/* Cobertura multi-ciudad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -397,7 +385,6 @@ export default function PerfilEmpresa() {
           {ciudadesCobertura.length === 0 && <p className="text-xs text-gray-400 mt-2 text-center">Agrega las ciudades donde tu empresa busca talento</p>}
         </div>
 
-        {/* Información */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">📋 Información</h3>
           <div className="flex flex-col gap-4">
@@ -447,7 +434,6 @@ export default function PerfilEmpresa() {
           </div>
         </div>
 
-        {/* Reseñas */}
         {reseñas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas de prestadores</h3>
