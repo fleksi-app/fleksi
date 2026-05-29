@@ -48,6 +48,7 @@ function PublicarForm() {
   const [flekserSugerido, setFlekserSugerido] = useState<any>(null);
   const [rolUsuario, setRolUsuario] = useState('flekser');
   const [horaMinima, setHoraMinima] = useState('');
+  const [geocodificando, setGeocodificando] = useState(false);
 
   const hoyStr = new Date().toISOString().split('T')[0];
 
@@ -71,7 +72,6 @@ function PublicarForm() {
     cargarDatos();
   }, [paraId]);
 
-  // Actualizar hora mínima cuando cambia urgente o fecha
   useEffect(() => {
     if (urgente && fecha === hoyStr) {
       const ahora = new Date();
@@ -79,7 +79,6 @@ function PublicarForm() {
       const hh = String(ahora.getHours()).padStart(2, '0');
       const mm = String(ahora.getMinutes()).padStart(2, '0');
       setHoraMinima(`${hh}:${mm}`);
-      // Si la hora seleccionada es menor a la mínima, limpiarla
       if (hora && hora < `${hh}:${mm}`) setHora('');
     } else {
       setHoraMinima('');
@@ -95,6 +94,25 @@ function PublicarForm() {
     return h >= horaMinima.slice(0, 5);
   });
 
+  const geocodificarDireccion = async (dir: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      setGeocodificando(true);
+      const resp = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(dir + ', México')}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'es', 'User-Agent': 'FleksiApp/1.0' } }
+      );
+      const data = await resp.json();
+      if (data?.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    } finally {
+      setGeocodificando(false);
+    }
+  };
+
   const handlePublicar = async () => {
     if (!titulo || !fecha || !presupuesto) {
       setError('Por favor completa título, fecha y presupuesto');
@@ -103,7 +121,6 @@ function PublicarForm() {
     setCargando(true);
     setError('');
 
-    // Validar que la fecha no sea en el pasado
     const ahora = new Date();
     const fechaSeleccionada = new Date(`${fecha}T${hora || '23:59'}`);
     if (fechaSeleccionada < ahora) {
@@ -112,7 +129,6 @@ function PublicarForm() {
       return;
     }
 
-    // Validar urgente — mínimo 3 horas de anticipación
     if (urgente) {
       const tresHorasDesdeAhora = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
       if (fechaSeleccionada < tresHorasDesdeAhora) {
@@ -127,6 +143,13 @@ function PublicarForm() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
+
+      // Geocodificar dirección si existe
+      let coords = null;
+      if (direccion.trim()) {
+        coords = await geocodificarDireccion(direccion);
+      }
+
       const { data: servicioCreado, error: dbError } = await supabase
         .from('servicios')
         .insert({
@@ -138,6 +161,8 @@ function PublicarForm() {
           hora: hora || null,
           presupuesto: Number(presupuesto),
           direccion: direccion || null,
+          lat: coords?.lat || null,
+          lng: coords?.lng || null,
           urgente,
           seguro,
           metodo_pago: metodoPago,
@@ -149,6 +174,7 @@ function PublicarForm() {
         .select()
         .single();
       if (dbError) throw dbError;
+
       if (flekserSugerido?.id && servicioCreado) {
         try {
           await supabase.from('notificaciones').insert({
@@ -329,7 +355,7 @@ function PublicarForm() {
                 <input type="text" placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX"
                   value={direccion} onChange={(e) => setDireccion(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-                <p className="text-xs text-gray-400 mt-1">Solo visible para el flekser que aceptes</p>
+                <p className="text-xs text-gray-400 mt-1">📍 Se usará para verificar la ubicación del flekser al hacer check-in</p>
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
@@ -374,17 +400,13 @@ function PublicarForm() {
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">👥 ¿Cuántas personas necesitas?</label>
                   <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4 border border-gray-200">
                     <button onClick={() => setCupos(Math.max(1, cupos - 1))}
-                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">
-                      −
-                    </button>
+                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">−</button>
                     <div className="flex-1 text-center">
                       <p className="text-3xl font-extrabold text-gray-900">{cupos}</p>
                       <p className="text-xs text-gray-400">{cupos === 1 ? 'persona' : 'personas'}</p>
                     </div>
                     <button onClick={() => setCupos(Math.min(50, cupos + 1))}
-                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">
-                      +
-                    </button>
+                      className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">+</button>
                   </div>
                   {cupos > 1 && (
                     <p className="text-xs text-purple-600 font-semibold mt-2 text-center">
@@ -553,15 +575,11 @@ function PublicarForm() {
               {metodoPago === 'efectivo' && (
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-500 text-sm">📊 Comisión efectivo (5%)</span>
-                  <span className="font-semibold text-sm text-orange-600">
-                    ${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)
-                  </span>
+                  <span className="font-semibold text-sm text-orange-600">${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)</span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-2 flex justify-between">
-                <span className="font-extrabold text-gray-900">
-                  {metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}
-                </span>
+                <span className="font-extrabold text-gray-900">{metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}</span>
                 <span className="font-extrabold text-purple-600">
                   {metodoPago === 'stripe'
                     ? `$${Number(presupuesto) + (seguro ? 45 * (esEmpresa ? cupos : 1) : 0)} MXN`
@@ -575,6 +593,13 @@ function PublicarForm() {
                 <p className="text-amber-800 text-xs font-semibold">
                   💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.
                 </p>
+              </div>
+            )}
+
+            {geocodificando && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0"/>
+                <p className="text-blue-700 text-xs font-semibold">Geocodificando dirección...</p>
               </div>
             )}
           </div>
@@ -593,9 +618,9 @@ function PublicarForm() {
               Continuar →
             </button>
           ) : (
-            <button onClick={handlePublicar} disabled={cargando}
+            <button onClick={handlePublicar} disabled={cargando || geocodificando}
               className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-              {cargando ? 'Publicando...' : flekserSugerido ? `🎯 Enviar solicitud a ${flekserSugerido.nombre?.split(' ')[0]}` : '🚀 Publicar solicitud'}
+              {cargando ? 'Publicando...' : geocodificando ? 'Geocodificando...' : flekserSugerido ? `🎯 Enviar solicitud a ${flekserSugerido.nombre?.split(' ')[0]}` : '🚀 Publicar solicitud'}
             </button>
           )}
         </div>
