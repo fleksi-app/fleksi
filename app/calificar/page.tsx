@@ -55,7 +55,7 @@ export default function Calificar() {
       .from('aplicaciones')
       .select('*, servicios(*, usuarios!cliente_id(id, nombre, calificacion, foto_url))')
       .eq('prestador_id', user.id)
-      .eq('estado', 'completado')
+      .in('estado', ['completado', 'aceptado'])
       .order('created_at', { ascending: false });
 
     for (const app of appsP || []) {
@@ -101,7 +101,6 @@ export default function Calificar() {
             .eq('id', calificando.aplicacion.prestador_id);
         }
 
-        // Notificar al prestador e invitarlo a calificar al cliente
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: calificando.aplicacion.prestador_id,
@@ -134,7 +133,6 @@ export default function Calificar() {
             .eq('id', calificando.servicio.cliente_id);
         }
 
-        // Notificar al cliente que fue calificado
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: calificando.servicio.cliente_id,
