@@ -24,7 +24,7 @@ function DetalleTrabajoContent() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
-    setUsuario(perfil);
+    setUsuario({ ...perfil, id: user.id });
     const servicioId = searchParams.get('id');
     let servicio = null;
     if (servicioId) {
@@ -123,6 +123,7 @@ function DetalleTrabajoContent() {
 
   const precioBase = Number(miPrecio) || trabajo.presupuesto;
   const ganancia = calcularPagoFlekser(precioBase);
+  const esPropioServicio = trabajo.cliente_id === usuario?.id;
 
   if (aplicado) {
     return (
@@ -248,7 +249,7 @@ function DetalleTrabajoContent() {
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
         )}
 
-        {!yaAplico && mostrarOferta && (
+        {!yaAplico && mostrarOferta && !esPropioServicio && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">💬 Tu propuesta</h3>
             <div className="mb-3">
@@ -276,7 +277,11 @@ function DetalleTrabajoContent() {
 
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 z-20">
         <div className="max-w-md mx-auto flex gap-3">
-          {!yaAplico ? (
+          {esPropioServicio ? (
+            <div className="w-full py-3 bg-gray-100 text-gray-400 rounded-2xl font-bold text-center">
+              Esta es tu propia solicitud
+            </div>
+          ) : !yaAplico ? (
             <>
               <button onClick={() => setMostrarOferta(!mostrarOferta)}
                 className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
