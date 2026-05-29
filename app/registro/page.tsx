@@ -33,6 +33,10 @@ function RegistroForm() {
       setError('Por favor llena todos los campos');
       return;
     }
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
     setCargando(true);
     setError('');
     try {
@@ -42,7 +46,7 @@ function RegistroForm() {
         const { error: dbError } = await supabase.from('usuarios').insert({
           id: data.user.id,
           nombre,
-          telefono,
+          telefono: telefono ? `+52${telefono.replace(/\s/g, '')}` : null,
           rol,
           email,
         });
@@ -60,7 +64,6 @@ function RegistroForm() {
           });
         } catch (e) {}
 
-        // Redirigir al onboarding
         window.location.href = `/onboarding?rol=${rol}`;
       }
     } catch (err: any) {
@@ -145,7 +148,7 @@ function RegistroForm() {
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Teléfono celular</label>
                 <div className="flex gap-2">
-                  <div className="p-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold">🇲🇽 +52</div>
+                  <div className="p-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold whitespace-nowrap">🇲🇽 +52</div>
                   <input type="tel" placeholder="55 1234 5678" value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
                     className="flex-1 p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
@@ -164,16 +167,18 @@ function RegistroForm() {
                   onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
+
               <button onClick={handleRegistro} disabled={cargando}
                 className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mt-2 disabled:opacity-50">
                 {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
               </button>
             </div>
+
             <p className="mt-6 text-center text-gray-400 text-xs font-light">
               Al registrarte aceptas nuestros{" "}
-              <span className="text-purple-600 cursor-pointer">Términos y condiciones</span>
+              <a href="/terminos" className="text-purple-600 font-semibold hover:underline">Términos y condiciones</a>
               {" "}y{" "}
-              <span className="text-purple-600 cursor-pointer">Aviso de privacidad</span>
+              <a href="/privacidad" className="text-purple-600 font-semibold hover:underline">Aviso de privacidad</a>
             </p>
           </div>
         )}
