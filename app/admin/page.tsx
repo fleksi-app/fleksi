@@ -124,7 +124,7 @@ export default function Admin() {
           await supabase.from('notificaciones').insert({
             usuario_id: usuarioId,
             tipo: 'verificacion_aprobada',
-            titulo: '✅ ¡Verificación completada!',
+            titulo: '🏆 ¡Verificación completada!',
             mensaje: 'Todos tus documentos fueron aprobados. Ya puedes usar Fleksi al 100%.',
             link: '/perfil',
           });
@@ -135,8 +135,8 @@ export default function Admin() {
             usuario_id: usuarioId,
             tipo: 'documento_aprobado',
             titulo: '✅ Documento aprobado',
-            mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado.`,
-            link: '/documentos',
+            mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado. Sigue subiendo los documentos restantes.`,
+            link: '/verificacion',
           });
         } catch (e) {}
       }
@@ -162,8 +162,8 @@ export default function Admin() {
           usuario_id: usuarioId,
           tipo: 'documento_rechazado',
           titulo: '❌ Documento rechazado',
-          mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue rechazado: ${motivoDoc}`,
-          link: '/documentos',
+          mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue rechazado: ${motivoDoc}. Por favor súbelo de nuevo.`,
+          link: '/verificacion',
         });
       } catch (e) {}
 
@@ -189,6 +189,17 @@ export default function Admin() {
         { usuario_id: usuarioId, tipo: 'verificado' },
         { onConflict: 'usuario_id,tipo' }
       );
+
+      try {
+        await supabase.from('notificaciones').insert({
+          usuario_id: usuarioId,
+          tipo: 'verificacion_aprobada',
+          titulo: '🏆 ¡Verificación aprobada!',
+          mensaje: 'Tu identidad fue verificada. Ahora apareces con el badge de confianza en tu perfil.',
+          link: '/perfil',
+        });
+      } catch (e) {}
+
       await cargarDatos();
     } finally { setProcesando(''); }
   };
@@ -197,12 +208,28 @@ export default function Admin() {
     if (!motivoRechazo.trim()) { alert('Escribe el motivo del rechazo'); return; }
     setProcesando(id);
     try {
+      const { data: verifData } = await supabase
+        .from('verificaciones').select('usuario_id').eq('id', id).single();
+
       await supabase.from('verificaciones').update({
         estado: 'rechazado',
         motivo_rechazo: motivoRechazo,
         revisado_por: usuario.email,
         revisado_at: new Date().toISOString(),
       }).eq('id', id);
+
+      if (verifData?.usuario_id) {
+        try {
+          await supabase.from('notificaciones').insert({
+            usuario_id: verifData.usuario_id,
+            tipo: 'documento_rechazado',
+            titulo: '❌ Verificación rechazada',
+            mensaje: `Tu verificación fue rechazada: ${motivoRechazo}. Por favor corrige y vuelve a intentarlo.`,
+            link: '/verificacion',
+          });
+        } catch (e) {}
+      }
+
       setRechazando('');
       setMotivoRechazo('');
       await cargarDatos();
@@ -264,7 +291,6 @@ export default function Admin() {
 
       <div className="max-w-2xl mx-auto px-6 py-6">
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <button onClick={() => setTab('documentos')}
             className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
@@ -276,7 +302,6 @@ export default function Admin() {
           </button>
         </div>
 
-        {/* ── TAB DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -307,7 +332,6 @@ export default function Admin() {
 
                   return (
                     <div key={grupo.usuario_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
                       <button
                         onClick={() => setUsuarioExpandido(expandido ? null : grupo.usuario_id)}
                         className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition">
@@ -342,7 +366,6 @@ export default function Admin() {
                           <div className="flex flex-col gap-3">
                             {grupo.documentos.map((doc: any) => (
                               <div key={doc.id} className={`rounded-xl p-4 border ${doc.estado === 'aprobado' ? 'bg-green-50 border-green-100' : doc.estado === 'rechazado' ? 'bg-red-50 border-red-100' : 'bg-yellow-50 border-yellow-100'}`}>
-
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-gray-900">
@@ -435,7 +458,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── TAB VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
