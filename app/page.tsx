@@ -255,6 +255,17 @@ export default function Home() {
             ) : (
               botonInstalar()
             )}
+
+            {/* Links legales */}
+            <div className="mt-8 flex gap-4 justify-center">
+              <a href="/terminos" className="text-xs text-gray-400 hover:text-purple-600 transition">
+                Términos y condiciones
+              </a>
+              <span className="text-gray-300">·</span>
+              <a href="/privacidad" className="text-xs text-gray-400 hover:text-purple-600 transition">
+                Privacidad
+              </a>
+            </div>
           </div>
         )}
 
