@@ -40,23 +40,88 @@ export default function Terminos() {
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="font-extrabold text-gray-900 text-lg mb-3">4. Pagos y comisiones</h2>
-          <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            Fleksi cobra una comisión del 10% sobre el valor de cada servicio completado. Los pagos se procesan de forma segura a través de Stripe. El dinero queda retenido por Fleksi hasta que el Cliente confirme que el trabajo fue completado satisfactoriamente.
+          <p className="text-gray-600 text-sm leading-relaxed mb-4">
+            Los pagos se procesan de forma segura a través de Stripe. El dinero queda retenido por Fleksi hasta que el Cliente confirme que el trabajo fue completado satisfactoriamente.
           </p>
+
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+              <p className="text-sm font-extrabold text-blue-800 mb-1">💳 Comisión al Cliente</p>
+              <p className="text-sm text-blue-700">
+                Se cobra un <span className="font-bold">15%</span> adicional sobre el precio acordado del servicio como cargo por uso de la plataforma.
+              </p>
+              <p className="text-xs text-blue-500 mt-1">Ejemplo: servicio de $500 MXN → el cliente paga $575 MXN</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+              <p className="text-sm font-extrabold text-purple-800 mb-1">⚡ Comisión al Flekser</p>
+              <p className="text-sm text-purple-700">
+                Se descuenta un <span className="font-bold">10%</span> del precio acordado como cargo por uso de la plataforma.
+              </p>
+              <p className="text-xs text-purple-500 mt-1">Ejemplo: servicio de $500 MXN → el flekser recibe $450 MXN</p>
+            </div>
+          </div>
+
           <p className="text-gray-600 text-sm leading-relaxed">
-            En caso de disputas, Fleksi actuará como mediador y podrá retener el pago hasta resolver el conflicto. Fleksi no se hace responsable por servicios no completados o realizados de forma insatisfactoria.
+            En caso de disputas, Fleksi actuará como mediador y podrá retener el pago hasta resolver el conflicto.
           </p>
         </section>
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="font-extrabold text-gray-900 text-lg mb-3">5. Fleksi Protege</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            El seguro "Fleksi Protege" es un servicio opcional con un costo adicional de $45 MXN por servicio. Cubre daños accidentales ocasionados durante la prestación del servicio. La cobertura está sujeta a verificación y tiene un límite máximo de $5,000 MXN por incidente. No cubre daños intencionales, robo, o situaciones fuera del alcance del servicio contratado.
+          <p className="text-gray-600 text-sm leading-relaxed mb-3">
+            El seguro "Fleksi Protege" es un servicio opcional con un costo adicional de $45 MXN por persona contratada. Cubre daños accidentales ocasionados durante la prestación del servicio. La cobertura está sujeta a verificación y tiene un límite máximo de $5,000 MXN por incidente.
           </p>
+          <p className="text-gray-600 text-sm leading-relaxed mb-3">
+            No cubre daños intencionales, robo, o situaciones fuera del alcance del servicio contratado.
+          </p>
+          <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+            <p className="text-sm text-green-700 font-semibold">
+              💚 Reembolso del seguro: Si el servicio es cancelado antes de iniciarse, el monto de Fleksi Protege se reembolsa íntegramente al Cliente.
+            </p>
+          </div>
         </section>
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-extrabold text-gray-900 text-lg mb-3">6. Responsabilidades del Flekser</h2>
+          <h2 className="font-extrabold text-gray-900 text-lg mb-3">6. Cancelaciones y penalizaciones</h2>
+
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-extrabold text-gray-900 mb-2">📅 Cancelación por el Cliente</p>
+              <ul className="text-gray-600 text-sm leading-relaxed space-y-2 list-none">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 flex-shrink-0">✓</span>
+                  <span><span className="font-semibold">Más de 2 horas antes:</span> Cancelación gratuita. Reembolso total incluyendo Fleksi Protege.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 flex-shrink-0">✕</span>
+                  <span><span className="font-semibold">Menos de 2 horas antes:</span> Se cobra el 20% del valor del servicio como compensación al Flekser por su tiempo. Fleksi Protege se reembolsa íntegramente.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-sm font-extrabold text-gray-900 mb-2">⚡ Cancelación por el Flekser</p>
+              <ul className="text-gray-600 text-sm leading-relaxed space-y-2 list-none">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-500 flex-shrink-0">⚠️</span>
+                  <span><span className="font-semibold">Primera cancelación:</span> Advertencia en el perfil y reducción temporal en visibilidad en búsquedas.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-500 flex-shrink-0">⚠️</span>
+                  <span><span className="font-semibold">Segunda cancelación:</span> Penalización de 0.5 puntos en calificación y suspensión de 48 horas.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 flex-shrink-0">✕</span>
+                  <span><span className="font-semibold">Tercera cancelación:</span> Suspensión de cuenta por 30 días. El Cliente recibe reembolso total.</span>
+                </li>
+              </ul>
+              <p className="text-xs text-gray-400 mt-2">Las cancelaciones por causa de fuerza mayor debidamente documentadas no generan penalización.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h2 className="font-extrabold text-gray-900 text-lg mb-3">7. Responsabilidades del Flekser</h2>
           <p className="text-gray-600 text-sm leading-relaxed mb-2">El Flekser se compromete a:</p>
           <ul className="text-gray-600 text-sm leading-relaxed space-y-1 list-none">
             <li>✓ Proporcionar información veraz sobre sus habilidades y experiencia</li>
@@ -69,7 +134,7 @@ export default function Terminos() {
         </section>
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-extrabold text-gray-900 text-lg mb-3">7. Responsabilidades del Cliente</h2>
+          <h2 className="font-extrabold text-gray-900 text-lg mb-3">8. Responsabilidades del Cliente</h2>
           <p className="text-gray-600 text-sm leading-relaxed mb-2">El Cliente se compromete a:</p>
           <ul className="text-gray-600 text-sm leading-relaxed space-y-1 list-none">
             <li>✓ Proporcionar información clara y completa sobre el servicio requerido</li>
@@ -78,16 +143,6 @@ export default function Terminos() {
             <li>✓ No solicitar servicios fuera de la plataforma al mismo Flekser</li>
             <li>✓ Pagar el precio acordado a través de la plataforma</li>
           </ul>
-        </section>
-
-        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-extrabold text-gray-900 text-lg mb-3">8. Cancelaciones y reembolsos</h2>
-          <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            El Cliente puede cancelar una solicitud sin costo hasta 2 horas antes del inicio del servicio. Cancelaciones con menos de 2 horas de anticipación pueden generar un cargo del 20% del valor del servicio como compensación al Flekser.
-          </p>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            Los reembolsos se procesan en un plazo de 5 a 10 días hábiles dependiendo del banco emisor de la tarjeta.
-          </p>
         </section>
 
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -120,7 +175,7 @@ export default function Terminos() {
         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="font-extrabold text-gray-900 text-lg mb-3">12. Contacto</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
-            Para cualquier pregunta sobre estos términos, contáctanos en <span className="text-purple-600 font-semibold">soporte@fleksi.app</span> o a través del chat de soporte dentro de la aplicación.
+            Para cualquier pregunta sobre estos términos, contáctanos a través del chat de soporte dentro de la aplicación o escríbenos a <span className="text-purple-600 font-semibold">soporte@fleksi.app</span>.
           </p>
         </section>
 
