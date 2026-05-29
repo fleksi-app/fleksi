@@ -223,8 +223,7 @@ export default function HomeEmpresa() {
                   )}
                   <div className="flex gap-2">
                     {aplicacionesPendientes.length > 0 && (
-                      <a href={`/aplicaciones?servicio=${servicio.id}`} className="flex-1 py-2.5 bg-gradient-to-r from-slate-700 to-blue-800 text-white rounded-xl font-semibold text-sm text-center">Ver propuestas</a>
-                    )}
+<a href={`/aplicaciones?servicio=${servicio.id}`} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold text-sm text-center hover:border-slate-400 transition">Ver detalle</a>                    )}
                     <a href={`/trabajo?id=${servicio.id}`} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold text-sm text-center hover:border-slate-400 transition">Ver detalle</a>
                   </div>
                 </div>

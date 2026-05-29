@@ -45,16 +45,16 @@ function PublicarForm() {
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [cargandoWallet, setCargandoWallet] = useState(true);
   const [flekserSugerido, setFlekserSugerido] = useState<any>(null);
+  const [rolUsuario, setRolUsuario] = useState('flekser');
 
   useEffect(() => {
     const cargarDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('usuarios').select('wallet_saldo').eq('id', user.id).single();
+      const { data } = await supabase.from('usuarios').select('wallet_saldo, rol, rol_activo').eq('id', user.id).single();
       setWalletSaldo(data?.wallet_saldo || 0);
+      setRolUsuario(data?.rol_activo || data?.rol || 'flekser');
       setCargandoWallet(false);
-
-      // Cargar flekser sugerido si viene con ?para=ID
       if (paraId) {
         const { data: flekser } = await supabase
           .from('usuarios')
@@ -68,6 +68,7 @@ function PublicarForm() {
   }, [paraId]);
 
   const efectivoHabilitado = walletSaldo >= 50;
+  const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : rolUsuario === 'viajero' ? '/home-viajero' : '/home';
 
   const handlePublicar = async () => {
     if (!titulo || !fecha || !presupuesto) {
@@ -79,7 +80,6 @@ function PublicarForm() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
-
       const { data: servicioCreado, error: dbError } = await supabase
         .from('servicios')
         .insert({
@@ -99,10 +99,7 @@ function PublicarForm() {
         })
         .select()
         .single();
-
       if (dbError) throw dbError;
-
-      // Si hay flekser sugerido, notificarlo directamente
       if (flekserSugerido?.id && servicioCreado) {
         try {
           await supabase.from('notificaciones').insert({
@@ -114,7 +111,6 @@ function PublicarForm() {
           });
         } catch (e) {}
       }
-
       setPublicado(true);
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
@@ -187,7 +183,7 @@ function PublicarForm() {
             className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">
             Ver mis solicitudes
           </a>
-          <a href="/home"
+          <a href={homeUrl}
             className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">
             Volver al inicio
           </a>
@@ -198,11 +194,10 @@ function PublicarForm() {
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
-
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href="/home"
+            <a href={homeUrl}
               className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
               ←
             </a>
@@ -220,8 +215,6 @@ function PublicarForm() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-6">
-
-        {/* Banner flekser sugerido */}
         {flekserSugerido && (
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -236,12 +229,10 @@ function PublicarForm() {
               <p className="font-bold text-gray-900">{flekserSugerido.nombre}</p>
               <p className="text-xs text-purple-600">Recibirá una notificación especial al publicar</p>
             </div>
-            <button onClick={() => setFlekserSugerido(null)}
-              className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            <button onClick={() => setFlekserSugerido(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
           </div>
         )}
 
-        {/* PASO 1 — Categoría */}
         {paso === 1 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">¿Qué necesitas?</h2>
@@ -249,11 +240,7 @@ function PublicarForm() {
             <div className="grid grid-cols-2 gap-3">
               {categorias.map((cat) => (
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
-                  className={`p-4 rounded-2xl border-2 text-left transition ${
-                    categoriaSeleccionada === cat.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 bg-white hover:border-purple-300'
-                  }`}>
+                  className={`p-4 rounded-2xl border-2 text-left transition ${categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
                   <span className="text-2xl mb-2 block">{cat.emoji}</span>
                   <span className="text-sm font-semibold text-gray-900">{cat.nombre}</span>
                 </button>
@@ -262,16 +249,11 @@ function PublicarForm() {
           </div>
         )}
 
-        {/* PASO 2 — Detalles */}
         {paso === 2 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Cuéntanos más</h2>
             <p className="text-gray-400 mb-6 font-light">Mientras más detalle des, mejores propuestas recibirás</p>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
-            )}
-
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Título de tu solicitud</label>
@@ -302,9 +284,7 @@ function PublicarForm() {
                 <div className="grid grid-cols-4 gap-2">
                   {horas.map((h) => (
                     <button key={h} onClick={() => setHora(hora === h ? '' : h)}
-                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${
-                        hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'
-                      }`}>
+                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'}`}>
                       {h}
                     </button>
                   ))}
@@ -316,14 +296,11 @@ function PublicarForm() {
                   onChange={(e) => setPresupuesto(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
-
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">💳 Método de pago</label>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => setMetodoPago('stripe')}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
-                      metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
-                    }`}>
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'}`}>
                       {metodoPago === 'stripe' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
                     </div>
@@ -333,13 +310,8 @@ function PublicarForm() {
                     </div>
                     <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Recomendado</span>
                   </button>
-
-                  <button
-                    onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${
-                      !efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' :
-                      metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
-                    }`}>
+                  <button onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
+                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${!efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' : metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'}`}>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'}`}>
                       {metodoPago === 'efectivo' && efectivoHabilitado && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full"/>}
                     </div>
@@ -351,21 +323,15 @@ function PublicarForm() {
                       {efectivoHabilitado ? (
                         <p className="text-xs text-gray-400">5% de comisión para cada parte vía wallet.</p>
                       ) : (
-                        <p className="text-xs text-amber-600 font-semibold">
-                          Necesitas $50 en tu wallet.{' '}
+                        <p className="text-xs text-amber-600 font-semibold">Necesitas $50 en tu wallet.{' '}
                           <a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>Recargar →</a>
                         </p>
                       )}
                     </div>
-                    {efectivoHabilitado && (
-                      <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">
-                        Saldo: ${walletSaldo.toFixed(0)}
-                      </span>
-                    )}
+                    {efectivoHabilitado && <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">Saldo: ${walletSaldo.toFixed(0)}</span>}
                   </button>
                 </div>
               </div>
-
               <div onClick={() => setUrgente(!urgente)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}>
                 <div className="flex items-center gap-3">
@@ -383,25 +349,15 @@ function PublicarForm() {
           </div>
         )}
 
-        {/* PASO 3 — Confirmar */}
         {paso === 3 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Confirma tu solicitud</h2>
             <p className="text-gray-400 mb-6 font-light">Revisa los detalles antes de publicar</p>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
-            )}
-
-            {/* Banner flekser sugerido en confirmación */}
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
             {flekserSugerido && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  {flekserSugerido.foto_url ? (
-                    <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/>
-                  ) : (
-                    <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>
-                  )}
+                  {flekserSugerido.foto_url ? <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>}
                 </div>
                 <div>
                   <p className="text-xs text-purple-600 font-bold">🎯 Solicitud directa</p>
@@ -410,14 +366,11 @@ function PublicarForm() {
                 </div>
               </div>
             )}
-
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Categoría</span>
-                  <span className="font-semibold text-sm text-gray-900">
-                    {categorias.find(c => c.id === categoriaSeleccionada)?.emoji} {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}
-                  </span>
+                  <span className="font-semibold text-sm text-gray-900">{categorias.find(c => c.id === categoriaSeleccionada)?.emoji} {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Título</span>
@@ -439,9 +392,7 @@ function PublicarForm() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Método de pago</span>
-                  <span className="font-semibold text-sm text-gray-900">
-                    {metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}
-                  </span>
+                  <span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span>
                 </div>
                 {urgente && (
                   <div className="flex justify-between">
@@ -451,7 +402,6 @@ function PublicarForm() {
                 )}
               </div>
             </div>
-
             {metodoPago === 'stripe' && (
               <div onClick={() => setSeguro(!seguro)}
                 className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition mb-4 ${seguro ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white'}`}>
@@ -467,7 +417,6 @@ function PublicarForm() {
                 </div>
               </div>
             )}
-
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-500 text-sm">Tu presupuesto</span>
@@ -482,42 +431,27 @@ function PublicarForm() {
               {metodoPago === 'efectivo' && (
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-500 text-sm">📊 Comisión efectivo (5%)</span>
-                  <span className="font-semibold text-sm text-orange-600">
-                    ${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)
-                  </span>
+                  <span className="font-semibold text-sm text-orange-600">${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)</span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-2 flex justify-between">
-                <span className="font-extrabold text-gray-900">
-                  {metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}
-                </span>
-                <span className="font-extrabold text-purple-600">
-                  {metodoPago === 'stripe'
-                    ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN`
-                    : `$${presupuesto} MXN en efectivo`}
-                </span>
+                <span className="font-extrabold text-gray-900">{metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}</span>
+                <span className="font-extrabold text-purple-600">{metodoPago === 'stripe' ? `$${Number(presupuesto) + (seguro ? 45 : 0)} MXN` : `$${presupuesto} MXN en efectivo`}</span>
               </div>
             </div>
-
             {metodoPago === 'efectivo' && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
-                <p className="text-amber-800 text-xs font-semibold">
-                  💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.
-                </p>
+                <p className="text-amber-800 text-xs font-semibold">💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.</p>
               </div>
             )}
           </div>
         )}
-
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
         <div className="max-w-md mx-auto flex gap-3">
           {paso > 1 && (
-            <button onClick={() => setPaso(paso - 1)}
-              className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
-              ← Regresar
-            </button>
+            <button onClick={() => setPaso(paso - 1)} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">← Regresar</button>
           )}
           {paso < 3 ? (
             <button onClick={() => { setError(''); setPaso(paso + 1); }}
@@ -533,7 +467,6 @@ function PublicarForm() {
           )}
         </div>
       </div>
-
     </main>
   );
 }

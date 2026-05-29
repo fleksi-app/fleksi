@@ -25,8 +25,7 @@ export default function CheckIn() {
     setUsuario(perfil);
     const { data: apps } = await supabase
       .from('aplicaciones')
-      .select('*, servicios(*, usuarios(id, nombre, telefono, email))')
-      .eq('prestador_id', user.id)
+.select('*, servicios(*, usuarios!cliente_id(id, nombre, telefono, email))')      .eq('prestador_id', user.id)
       .in('estado', ['aceptado', 'completado'])
       .order('created_at', { ascending: false });
     setTrabajos(apps || []);
