@@ -19,7 +19,8 @@ function contienetelefono(texto: string): boolean {
 
 function FondoFlekser() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg"
+      style={{opacity:0.12}} viewBox="0 0 380 700" preserveAspectRatio="xMidYMid slice">
       <g transform="translate(20,40) rotate(-30)">
         <rect x="0" y="3" width="28" height="6" rx="3" fill="#7C3AED"/>
         <circle cx="4" cy="6" r="6" fill="none" stroke="#7C3AED" strokeWidth="3"/>
@@ -171,7 +172,8 @@ function FondoFlekser() {
 
 function FondoEmpresa() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg"
+      style={{opacity:0.12}} viewBox="0 0 380 700" preserveAspectRatio="xMidYMid slice">
       <g transform="translate(15,20)">
         <rect x="0" y="0" width="28" height="50" rx="2" fill="#1e3a8a"/>
         {[0,1,2,3].map(i=>[0,1,2].map(j=>(
@@ -364,7 +366,8 @@ function FondoEmpresa() {
 
 function FondoViajero() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg"
+      style={{opacity:0.12}} viewBox="0 0 380 700" preserveAspectRatio="xMidYMid slice">
       <g transform="translate(20,30) rotate(-15)">
         <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
         <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
@@ -665,7 +668,6 @@ export default function Chat() {
   const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
   const bgFondo = esEmpresa ? 'bg-slate-100' : esViajero ? 'bg-sky-100' : 'bg-purple-50';
   const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
-
   const Fondo = esEmpresa ? FondoEmpresa : esViajero ? FondoViajero : FondoFlekser;
 
   if (cargando) {
@@ -683,8 +685,6 @@ export default function Chat() {
     const otroUsuario = getOtroUsuario(conversacionActiva);
     return (
       <main className={`min-h-screen ${bgFondo} flex flex-col pb-16 relative`}>
-
-        {/* Fondo fijo que no hace scroll */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <Fondo />
         </div>
@@ -767,8 +767,6 @@ export default function Chat() {
 
   return (
     <main className={`min-h-screen ${bgFondo} pb-32 relative`}>
-
-      {/* Fondo fijo que no hace scroll */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <Fondo />
       </div>
