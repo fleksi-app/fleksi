@@ -30,6 +30,7 @@ export default function HomeWorker() {
   const [usuario, setUsuario] = useState<any>(null);
   const [aplicacionesUsuario, setAplicacionesUsuario] = useState<string[]>([]);
   const [trabajosCompletados, setTrabajosCompletados] = useState<string[]>([]);
+  const [aplicacionesRechazadas, setAplicacionesRechazadas] = useState<string[]>([]);
   const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
   const [mostrarNotifs, setMostrarNotifs] = useState(false);
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
@@ -62,6 +63,7 @@ export default function HomeWorker() {
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
     setTrabajosCompletados((apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id));
+    setAplicacionesRechazadas((apps || []).filter(a => a.estado === 'rechazado').map(a => a.servicio_id));
     const { data: notifs } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
     setNotificaciones(notifs || []);
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
@@ -121,6 +123,8 @@ export default function HomeWorker() {
 
   const trabajosFiltrados = trabajos
     .filter(t => !trabajosCompletados.includes(t.id))
+    .filter(t => !aplicacionesRechazadas.includes(t.id))
+    .filter(t => !aplicacionesUsuario.includes(t.id))
     .filter(t => {
       const matchCat = categoriaActiva === 'Todos' || t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
       const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
@@ -264,14 +268,15 @@ export default function HomeWorker() {
         {trabajosFiltrados.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-4">🔍</p>
-            <p className="font-bold text-gray-900 mb-2">No hay trabajos con esos filtros</p>
-            <p className="text-gray-400 text-sm mb-4">Prueba cambiando los filtros</p>
+            <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
+            <p className="text-gray-400 text-sm mb-4">
+              {filtrosActivos > 0 ? 'Prueba cambiando los filtros' : 'Vuelve más tarde para ver nuevas solicitudes'}
+            </p>
             {filtrosActivos > 0 && <button onClick={limpiarFiltros} className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">Limpiar filtros</button>}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {trabajosFiltrados.map((trabajo) => {
-              const yaAplico = aplicacionesUsuario.includes(trabajo.id);
               const ganancia = calcularPagoFlekser(trabajo.presupuesto);
               return (
                 <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
@@ -292,8 +297,8 @@ export default function HomeWorker() {
                         <p className="text-xs text-gray-400">📅 {trabajo.fecha} {trabajo.hora?.slice(0,5)}</p>
                         <div className="text-right">
                           <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
-                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block ${yaAplico ? 'bg-green-100 text-green-600' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'}`}>
-                            {yaAplico ? '✅ Aplicado' : 'Aplicar'}
+                          <span className="mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                            Aplicar
                           </span>
                         </div>
                       </div>
