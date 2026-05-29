@@ -7,6 +7,8 @@ const outfit = Outfit({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Fleksi — Tu trabajo, tus reglas',
   description: 'Conectamos personas que necesitan un servicio con quienes pueden hacerlo. Rápido, seguro y flexible.',
+  keywords: ['fleksi', 'trabajo flexible', 'servicios', 'flekser', 'empleo', 'freelance', 'México', 'servicios a domicilio'],
+  metadataBase: new URL('https://fleksi.vercel.app'),
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -24,14 +26,20 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Fleksi',
   },
-  formatDetection: {
-    telephone: false,
-  },
+  formatDetection: { telephone: false },
   openGraph: {
     type: 'website',
+    url: 'https://fleksi.vercel.app',
     title: 'Fleksi — Tu trabajo, tus reglas',
-    description: 'Conectamos personas que necesitan un servicio con quieres pueden hacerlo.',
-    images: [{ url: '/icons/icon-512.png', width: 512, height: 512 }],
+    description: 'Conectamos personas que necesitan un servicio con quienes pueden hacerlo. Rápido, seguro y flexible.',
+    siteName: 'Fleksi',
+    images: [{ url: '/icons/icon-512.png', width: 512, height: 512, alt: 'Fleksi' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Fleksi — Tu trabajo, tus reglas',
+    description: 'Conectamos personas que necesitan un servicio con quienes pueden hacerlo.',
+    images: ['/icons/icon-512.png'],
   },
 };
 
