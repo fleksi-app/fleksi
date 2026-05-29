@@ -105,8 +105,7 @@ export default function Perfil() {
         if (progreso === 100) {
           try {
             await supabase.from('badges').upsert({
-              usuario_id: user.id,
-              tipo: 'perfil_completo',
+              usuario_id: user.id, tipo: 'perfil_completo',
             }, { onConflict: 'usuario_id,tipo' });
           } catch (e) {}
         }
@@ -115,10 +114,12 @@ export default function Perfil() {
       const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', user.id);
       setBadges(badgesData || []);
 
+      // Solo reseñas que OTROS hicieron al flekser (es_del_prestador = false)
       const { data: reseñasData } = await supabase
         .from('reseñas')
         .select('*, usuarios!reseñas_cliente_id_fkey(nombre, foto_url)')
         .eq('prestador_id', user.id)
+        .eq('es_del_prestador', false)
         .order('created_at', { ascending: false })
         .limit(3);
       setReseñas(reseñasData || []);
@@ -283,7 +284,6 @@ export default function Perfil() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Card principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
@@ -321,7 +321,6 @@ export default function Perfil() {
             </div>
           </div>
 
-          {/* Barra de progreso */}
           {!perfilCompleto && (
             <div className="mb-4 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-2">
@@ -329,23 +328,17 @@ export default function Perfil() {
                 <span className="text-sm font-extrabold text-purple-600">{progresoPerfil}%</span>
               </div>
               <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
+                <div className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${progresoPerfil}%`,
-                    background: progresoPerfil < 40
-                      ? '#EF4444'
-                      : progresoPerfil < 70
-                      ? '#F59E0B'
-                      : 'linear-gradient(90deg, #2563EB, #7C3AED)',
-                  }}
-                />
+                    background: progresoPerfil < 40 ? '#EF4444' : progresoPerfil < 70 ? '#F59E0B' : 'linear-gradient(90deg, #2563EB, #7C3AED)',
+                  }}/>
               </div>
               {faltantes.length > 0 && (
                 <div className="flex flex-col gap-1">
                   {faltantes.slice(0, 3).map((paso, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"/>
                       <p className="text-xs text-gray-500">{paso}</p>
                     </div>
                   ))}
@@ -357,7 +350,6 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Badge perfil completo */}
           {perfilCompleto && (
             <div className="mb-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border border-purple-100 flex items-center gap-3">
               <span className="text-3xl">🏆</span>
@@ -402,7 +394,6 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Banner ganancias */}
         <a href="/earnings"
           className="flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-sm mb-3 hover:opacity-90 transition">
           <div>
@@ -416,7 +407,6 @@ export default function Perfil() {
           </div>
         </a>
 
-        {/* Banner Wallet */}
         <a href="/wallet"
           className="flex items-center justify-between bg-gradient-to-r from-teal-500 to-cyan-600 rounded-2xl p-5 shadow-sm mb-4 hover:opacity-90 transition">
           <div>
@@ -430,7 +420,6 @@ export default function Perfil() {
           </div>
         </a>
 
-        {/* Banner verificación */}
         <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -446,21 +435,17 @@ export default function Perfil() {
           </div>
         </a>
 
-        {/* Ciudades visitadas — sin toggle */}
         {ciudadesVisitadas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde has trabajado</h3>
             <div className="flex flex-wrap gap-2">
               {ciudadesVisitadas.map((c, i) => (
-                <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-600">
-                  📍 {c}
-                </span>
+                <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-600">📍 {c}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Teléfono */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📱 Teléfono</h3>
           {editando ? (
@@ -472,7 +457,6 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Ciudad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📍 Ciudad base</h3>
           {editando ? (
@@ -484,7 +468,6 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Descripción */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📝 Sobre mí</h3>
           {editando ? (
@@ -496,7 +479,6 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* Insignias */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">🏅 Insignias</h3>
           <div className="grid grid-cols-4 gap-3">
@@ -517,7 +499,6 @@ export default function Perfil() {
           </p>
         </div>
 
-        {/* Reseñas */}
         {reseñas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas recientes</h3>
@@ -540,7 +521,6 @@ export default function Perfil() {
           </div>
         )}
 
-        {/* Portafolio */}
         {portafolio.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <div className="flex items-center justify-between mb-4">
@@ -562,7 +542,6 @@ export default function Perfil() {
           </div>
         )}
 
-        {/* Habilidades */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
           <div className="flex flex-wrap gap-2 mb-3">
