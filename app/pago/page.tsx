@@ -15,8 +15,13 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
   const [error, setError] = useState('');
 
   const precio = aplicacion?.precio_ofrecido || servicio?.presupuesto || 0;
+  const cupos = servicio?.cupos || 1;
   const desglose = calcularPagoCliente(precio, servicio?.seguro);
   const desgloseFlekser = calcularPagoFlekser(precio);
+
+  // Fleksi Protege se multiplica por cupos
+  const totalSeguro = servicio?.seguro ? 45 * cupos : 0;
+  const totalCliente = desglose.total - (servicio?.seguro ? 45 : 0) + totalSeguro;
 
   const handlePagar = async () => {
     if (!stripe || !elements) return;
@@ -28,7 +33,7 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          monto: desglose.total,
+          monto: totalCliente,
           descripcion: servicio.titulo,
           servicioId: servicio.id,
           clienteEmail: usuario?.email || '',
@@ -56,27 +61,39 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
         throw new Error('Pago no completado');
       }
 
+      // Actualizar la aplicación aceptada
       await supabase.from('aplicaciones').update({
         estado: 'aceptado',
         payment_intent_id: paymentIntentId,
         pago_retenido: true,
-        monto_cliente: desglose.total,
+        monto_cliente: totalCliente,
         monto_flekser: desgloseFlekser.total,
       }).eq('id', aplicacionId);
 
+      // Incrementar cupos_tomados
+      const nuevosCuposTomados = (servicio.cupos_tomados || 0) + 1;
+      const cuposLlenos = nuevosCuposTomados >= (servicio.cupos || 1);
+
       await supabase.from('servicios').update({
-        estado: 'en_proceso',
+        cupos_tomados: nuevosCuposTomados,
         pago_retenido: true,
+        // Solo pasar a en_proceso si todos los cupos están llenos
+        estado: cuposLlenos ? 'en_proceso' : 'activo',
       }).eq('id', servicio.id);
 
-      await supabase.from('aplicaciones')
-        .update({ estado: 'rechazado' })
-        .eq('servicio_id', servicio.id)
-        .neq('id', aplicacionId);
+      // Solo rechazar otras aplicaciones si los cupos están llenos
+      if (cuposLlenos) {
+        await supabase.from('aplicaciones')
+          .update({ estado: 'rechazado' })
+          .eq('servicio_id', servicio.id)
+          .eq('estado', 'pendiente')
+          .neq('id', aplicacionId);
+      }
 
+      // Enviar mensaje al flekser aceptado
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: existente } = await supabase.from('mensajes').select('id').eq('servicio_id', servicio.id).limit(1);
+        const { data: existente } = await supabase.from('mensajes').select('id').eq('servicio_id', servicio.id).eq('destinatario_id', aplicacion.prestador_id).limit(1);
         if (!existente || existente.length === 0) {
           await supabase.from('mensajes').insert({
             servicio_id: servicio.id,
@@ -117,7 +134,6 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Resumen para el cliente */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-extrabold text-gray-900 mb-3">📋 Resumen</h3>
         <div className="flex flex-col gap-2">
@@ -140,22 +156,30 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
           {servicio?.seguro && (
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
-              <span className="font-semibold text-sm">$45 MXN</span>
+              <span className="font-semibold text-sm">${totalSeguro} MXN {cupos > 1 ? `(${cupos} × $45)` : ''}</span>
             </div>
           )}
           <div className="border-t border-gray-100 pt-2 flex justify-between">
             <span className="font-extrabold text-gray-900">Total</span>
-            <span className="font-extrabold text-purple-600 text-lg">${desglose.total} MXN</span>
+            <span className="font-extrabold text-purple-600 text-lg">${totalCliente} MXN</span>
           </div>
         </div>
       </div>
 
-      {/* Lo que recibirá el flekser — sección informativa */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4">
         <p className="text-green-700 text-xs font-semibold mb-1">💰 El flekser recibirá</p>
         <p className="text-green-800 font-extrabold text-xl">${desgloseFlekser.total} MXN</p>
         <p className="text-green-600 text-xs mt-0.5">Después de comisión de plataforma (10%)</p>
       </div>
+
+      {servicio?.cupos > 1 && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+          <p className="text-blue-700 text-xs font-semibold">
+            👥 Cupos: {servicio.cupos_tomados || 0} de {servicio.cupos} ocupados. 
+            Quedan {servicio.cupos - (servicio.cupos_tomados || 0) - 1} después de este.
+          </p>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-extrabold text-gray-900 mb-4">💳 Datos de tu tarjeta</h3>
@@ -183,7 +207,7 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
 
       <button onClick={handlePagar} disabled={procesando || !stripe}
         className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-        {procesando ? '⏳ Procesando...' : `🔒 Pagar $${desglose.total} MXN`}
+        {procesando ? '⏳ Procesando...' : `🔒 Pagar $${totalCliente} MXN`}
       </button>
     </div>
   );

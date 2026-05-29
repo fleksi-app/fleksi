@@ -72,6 +72,14 @@ export default function HomeEmpresa() {
 
   const notifEmoji: any = { nueva_aplicacion:'✋', aplicacion_aceptada:'✅', aplicacion_rechazada:'❌', trabajo_completado:'🎉', nuevo_trabajo:'🔔', pago_liberado:'💰', mensaje_nuevo:'💬' };
 
+  const getCuposLabel = (servicio: any) => {
+    if (!servicio.cupos || servicio.cupos <= 1) return null;
+    const disponibles = servicio.cupos - (servicio.cupos_tomados || 0);
+    if (disponibles <= 1) return <span className="text-xs font-bold text-red-500">🔥 ¡Solo queda {disponibles} cupo!</span>;
+    if (disponibles <= 3) return <span className="text-xs font-bold text-amber-500">🟡 {disponibles} cupos disponibles</span>;
+    return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
+  };
+
   const serviciosFiltrados = servicios.filter(s => {
     if (!ciudadFiltro.trim()) return true;
     return s.direccion?.toLowerCase().includes(ciudadFiltro.toLowerCase()) ||
@@ -131,22 +139,17 @@ export default function HomeEmpresa() {
             ))}
           </div>
 
-          {/* Búsqueda por ciudad */}
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
             <input
               type="text"
               placeholder="Filtrar mis servicios por ciudad..."
               value={busquedaCiudad}
-              onChange={(e) => {
-                setBusquedaCiudad(e.target.value);
-                setCiudadFiltro(e.target.value);
-              }}
+              onChange={(e) => { setBusquedaCiudad(e.target.value); setCiudadFiltro(e.target.value); }}
               className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"
             />
             {busquedaCiudad && (
-              <button
-                onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
+              <button onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">
                 ✕
               </button>
@@ -186,27 +189,30 @@ export default function HomeEmpresa() {
             {serviciosFiltrados.map((servicio) => {
               const aplicacionesAceptadas = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='aceptado'||a.estado==='completado');
               const aplicacionesPendientes = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='pendiente');
+              const cuposLabel = getCuposLabel(servicio);
+
               return (
                 <div key={servicio.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 pr-3">
                       <h3 className="font-extrabold text-slate-800 mb-1">{servicio.titulo}</h3>
                       <p className="text-xs text-slate-400">📅 {servicio.fecha} {servicio.hora?.slice(0,5)}</p>
-                      {servicio.direccion && (
-                        <p className="text-xs text-slate-400 mt-0.5">📍 {servicio.direccion}</p>
-                      )}
+                      {servicio.direccion && <p className="text-xs text-slate-400 mt-0.5">📍 {servicio.direccion}</p>}
+                      {cuposLabel && <div className="mt-1">{cuposLabel}</div>}
                     </div>
                     <span className={`text-xs font-bold px-3 py-1 rounded-lg ${estadoColor(servicio.estado)}`}>{estadoLabel(servicio.estado)}</span>
                   </div>
+
                   <div className="flex justify-between items-center mb-3 py-2 border-y border-slate-50">
                     <span className="text-blue-700 font-extrabold">${servicio.presupuesto} MXN</span>
                     <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{servicio.categoria}</span>
                   </div>
+
                   {aplicacionesAceptadas.length > 0 && (
                     <div className="bg-emerald-50 rounded-xl p-3 mb-3 border border-emerald-100">
-                      <p className="text-xs font-bold text-emerald-700 mb-2">✓ Profesionales confirmados</p>
+                      <p className="text-xs font-bold text-emerald-700 mb-2">✓ Profesionales confirmados ({aplicacionesAceptadas.length})</p>
                       {aplicacionesAceptadas.map((app:any) => (
-                        <div key={app.id} className="flex items-center gap-2">
+                        <div key={app.id} className="flex items-center gap-2 mb-1">
                           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-600 to-blue-700 flex items-center justify-center flex-shrink-0">
                             {app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover rounded-lg"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0)||'?'}</span>}
                           </div>
@@ -216,16 +222,22 @@ export default function HomeEmpresa() {
                       ))}
                     </div>
                   )}
+
                   {aplicacionesPendientes.length > 0 && (
                     <div className="bg-amber-50 rounded-xl p-3 mb-3 border border-amber-100">
-                      <p className="text-xs font-bold text-amber-700">⏳ {aplicacionesPendientes.length} propuesta{aplicacionesPendientes.length!==1?'s':''} recibida{aplicacionesPendientes.length!==1?'s':''}</p>
+                      <p className="text-xs font-bold text-amber-700">⏳ {aplicacionesPendientes.length} propuesta{aplicacionesPendientes.length!==1?'s':''} pendiente{aplicacionesPendientes.length!==1?'s':''}</p>
                     </div>
                   )}
-                  <div className="flex gap-2">
-                    {aplicacionesPendientes.length > 0 && (
-<a href={`/aplicaciones?servicio=${servicio.id}`} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold text-sm text-center hover:border-slate-400 transition">Ver detalle</a>                    )}
-                    <a href={`/trabajo?id=${servicio.id}`} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold text-sm text-center hover:border-slate-400 transition">Ver detalle</a>
-                  </div>
+
+                  {/* Un solo botón */}
+                  <a href={`/aplicaciones?servicio=${servicio.id}`}
+                    className="block w-full py-2.5 bg-gradient-to-r from-slate-700 to-blue-800 text-white rounded-xl font-semibold text-sm text-center hover:opacity-90 transition">
+                    {aplicacionesPendientes.length > 0
+                      ? `Ver propuestas (${aplicacionesPendientes.length})`
+                      : aplicacionesAceptadas.length > 0
+                      ? `Gestionar (${aplicacionesAceptadas.length} confirmados)`
+                      : 'Ver detalle'}
+                  </a>
                 </div>
               );
             })}
