@@ -118,16 +118,15 @@ export default function Nav({ activo }: { activo: string }) {
   const colorPlus = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
 
   const items = [
-    { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio' },
-    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo' },
-    { href: null, emoji: '+', label: 'Nuevo', id: 'nuevo' },
-    { href: '/chat', emoji: '💬', label: 'Chat', id: 'chat', badge: mensajesNoLeidos },
-    { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil' },
+    { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio', clase: 'tour-home' },
+    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo', clase: '' },
+    { href: null, emoji: '+', label: 'Nuevo', id: 'nuevo', clase: 'tour-nuevo' },
+    { href: '/chat', emoji: '💬', label: 'Chat', id: 'chat', badge: mensajesNoLeidos, clase: 'tour-chat' },
+    { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil', clase: 'tour-perfil' },
   ];
 
   return (
     <>
-      {/* Modales */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -264,7 +263,7 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
-      {/* Botón flotante de soporte WhatsApp */}
+      {/* Botón flotante WhatsApp */}
       <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
         className="fixed bottom-20 right-4 z-30 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition hover:scale-110 active:scale-95">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
@@ -281,7 +280,7 @@ export default function Nav({ activo }: { activo: string }) {
             if (item.href === null) {
               return (
                 <button key={item.id} onClick={() => setMostrarModal(true)}
-                  className="flex flex-col items-center gap-0.5 px-3">
+                  className={`flex flex-col items-center gap-0.5 px-3 ${item.clase}`}>
                   <div className={`bg-gradient-to-r ${colorPlus} rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14`}>
                     <span className="text-white text-3xl font-bold leading-none">+</span>
                   </div>
@@ -292,7 +291,7 @@ export default function Nav({ activo }: { activo: string }) {
 
             return (
               <a key={item.id} href={item.href}
-                className="relative flex flex-col items-center gap-0.5 px-3 py-1">
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 ${item.clase}`}>
                 {item.badge > 0 ? (
                   <div className="relative">
                     <span className="text-xl">{item.emoji}</span>
