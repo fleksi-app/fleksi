@@ -119,7 +119,7 @@ export default function Nav({ activo }: { activo: string }) {
 
   const items = [
     { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio', clase: 'tour-home' },
-    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo', clase: '' },
+    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo', clase: 'tour-catalogo' },
     { href: null, emoji: '+', label: 'Nuevo', id: 'nuevo', clase: 'tour-nuevo' },
     { href: '/chat', emoji: '💬', label: 'Chat', id: 'chat', badge: mensajesNoLeidos, clase: 'tour-chat' },
     { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil', clase: 'tour-perfil' },

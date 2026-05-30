@@ -68,7 +68,25 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 3 — Botón +
+  // Paso 3 — Catálogo
+  tour.addStep({
+    id: 'catalogo',
+    text: `
+      <p style="font-weight:800; color:#111; margin:0 0 6px">🔍 Catálogo de Fleksers</p>
+      <p style="color:#666; font-size:13px; margin:0">${
+        esEmpresa
+          ? 'Encuentra y contrata fleksers directamente por su perfil, habilidades y calificación.'
+          : 'Explora otros fleksers, ve sus habilidades y calificaciones.'
+      }</p>
+    `,
+    attachTo: { element: '.tour-catalogo', on: 'top' },
+    buttons: [
+      { text: '← Atrás', classes: 'shepherd-button-secondary', action: tour.back },
+      { text: 'Siguiente →', classes: 'shepherd-button-primary', action: tour.next },
+    ],
+  });
+
+  // Paso 4 — Botón +
   tour.addStep({
     id: 'nuevo',
     text: `
@@ -86,7 +104,7 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 4 — Chat
+  // Paso 5 — Chat
   tour.addStep({
     id: 'chat',
     text: `
@@ -100,7 +118,7 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 5 — Perfil
+  // Paso 6 — Perfil
   tour.addStep({
     id: 'perfil',
     text: `
@@ -114,7 +132,7 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 6 — Notificaciones
+  // Paso 7 — Notificaciones
   tour.addStep({
     id: 'notificaciones',
     text: `
@@ -128,7 +146,7 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 7 — Fin
+  // Paso 8 — Fin
   tour.addStep({
     id: 'fin',
     text: `
@@ -151,7 +169,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Marcar como visto cuando se cancela con la X
   tour.on('cancel', () => { marcarTourVisto(); });
   tour.on('complete', () => { marcarTourVisto(); });
 
