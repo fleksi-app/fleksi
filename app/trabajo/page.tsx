@@ -140,6 +140,7 @@ function DetalleTrabajoContent() {
   const esPropioServicio = trabajo.cliente_id === usuario?.id;
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const homeUrl = rol === 'empresa' ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
+  const tieneFoto = !!usuario?.foto_url;
 
   const visitasSemana = (trabajo.visitas_semana || []).filter((v: string) => {
     const hace7dias = new Date();
@@ -193,6 +194,25 @@ function DetalleTrabajoContent() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
+
+        {/* Banner perfil incompleto */}
+        {!tieneFoto && !esPropioServicio && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">⚠️</span>
+              <div>
+                <p className="font-extrabold text-amber-800 text-sm mb-1">Tu perfil está incompleto</p>
+                <p className="text-amber-700 text-xs leading-relaxed">
+                  Los fleksers sin foto de perfil tienen <span className="font-bold">90% menos probabilidades</span> de ser contratados. Los clientes prefieren ver con quién trabajan.
+                </p>
+                <a href="/perfil" className="inline-block mt-2 text-xs font-bold text-amber-800 underline">
+                  Completar perfil ahora →
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-14 h-14 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
@@ -204,7 +224,6 @@ function DetalleTrabajoContent() {
                 {trabajo.urgente && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">🔴 Urgente</span>}
               </div>
               <p className="text-gray-400 text-sm mt-1">{trabajo.categoria}</p>
-              {/* Visitas de la última semana — público */}
               {visitasSemana > 0 && (
                 <p className="text-xs text-gray-400 mt-1">👁️ {visitasSemana} vista{visitasSemana !== 1 ? 's' : ''} esta semana</p>
               )}
@@ -271,7 +290,7 @@ function DetalleTrabajoContent() {
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
         )}
 
-        {!yaAplico && mostrarOferta && !esPropioServicio && (
+        {!yaAplico && mostrarOferta && !esPropioServicio && tieneFoto && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">💬 Tu propuesta</h3>
             <div className="mb-3">
@@ -302,6 +321,11 @@ function DetalleTrabajoContent() {
             <div className="w-full py-3 bg-gray-100 text-gray-400 rounded-2xl font-bold text-center">
               Esta es tu propia solicitud
             </div>
+          ) : !tieneFoto ? (
+            <a href="/perfil"
+              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+              📷 Agrega tu foto para aplicar
+            </a>
           ) : !yaAplico ? (
             <>
               <button onClick={() => setMostrarOferta(!mostrarOferta)}
