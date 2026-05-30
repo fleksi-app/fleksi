@@ -235,6 +235,20 @@ export default function HomeWorker() {
         </div>
       </div>
 
+      {/* Banner perfil incompleto */}
+      {!usuario?.foto_url && (
+        <div className="max-w-md mx-auto px-6 pt-4">
+          <a href="/perfil" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:opacity-90 transition">
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div className="flex-1">
+              <p className="font-bold text-amber-800 text-sm">Completa tu perfil para conseguir trabajo</p>
+              <p className="text-amber-700 text-xs mt-0.5">Sin foto tienes <span className="font-bold">90% menos chances</span> de ser contratado</p>
+            </div>
+            <span className="text-amber-600 font-bold text-sm flex-shrink-0">→</span>
+          </a>
+        </div>
+      )}
+
       {mostrarBannerPush && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
