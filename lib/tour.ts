@@ -1,15 +1,15 @@
 import Shepherd from 'shepherd.js';
 import 'shepherd.js/dist/css/shepherd.css';
+import { supabase } from '@/lib/supabase';
 
 async function marcarTourVisto() {
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    await supabase.from('usuarios').update({ tour_visto: true }).eq('id', user.id);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('usuarios').update({ tour_visto: true }).eq('id', user.id);
+    }
+  } catch (e) {
+    console.error('Error marcando tour visto:', e);
   }
 }
 
@@ -114,7 +114,21 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 6 — Fin
+  // Paso 6 — Notificaciones
+  tour.addStep({
+    id: 'notificaciones',
+    text: `
+      <p style="font-weight:800; color:#111; margin:0 0 6px">🔔 Notificaciones</p>
+      <p style="color:#666; font-size:13px; margin:0">Aquí te avisamos cuando ${esEmpresa ? 'alguien aplica a tu solicitud' : 'aceptan tu propuesta o tienes un nuevo trabajo'}.</p>
+    `,
+    attachTo: { element: '.tour-notifs', on: 'bottom' },
+    buttons: [
+      { text: '← Atrás', classes: 'shepherd-button-secondary', action: tour.back },
+      { text: 'Siguiente →', classes: 'shepherd-button-primary', action: tour.next },
+    ],
+  });
+
+  // Paso 7 — Fin
   tour.addStep({
     id: 'fin',
     text: `
@@ -136,6 +150,10 @@ export function iniciarTour(rol: string) {
       },
     ],
   });
+
+  // Marcar como visto cuando se cancela con la X
+  tour.on('cancel', () => { marcarTourVisto(); });
+  tour.on('complete', () => { marcarTourVisto(); });
 
   tour.start();
   return tour;
