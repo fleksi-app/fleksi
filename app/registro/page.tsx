@@ -17,6 +17,7 @@ function RegistroForm() {
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -48,6 +49,8 @@ function RegistroForm() {
           nombre,
           telefono: telefono ? `+52${telefono.replace(/\s/g, '')}` : null,
           rol,
+          rol_activo: rol,
+          roles: [rol],
           email,
         });
         if (dbError) throw dbError;
@@ -162,10 +165,32 @@ function RegistroForm() {
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Contraseña</label>
-                <input type="password" placeholder="Mínimo 8 caracteres" value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
-                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                <div className="relative">
+                  <input
+                    type={verPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
+                    className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 pr-14"/>
+                  <button
+                    type="button"
+                    onClick={() => setVerPassword(!verPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                    {verPassword ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                        <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <button onClick={handleRegistro} disabled={cargando}
