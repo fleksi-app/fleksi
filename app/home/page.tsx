@@ -113,7 +113,11 @@ export default function HomeWorker() {
     if (!usuario || cambiandoRol) return;
     setCambiandoRol(true);
     const rolesActuales = roles.includes(nuevoRol) ? roles : [...roles, nuevoRol];
-    await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
+    await supabase.from('usuarios').update({
+      rol_activo: nuevoRol,
+      roles: rolesActuales,
+      ...(nuevoRol === 'empresa' && { modo_viajero: false }),
+    }).eq('id', usuario.id);
     setMostrarCambioRol(false);
     if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
     setCambiandoRol(false);
@@ -150,7 +154,6 @@ export default function HomeWorker() {
       const matchFecha = !filtroFecha || t.fecha === filtroFecha;
       const matchUrgente = !filtroUrgente || t.urgente === true;
       const matchSeguro = !filtroSeguro || t.seguro === true;
-      // En modo viajero no filtramos por ciudad
       return matchCat && matchBusqueda && matchCiudad && matchMin && matchMax && matchFecha && matchUrgente && matchSeguro;
     });
 
@@ -168,16 +171,11 @@ export default function HomeWorker() {
     return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
   };
 
-  // Gradientes según modo viajero
   const headerGradient = modoViajero
     ? 'from-sky-500 via-teal-500 to-emerald-600'
     : 'from-blue-600 via-purple-600 to-purple-700';
-  const categoriaActivaBg = modoViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
-  const aplicarBg = modoViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
+  const categoriaActivaBg = modoViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const aplicarBg = modoViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
 
   if (cargando) {
     return (
@@ -207,7 +205,6 @@ export default function HomeWorker() {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
               </button>
 
-              {/* Toggle modo viajero */}
               <button
                 onClick={toggleModoViajero}
                 disabled={cambiandoViajero}
