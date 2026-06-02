@@ -7,18 +7,20 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const type = requestUrl.searchParams.get('type');
 
-  // Recuperación de contraseña — redirigir a reset-password
-  if (type === 'recovery') {
-    return NextResponse.redirect(`${requestUrl.origin}/reset-password`);
-  }
-
   if (code) {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
+    // Siempre intercambiar el code por sesión primero
     await supabase.auth.exchangeCodeForSession(code);
+
+    // Si es recuperación de contraseña, redirigir a reset-password
+    if (type === 'recovery') {
+      return NextResponse.redirect(`${requestUrl.origin}/reset-password`);
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
