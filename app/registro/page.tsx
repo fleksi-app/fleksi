@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 const roles = [
   { id: 'flekser', emoji: '⚡', titulo: 'Soy Flekser', desc: 'Ofrece servicios y contrata cuando lo necesites' },
   { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
-  { id: 'viajero', emoji: '✈️', titulo: 'Soy viajero', desc: 'Trabaja mientras viajas por el mundo' },
 ];
 
 function RegistroForm() {
@@ -23,7 +22,7 @@ function RegistroForm() {
 
   useEffect(() => {
     const rolParam = searchParams.get('rol');
-    if (rolParam && ['flekser', 'empresa', 'viajero'].includes(rolParam)) {
+    if (rolParam && ['flekser', 'empresa'].includes(rolParam)) {
       setRol(rolParam);
       setPaso(2);
     }
@@ -41,7 +40,6 @@ function RegistroForm() {
     setCargando(true);
     setError('');
     try {
-      // Verificar teléfono duplicado
       if (telefono) {
         const telefonoCompleto = `+52${telefono.replace(/\s/g, '')}`;
         const { data: existente } = await supabase
@@ -74,6 +72,7 @@ function RegistroForm() {
           rol_activo: rol,
           roles: [rol],
           email,
+          modo_viajero: false,
         });
         if (dbError) throw dbError;
 

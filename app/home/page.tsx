@@ -39,6 +39,8 @@ export default function HomeWorker() {
   const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
+  const [modoViajero, setModoViajero] = useState(false);
+  const [cambiandoViajero, setCambiandoViajero] = useState(false);
 
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [filtroCiudad, setFiltroCiudad] = useState('');
@@ -56,6 +58,7 @@ export default function HomeWorker() {
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
+    setModoViajero(perfil?.modo_viajero || false);
     const { data: servicios } = await supabase.from('servicios')
       .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
       .eq('estado', 'activo').neq('cliente_id', user.id)
@@ -70,6 +73,15 @@ export default function HomeWorker() {
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
     if ('Notification' in window && Notification.permission === 'default') setMostrarBannerPush(true);
+  };
+
+  const toggleModoViajero = async () => {
+    if (!usuario || cambiandoViajero) return;
+    setCambiandoViajero(true);
+    const nuevoModo = !modoViajero;
+    await supabase.from('usuarios').update({ modo_viajero: nuevoModo }).eq('id', usuario.id);
+    setModoViajero(nuevoModo);
+    setCambiandoViajero(false);
   };
 
   const activarNotificaciones = async () => {
@@ -104,7 +116,6 @@ export default function HomeWorker() {
     await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
     setMostrarCambioRol(false);
     if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
-    else if (nuevoRol === 'viajero') window.location.href = '/home-viajero';
     setCambiandoRol(false);
   };
 
@@ -139,6 +150,7 @@ export default function HomeWorker() {
       const matchFecha = !filtroFecha || t.fecha === filtroFecha;
       const matchUrgente = !filtroUrgente || t.urgente === true;
       const matchSeguro = !filtroSeguro || t.seguro === true;
+      // En modo viajero no filtramos por ciudad
       return matchCat && matchBusqueda && matchCiudad && matchMin && matchMax && matchFecha && matchUrgente && matchSeguro;
     });
 
@@ -146,7 +158,6 @@ export default function HomeWorker() {
   const rolInfo: any = {
     flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
     empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
-    viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
   };
 
   const getCuposLabel = (trabajo: any) => {
@@ -156,6 +167,17 @@ export default function HomeWorker() {
     if (disponibles <= 3) return <span className="text-xs font-bold text-amber-500">🟡 Quedan {disponibles} cupos</span>;
     return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
   };
+
+  // Gradientes según modo viajero
+  const headerGradient = modoViajero
+    ? 'from-sky-500 via-teal-500 to-emerald-600'
+    : 'from-blue-600 via-purple-600 to-purple-700';
+  const categoriaActivaBg = modoViajero
+    ? 'from-sky-500 to-teal-500'
+    : 'from-blue-600 to-purple-600';
+  const aplicarBg = modoViajero
+    ? 'from-sky-500 to-teal-500'
+    : 'from-blue-600 to-purple-600';
 
   if (cargando) {
     return (
@@ -171,18 +193,33 @@ export default function HomeWorker() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 px-6 pt-12 pb-8 relative overflow-hidden">
+      <div className={`bg-gradient-to-br ${headerGradient} px-6 pt-12 pb-8 relative overflow-hidden transition-all duration-500`}>
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
         <div className="max-w-md mx-auto relative">
 
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setMostrarCambioRol(true)}
-              className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
-              <span className="text-sm">⚡</span>
-              <span className="text-white text-xs font-extrabold">Flekser</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setMostrarCambioRol(true)}
+                className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
+                <span className="text-sm">⚡</span>
+                <span className="text-white text-xs font-extrabold">Flekser</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              {/* Toggle modo viajero */}
+              <button
+                onClick={toggleModoViajero}
+                disabled={cambiandoViajero}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition text-xs font-bold ${
+                  modoViajero
+                    ? 'bg-white text-teal-600 border-white'
+                    : 'bg-white/15 border-white/25 text-white hover:bg-white/25'
+                }`}>
+                ✈️ {modoViajero ? 'Viajero ON' : 'Viajero'}
+              </button>
+            </div>
+
             <button onClick={abrirNotifs}
               className="tour-notifs relative w-9 h-9 bg-white/15 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/25 transition">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -198,14 +235,21 @@ export default function HomeWorker() {
 
           <div className="mb-4">
             <p className="text-white/70 text-sm">{getSaludo()}</p>
-            <h1 className="text-2xl font-extrabold text-white">{usuario?.nombre?.split(' ')[0] || 'Bienvenido'} ⚡</h1>
+            <h1 className="text-2xl font-extrabold text-white">
+              {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} {modoViajero ? '✈️' : '⚡'}
+            </h1>
+            {modoViajero && (
+              <p className="text-white/70 text-xs mt-1 font-semibold">🌍 Modo viajero activo — ves trabajos de todo el país</p>
+            )}
           </div>
 
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
-            <p className="text-white/70 text-xs font-semibold mb-1">⚡ Trabajos disponibles ahora</p>
+            <p className="text-white/70 text-xs font-semibold mb-1">
+              {modoViajero ? '✈️ Trabajos en todo el país' : '⚡ Trabajos disponibles ahora'}
+            </p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
-              <p className="text-white/60 text-sm mb-1">{filtrosActivos > 0 ? 'con tus filtros' : 'cerca de ti'}</p>
+              <p className="text-white/60 text-sm mb-1">{filtrosActivos > 0 ? 'con tus filtros' : modoViajero ? 'en México' : 'cerca de ti'}</p>
             </div>
             <div className="flex items-center gap-1 mt-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"/>
@@ -235,7 +279,6 @@ export default function HomeWorker() {
         </div>
       </div>
 
-      {/* Banner perfil incompleto */}
       {!usuario?.foto_url && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <a href="/perfil" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:opacity-90 transition">
@@ -271,7 +314,7 @@ export default function HomeWorker() {
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${categoriaActiva === cat ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md' : 'bg-white text-gray-500 border-2 border-gray-200'}`}>
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${categoriaActiva === cat ? `bg-gradient-to-r ${categoriaActivaBg} text-white shadow-md` : 'bg-white text-gray-500 border-2 border-gray-200'}`}>
               {cat}
             </button>
           ))}
@@ -289,7 +332,9 @@ export default function HomeWorker() {
         )}
 
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-extrabold text-gray-900">Trabajos cerca de ti</h2>
+          <h2 className="font-extrabold text-gray-900">
+            {modoViajero ? '🌍 Trabajos en todo el país' : 'Trabajos cerca de ti'}
+          </h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
         </div>
 
@@ -329,7 +374,7 @@ export default function HomeWorker() {
                         </div>
                         <div className="text-right">
                           <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
-                          <span className="mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r ${aplicarBg} text-white`}>
                             Aplicar
                           </span>
                         </div>
@@ -423,7 +468,7 @@ export default function HomeWorker() {
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100">
-              <button onClick={() => setMostrarFiltros(false)} className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition">
+              <button onClick={() => setMostrarFiltros(false)} className={`w-full py-4 bg-gradient-to-r ${categoriaActivaBg} text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition`}>
                 Ver {trabajosFiltrados.length} trabajo{trabajosFiltrados.length !== 1 ? 's' : ''}
               </button>
             </div>
@@ -475,7 +520,7 @@ export default function HomeWorker() {
             <h3 className="font-extrabold text-gray-900 text-lg mb-1 text-center">Cambiar modo</h3>
             <p className="text-gray-400 text-sm text-center mb-5">Alterna entre tus perfiles sin cerrar sesión</p>
             <div className="flex flex-col gap-3 mb-4">
-              {(['flekser','empresa','viajero'] as string[]).map((r) => {
+              {(['flekser','empresa'] as string[]).map((r) => {
                 const info = rolInfo[r];
                 const esActivo = r === 'flekser';
                 return (
@@ -485,7 +530,7 @@ export default function HomeWorker() {
                     <div className="flex-1 text-left">
                       <p className={`font-extrabold ${esActivo ? 'text-white' : 'text-gray-900'}`}>Modo {info.label}</p>
                       <p className={`text-xs mt-0.5 ${esActivo ? 'text-white/70' : 'text-gray-400'}`}>
-                        {r === 'flekser' ? 'Busca y ofrece servicios' : r === 'empresa' ? 'Gestiona tus solicitudes' : 'Trabaja desde cualquier ciudad'}
+                        {r === 'flekser' ? 'Busca y ofrece servicios' : 'Gestiona tus solicitudes'}
                       </p>
                     </div>
                     {esActivo ? <span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span> : <span className="text-gray-400 text-xs font-bold">Cambiar →</span>}
