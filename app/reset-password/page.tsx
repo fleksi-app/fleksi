@@ -8,16 +8,26 @@ export default function ResetPassword() {
   const [verPassword, setVerPassword] = useState(false);
   const [verConfirmar, setVerConfirmar] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [listo, setListo] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState(false);
 
   useEffect(() => {
-    // Supabase maneja el token automáticamente via URL hash
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // Escuchar el evento de recuperación de contraseña
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // El usuario está listo para cambiar su contraseña
+        setListo(true);
+      }
+      if (event === 'SIGNED_IN' && session) {
+        setListo(true);
       }
     });
+
+    // También verificar si ya hay sesión activa
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setListo(true);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -33,7 +43,7 @@ export default function ResetPassword() {
       setExito(true);
       setTimeout(() => { window.location.href = '/login'; }, 3000);
     } catch (err: any) {
-      setError('No pudimos actualizar tu contraseña. El enlace puede haber expirado.');
+      setError('No pudimos actualizar tu contraseña. Intenta solicitar un nuevo enlace.');
     } finally {
       setCargando(false);
     }
@@ -65,8 +75,19 @@ export default function ResetPassword() {
             <span className="text-4xl">✅</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Contraseña actualizada!</h1>
-          <p className="text-gray-400 mb-6">Tu contraseña fue cambiada exitosamente. Redirigiendo al inicio de sesión...</p>
+          <p className="text-gray-400 mb-6">Tu contraseña fue cambiada exitosamente. Redirigiendo...</p>
           <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"/>
+        </div>
+      </main>
+    );
+  }
+
+  if (!listo) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"/>
+          <p className="text-gray-400">Verificando enlace...</p>
         </div>
       </main>
     );
@@ -130,6 +151,10 @@ export default function ResetPassword() {
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
             {cargando ? 'Actualizando...' : 'Actualizar contraseña →'}
           </button>
+
+          <a href="/login" className="text-center text-sm text-gray-400 hover:text-purple-600 transition">
+            ← Volver al inicio de sesión
+          </a>
         </div>
       </div>
     </main>
