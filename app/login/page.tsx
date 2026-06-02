@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [cargandoProvider, setCargandoProvider] = useState('');
   const [error, setError] = useState('');
@@ -32,7 +33,7 @@ export default function Login() {
           .select('rol, rol_activo')
           .eq('id', data.user.id)
           .single();
-        const rol = usuario?.rol || 'flekser';
+        const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
         redirigirPorRol(rol);
       }
     } catch (err: any) {
@@ -73,6 +74,24 @@ export default function Login() {
       setCargandoRecuperar(false);
     }
   };
+
+  const Ojito = ({ ver, toggle }: { ver: boolean; toggle: () => void }) => (
+    <button type="button" onClick={toggle}
+      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+      {ver ? (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      ) : (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      )}
+    </button>
+  );
 
   const Logo = () => (
     <div className="flex items-center justify-center gap-3 mb-8">
@@ -158,10 +177,16 @@ export default function Login() {
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500 mb-1 block tracking-wide uppercase">Contraseña</label>
-            <input type="password" placeholder="••••••••" value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50"/>
+            <div className="relative">
+              <input
+                type={verPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50 pr-14"/>
+              <Ojito ver={verPassword} toggle={() => setVerPassword(!verPassword)}/>
+            </div>
           </div>
           <div className="flex justify-end -mt-2">
             <button onClick={() => { setModoRecuperar(true); setError(''); }}
