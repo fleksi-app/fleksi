@@ -85,12 +85,15 @@ export default function Nav({ activo }: { activo: string }) {
     setCambiandoRol(true);
     try {
       const rolesActuales = roles.includes(nuevoRol) ? roles : [...roles, nuevoRol];
-      await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuarioId);
+      await supabase.from('usuarios').update({
+        rol_activo: nuevoRol,
+        roles: rolesActuales,
+        ...(nuevoRol === 'empresa' && { modo_viajero: false }),
+      }).eq('id', usuarioId);
       setRol(nuevoRol);
       setRoles(rolesActuales);
       setMostrarCambioRol(false);
       if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
-      else if (nuevoRol === 'viajero') window.location.href = '/home-viajero';
       else window.location.href = '/home';
     } finally { setCambiandoRol(false); }
   };
@@ -106,16 +109,14 @@ export default function Nav({ activo }: { activo: string }) {
   const rolInfo: any = {
     flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
     empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
-    viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
   };
 
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
-  const inicio = esEmpresa ? '/home-empresa' : esViajero ? '/home-viajero' : '/home';
+  const inicio = esEmpresa ? '/home-empresa' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
 
-  const colorActivo = esEmpresa ? 'text-blue-900' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const colorPlus = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const colorActivo = esEmpresa ? 'text-blue-900' : 'text-purple-600';
+  const colorPlus = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
 
   const items = [
     { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio', clase: 'tour-home' },
@@ -179,7 +180,7 @@ export default function Nav({ activo }: { activo: string }) {
             <h3 className="font-extrabold text-gray-900 text-lg mb-1 text-center">Cambiar modo</h3>
             <p className="text-gray-400 text-sm text-center mb-5">Alterna entre tus perfiles sin cerrar sesión</p>
             <div className="flex flex-col gap-3 mb-4">
-              {(['flekser', 'empresa', 'viajero'] as string[]).map((r) => {
+              {(['flekser', 'empresa'] as string[]).map((r) => {
                 const info = rolInfo[r];
                 const esActivo = rol === r;
                 return (
@@ -193,7 +194,7 @@ export default function Nav({ activo }: { activo: string }) {
                     <div className="flex-1 text-left">
                       <p className={`font-extrabold ${esActivo ? 'text-white' : 'text-gray-900'}`}>Modo {info.label}</p>
                       <p className={`text-xs mt-0.5 ${esActivo ? 'text-white/70' : 'text-gray-400'}`}>
-                        {r === 'flekser' ? 'Busca y ofrece servicios' : r === 'empresa' ? 'Gestiona tus solicitudes' : 'Trabaja desde cualquier ciudad'}
+                        {r === 'flekser' ? 'Busca y ofrece servicios' : 'Gestiona tus solicitudes'}
                       </p>
                     </div>
                     {esActivo ? (
@@ -276,7 +277,6 @@ export default function Nav({ activo }: { activo: string }) {
         <div className="max-w-md mx-auto flex justify-around items-center">
           {items.map((item: any) => {
             const estaActivo = activo === item.id;
-
             if (item.href === null) {
               return (
                 <button key={item.id} onClick={() => setMostrarModal(true)}
@@ -288,7 +288,6 @@ export default function Nav({ activo }: { activo: string }) {
                 </button>
               );
             }
-
             return (
               <a key={item.id} href={item.href}
                 className={`relative flex flex-col items-center gap-0.5 px-3 py-1 ${item.clase}`}>
