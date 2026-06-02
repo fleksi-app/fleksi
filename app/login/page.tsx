@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function Login() {
@@ -13,6 +13,35 @@ export default function Login() {
   const [emailRecuperar, setEmailRecuperar] = useState('');
   const [recuperarEnviado, setRecuperarEnviado] = useState(false);
   const [cargandoRecuperar, setCargandoRecuperar] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user) {
+          const { data: usuario } = await supabase
+            .from('usuarios').select('id, rol, rol_activo').eq('id', session.user.id).single();
+          if (!usuario) {
+            await supabase.from('usuarios').insert({
+              id: session.user.id,
+              nombre: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuario',
+              email: session.user.email,
+              foto_url: session.user.user_metadata?.avatar_url || null,
+              rol: 'flekser',
+              rol_activo: 'flekser',
+              roles: ['flekser'],
+              modo_viajero: false,
+            });
+            window.location.href = '/onboarding?rol=flekser&social=true';
+            return;
+          }
+          const rol = usuario.rol_activo || usuario.rol || 'flekser';
+          if (rol === 'empresa') window.location.href = '/home-empresa';
+          else window.location.href = '/home';
+        }
+      });
+    }
+  }, []);
 
   const redirigirPorRol = (rol: string) => {
     if (rol === 'empresa') window.location.href = '/home-empresa';
@@ -64,7 +93,7 @@ export default function Login() {
     setError('');
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailRecuperar, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       });
       if (error) throw error;
       setRecuperarEnviado(true);
@@ -202,7 +231,7 @@ export default function Login() {
 
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px bg-gray-200"/>
-          <span className="text-xs text-gray-400 font-medium">o regístrate con</span>
+          <span className="text-xs text-gray-400 font-medium">o continúa con</span>
           <div className="flex-1 h-px bg-gray-200"/>
         </div>
 
