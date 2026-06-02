@@ -328,10 +328,10 @@ function OnboardingContent() {
       const { data: perfil } = await supabase
         .from('usuarios').select('rol, onboarding_completado').eq('id', user.id).single();
       if (perfil?.onboarding_completado) {
-        redirigir(perfil.rol);
+        redirigir(perfil.rol_activo || perfil.rol);
         return;
       }
-      setRol(perfil?.rol || searchParams.get('rol') || 'flekser');
+      setRol(perfil?.rol_activo || perfil?.rol || searchParams.get('rol') || 'flekser');
       setCargando(false);
     };
     verificar();
