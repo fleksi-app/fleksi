@@ -13,22 +13,27 @@ export default function ResetPassword() {
   const [exito, setExito] = useState(false);
 
   useEffect(() => {
-    // Escuchar el evento de recuperación de contraseña
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setListo(true);
-      }
-      if (event === 'SIGNED_IN' && session) {
-        setListo(true);
-      }
-    });
-
-    // También verificar si ya hay sesión activa
+    // Intentar obtener sesión inmediatamente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setListo(true);
     });
 
-    return () => subscription.unsubscribe();
+    // Escuchar cambios de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        if (session) setListo(true);
+      }
+    });
+
+    // Timeout de seguridad — si en 3 segundos no hay sesión, mostrar el form igual
+    const timeout = setTimeout(() => {
+      setListo(true);
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleReset = async () => {
@@ -43,7 +48,7 @@ export default function ResetPassword() {
       setExito(true);
       setTimeout(() => { window.location.href = '/login'; }, 3000);
     } catch (err: any) {
-      setError('No pudimos actualizar tu contraseña. Intenta solicitar un nuevo enlace.');
+      setError('No pudimos actualizar tu contraseña. Solicita un nuevo enlace desde el login.');
     } finally {
       setCargando(false);
     }
