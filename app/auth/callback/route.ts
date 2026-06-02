@@ -6,6 +6,14 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const type = requestUrl.searchParams.get('type');
+  const token_hash = requestUrl.searchParams.get('token_hash');
+
+  // Recuperación de contraseña
+  if (type === 'recovery' && token_hash) {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/reset-password?token_hash=${token_hash}&type=recovery`
+    );
+  }
 
   if (code) {
     const supabase = createClient(
@@ -15,10 +23,6 @@ export async function GET(request: NextRequest) {
 
     await supabase.auth.exchangeCodeForSession(code);
 
-    if (type === 'recovery') {
-      return NextResponse.redirect(`${requestUrl.origin}/reset-password`);
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
@@ -26,7 +30,6 @@ export async function GET(request: NextRequest) {
         .from('usuarios').select('id, rol, rol_activo').eq('id', user.id).single();
 
       if (!usuario) {
-        // Usuario nuevo con Google — crear perfil y mandar a onboarding
         await supabase.from('usuarios').insert({
           id: user.id,
           nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',

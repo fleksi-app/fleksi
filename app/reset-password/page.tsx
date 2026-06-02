@@ -1,39 +1,39 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [verPassword, setVerPassword] = useState(false);
   const [verConfirmar, setVerConfirmar] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [listo, setListo] = useState(false);
+  const [verificando, setVerificando] = useState(true);
   const [error, setError] = useState('');
   const [exito, setExito] = useState(false);
 
   useEffect(() => {
-    // Intentar obtener sesión inmediatamente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setListo(true);
-    });
+    const token_hash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
 
-    // Escuchar cambios de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        if (session) setListo(true);
-      }
-    });
-
-    // Timeout de seguridad — si en 3 segundos no hay sesión, mostrar el form igual
-    const timeout = setTimeout(() => {
-      setListo(true);
-    }, 3000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+    if (token_hash && type === 'recovery') {
+      supabase.auth.verifyOtp({ token_hash, type: 'recovery' }).then(({ error }) => {
+        if (error) {
+          setError('El enlace ha expirado. Solicita uno nuevo desde el login.');
+        }
+        setVerificando(false);
+      });
+    } else {
+      // Sin token_hash — verificar si ya hay sesión activa
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          setError('Enlace inválido. Solicita uno nuevo desde el login.');
+        }
+        setVerificando(false);
+      });
+    }
   }, []);
 
   const handleReset = async () => {
@@ -48,7 +48,7 @@ export default function ResetPassword() {
       setExito(true);
       setTimeout(() => { window.location.href = '/login'; }, 3000);
     } catch (err: any) {
-      setError('No pudimos actualizar tu contraseña. Solicita un nuevo enlace desde el login.');
+      setError('No pudimos actualizar tu contraseña. Solicita un nuevo enlace.');
     } finally {
       setCargando(false);
     }
@@ -87,7 +87,7 @@ export default function ResetPassword() {
     );
   }
 
-  if (!listo) {
+  if (verificando) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center">
@@ -101,7 +101,6 @@ export default function ResetPassword() {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full">
-
         <div className="flex items-center justify-center gap-3 mb-8">
           <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
             <defs>
@@ -122,46 +121,57 @@ export default function ResetPassword() {
         <p className="text-gray-400 mb-8 font-light">Elige una contraseña segura para tu cuenta.</p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
+            {error}
+            {error.includes('expirado') && (
+              <a href="/login" className="block mt-2 font-bold underline">Volver al login →</a>
+            )}
+          </div>
         )}
 
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block tracking-wide uppercase">Nueva contraseña</label>
-            <div className="relative">
-              <input
-                type={verPassword ? 'text' : 'password'}
-                placeholder="Mínimo 8 caracteres"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50 pr-14"/>
-              <OjitoBTN ver={verPassword} toggle={() => setVerPassword(!verPassword)}/>
+        {!error && (
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block tracking-wide uppercase">Nueva contraseña</label>
+              <div className="relative">
+                <input type={verPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50 pr-14"/>
+                <OjitoBTN ver={verPassword} toggle={() => setVerPassword(!verPassword)}/>
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block tracking-wide uppercase">Confirmar contraseña</label>
-            <div className="relative">
-              <input
-                type={verConfirmar ? 'text' : 'password'}
-                placeholder="Repite tu contraseña"
-                value={confirmar}
-                onChange={(e) => setConfirmar(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleReset()}
-                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50 pr-14"/>
-              <OjitoBTN ver={verConfirmar} toggle={() => setVerConfirmar(!verConfirmar)}/>
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block tracking-wide uppercase">Confirmar contraseña</label>
+              <div className="relative">
+                <input type={verConfirmar ? 'text' : 'password'} placeholder="Repite tu contraseña"
+                  value={confirmar} onChange={(e) => setConfirmar(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleReset()}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-gray-50 pr-14"/>
+                <OjitoBTN ver={verConfirmar} toggle={() => setVerConfirmar(!verConfirmar)}/>
+              </div>
             </div>
+            <button onClick={handleReset} disabled={cargando}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              {cargando ? 'Actualizando...' : 'Actualizar contraseña →'}
+            </button>
+            <a href="/login" className="text-center text-sm text-gray-400 hover:text-purple-600 transition">
+              ← Volver al inicio de sesión
+            </a>
           </div>
-
-          <button onClick={handleReset} disabled={cargando}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
-            {cargando ? 'Actualizando...' : 'Actualizar contraseña →'}
-          </button>
-
-          <a href="/login" className="text-center text-sm text-gray-400 hover:text-purple-600 transition">
-            ← Volver al inicio de sesión
-          </a>
-        </div>
+        )}
       </div>
     </main>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
