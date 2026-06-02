@@ -41,7 +41,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
     storageKey: 'fleksi-auth',
     storage: isBrowser ? cookieStorage : undefined,
   }
