@@ -41,8 +41,30 @@ function RegistroForm() {
     setCargando(true);
     setError('');
     try {
+      // Verificar teléfono duplicado
+      if (telefono) {
+        const telefonoCompleto = `+52${telefono.replace(/\s/g, '')}`;
+        const { data: existente } = await supabase
+          .from('usuarios')
+          .select('id')
+          .eq('telefono', telefonoCompleto)
+          .maybeSingle();
+        if (existente) {
+          setError('Este número de teléfono ya está registrado. ¿Ya tienes cuenta?');
+          setCargando(false);
+          return;
+        }
+      }
+
       const { data, error: authError } = await supabase.auth.signUp({ email, password });
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          setError('Este correo ya está registrado. ¿Ya tienes cuenta?');
+        } else {
+          throw authError;
+        }
+        return;
+      }
       if (data.user) {
         const { error: dbError } = await supabase.from('usuarios').insert({
           id: data.user.id,
@@ -173,9 +195,7 @@ function RegistroForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
                     className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 pr-14"/>
-                  <button
-                    type="button"
-                    onClick={() => setVerPassword(!verPassword)}
+                  <button type="button" onClick={() => setVerPassword(!verPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
                     {verPassword ? (
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
