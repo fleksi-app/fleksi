@@ -58,7 +58,6 @@ export default function HomeEmpresa() {
     await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
     setMostrarCambioRol(false);
     if (nuevoRol === 'flekser') window.location.href = '/home';
-    else if (nuevoRol === 'viajero') window.location.href = '/home-viajero';
     setCambiandoRol(false);
   };
 
@@ -68,7 +67,6 @@ export default function HomeEmpresa() {
   const rolInfo: any = {
     flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },
     empresa: { emoji: '🏢', label: 'Empresa', color: 'from-slate-700 to-blue-900' },
-    viajero: { emoji: '✈️', label: 'Viajero', color: 'from-sky-500 to-teal-500' },
   };
 
   const notifEmoji: any = { nueva_aplicacion:'✋', aplicacion_aceptada:'✅', aplicacion_rechazada:'❌', trabajo_completado:'🎉', nuevo_trabajo:'🔔', pago_liberado:'💰', mensaje_nuevo:'💬' };
@@ -142,18 +140,13 @@ export default function HomeEmpresa() {
 
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
-            <input
-              type="text"
-              placeholder="Filtrar mis servicios por ciudad..."
+            <input type="text" placeholder="Filtrar mis servicios por ciudad..."
               value={busquedaCiudad}
               onChange={(e) => { setBusquedaCiudad(e.target.value); setCiudadFiltro(e.target.value); }}
-              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"
-            />
+              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"/>
             {busquedaCiudad && (
               <button onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">
-                ✕
-              </button>
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">✕</button>
             )}
           </div>
         </div>
@@ -191,7 +184,6 @@ export default function HomeEmpresa() {
               const aplicacionesAceptadas = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='aceptado'||a.estado==='completado');
               const aplicacionesPendientes = (servicio.aplicaciones||[]).filter((a:any)=>a.estado==='pendiente');
               const cuposLabel = getCuposLabel(servicio);
-
               return (
                 <div key={servicio.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                   <div className="flex justify-between items-start mb-3">
@@ -283,7 +275,7 @@ export default function HomeEmpresa() {
             <h3 className="font-extrabold text-gray-900 text-lg mb-1 text-center">Cambiar modo</h3>
             <p className="text-gray-400 text-sm text-center mb-5">Alterna entre tus perfiles sin cerrar sesión</p>
             <div className="flex flex-col gap-3">
-              {(['flekser','empresa','viajero'] as string[]).map((r) => {
+              {(['flekser','empresa'] as string[]).map((r) => {
                 const info = rolInfo[r];
                 const esActivo = r === 'empresa';
                 return (
@@ -292,7 +284,9 @@ export default function HomeEmpresa() {
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${esActivo?'bg-white/20':'bg-gray-100'}`}>{info.emoji}</div>
                     <div className="flex-1 text-left">
                       <p className={`font-extrabold ${esActivo?'text-white':'text-gray-900'}`}>Modo {info.label}</p>
-                      <p className={`text-xs mt-0.5 ${esActivo?'text-white/70':'text-gray-400'}`}>{r==='flekser'?'Busca y ofrece servicios':r==='empresa'?'Gestiona tus solicitudes':'Trabaja desde cualquier ciudad'}</p>
+                      <p className={`text-xs mt-0.5 ${esActivo?'text-white/70':'text-gray-400'}`}>
+                        {r === 'flekser' ? 'Busca y ofrece servicios' : 'Gestiona tus solicitudes'}
+                      </p>
                     </div>
                     {esActivo?<span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span>:<span className="text-gray-400 text-xs font-bold">Cambiar →</span>}
                   </button>
