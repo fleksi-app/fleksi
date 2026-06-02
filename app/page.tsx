@@ -4,26 +4,6 @@ import { supabase } from '@/lib/supabase';
 
 type Plataforma = 'ios' | 'android' | 'windows' | 'mac' | 'otro';
 
-function tocarSonido() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const notas = [523.25, 659.25, 783.99, 1046.5];
-    notas.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.15 + 0.05);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.15 + 0.25);
-      osc.start(ctx.currentTime + i * 0.15);
-      osc.stop(ctx.currentTime + i * 0.15 + 0.3);
-    });
-  } catch (e) {}
-}
-
 export default function Home() {
   const [plataforma, setPlataforma] = useState<Plataforma>('otro');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -240,13 +220,12 @@ export default function Home() {
         {fase === 'boton' && (
           <div className="w-full mt-10 fade-up flex flex-col items-center">
             <a href="/login"
-              onClick={() => tocarSonido()}
               className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-xl hover:opacity-90 transition text-center">
               Sí, empezar ✨
             </a>
             <p className="mt-4 text-gray-400 text-sm">
               ¿Ya tienes cuenta?{' '}
-              <a href="/login" onClick={() => tocarSonido()} className="text-purple-600 font-semibold hover:underline">
+              <a href="/login" className="text-purple-600 font-semibold hover:underline">
                 Inicia sesión
               </a>
             </p>
