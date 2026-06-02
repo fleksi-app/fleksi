@@ -13,10 +13,8 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Siempre intercambiar el code por sesión primero
     await supabase.auth.exchangeCodeForSession(code);
 
-    // Si es recuperación de contraseña, redirigir a reset-password
     if (type === 'recovery') {
       return NextResponse.redirect(`${requestUrl.origin}/reset-password`);
     }
@@ -28,7 +26,18 @@ export async function GET(request: NextRequest) {
         .from('usuarios').select('id, rol, rol_activo').eq('id', user.id).single();
 
       if (!usuario) {
-        return NextResponse.redirect(`${requestUrl.origin}/registro?social=true`);
+        // Usuario nuevo con Google — crear perfil y mandar a onboarding
+        await supabase.from('usuarios').insert({
+          id: user.id,
+          nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+          email: user.email,
+          foto_url: user.user_metadata?.avatar_url || null,
+          rol: 'flekser',
+          rol_activo: 'flekser',
+          roles: ['flekser'],
+          modo_viajero: false,
+        });
+        return NextResponse.redirect(`${requestUrl.origin}/onboarding?rol=flekser&social=true`);
       }
 
       const rol = usuario.rol_activo || usuario.rol || 'flekser';
