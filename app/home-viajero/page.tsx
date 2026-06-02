@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import TourInicial from '@/components/TourInicial';
 
 const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo'];
 
@@ -132,7 +133,7 @@ export default function HomeViajero() {
               <span className="text-white text-xs font-extrabold">Viajero</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
             </button>
-            <button onClick={abrirNotifs} className="relative w-9 h-9 bg-white/15 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/25 transition">
+            <button onClick={abrirNotifs} className="tour-notifs relative w-9 h-9 bg-white/15 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/25 transition">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
               {noLeidas > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">{noLeidas > 9 ? '9+' : noLeidas}</span>}
             </button>
@@ -184,18 +185,13 @@ export default function HomeViajero() {
 
           <div className="relative mb-2">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
-            <input
-              type="text"
-              placeholder="Buscar por ciudad..."
+            <input type="text" placeholder="Buscar por ciudad..."
               value={busquedaCiudad}
               onChange={(e) => { setBusquedaCiudad(e.target.value); setCiudadFiltro(e.target.value); }}
-              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"
-            />
+              className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition text-sm"/>
             {busquedaCiudad && (
               <button onClick={() => { setBusquedaCiudad(''); setCiudadFiltro(''); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">
-                ✕
-              </button>
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition text-lg">✕</button>
             )}
           </div>
 
@@ -330,6 +326,7 @@ export default function HomeViajero() {
         </div>
       )}
 
+      <TourInicial rol="viajero" />
       <Nav activo="inicio" />
     </main>
   );
