@@ -54,10 +54,11 @@ function DetalleTrabajoContent() {
         const visitasSemana = (servicio.visitas_semana || [])
           .filter((v: string) => new Date(v) > hace7dias);
         visitasSemana.push(hoy);
-        await supabase.from('servicios').update({
+        const { error: visitaError } = await supabase.from('servicios').update({
           visitas: (servicio.visitas || 0) + 1,
           visitas_semana: visitasSemana,
         }).eq('id', servicio.id);
+        if (visitaError) console.error('Error visitas:', visitaError);
       }
     }
     setCargandoPagina(false);
@@ -195,7 +196,6 @@ function DetalleTrabajoContent() {
 
       <div className="max-w-md mx-auto px-6 py-4">
 
-        {/* Banner perfil incompleto */}
         {!tieneFoto && !esPropioServicio && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
             <div className="flex items-start gap-3">
@@ -203,7 +203,7 @@ function DetalleTrabajoContent() {
               <div>
                 <p className="font-extrabold text-amber-800 text-sm mb-1">Tu perfil está incompleto</p>
                 <p className="text-amber-700 text-xs leading-relaxed">
-                  Los fleksers sin foto de perfil tienen <span className="font-bold">90% menos probabilidades</span> de ser contratados. Los clientes prefieren ver con quién trabajan.
+                  Los fleksers sin foto de perfil tienen <span className="font-bold">90% menos probabilidades</span> de ser contratados.
                 </p>
                 <a href="/perfil" className="inline-block mt-2 text-xs font-bold text-amber-800 underline">
                   Completar perfil ahora →
