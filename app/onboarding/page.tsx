@@ -326,7 +326,7 @@ function OnboardingContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
       const { data: perfil } = await supabase
-        .from('usuarios').select('rol, onboarding_completado').eq('id', user.id).single();
+        .from('usuarios').select('rol, rol_activo, onboarding_completado').eq('id', user.id).single();
       if (perfil?.onboarding_completado) {
         redirigir(perfil.rol_activo || perfil.rol);
         return;
