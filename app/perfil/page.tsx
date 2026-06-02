@@ -74,6 +74,33 @@ export default function Perfil() {
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [progresoPerfil, setProgresoPerfil] = useState(0);
+
+  // Sección cuenta
+  const [mostrarCuenta, setMostrarCuenta] = useState(false);
+  const [editandoCuenta, setEditandoCuenta] = useState(false);
+  const [cuentaNombre, setCuentaNombre] = useState('');
+  const [cuentaTelefono, setCuentaTelefono] = useState('');
+  const [cuentaCiudad, setCuentaCiudad] = useState('');
+  const [guardandoCuenta, setGuardandoCuenta] = useState(false);
+  const [exitoCuenta, setExitoCuenta] = useState('');
+  const [errorCuenta, setErrorCuenta] = useState('');
+
+  // Cambiar contraseña
+  const [mostrarCambiarPass, setMostrarCambiarPass] = useState(false);
+  const [passActual, setPassActual] = useState('');
+  const [passNueva, setPassNueva] = useState('');
+  const [passConfirmar, setPassConfirmar] = useState('');
+  const [verPassActual, setVerPassActual] = useState(false);
+  const [verPassNueva, setVerPassNueva] = useState(false);
+  const [verPassConfirmar, setVerPassConfirmar] = useState(false);
+  const [guardandoPass, setGuardandoPass] = useState(false);
+  const [exitoPass, setExitoPass] = useState('');
+  const [errorPass, setErrorPass] = useState('');
+
+  // Eliminar cuenta
+  const [mostrarEliminar, setMostrarEliminar] = useState(false);
+  const [confirmEliminar, setConfirmEliminar] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
@@ -94,6 +121,9 @@ export default function Perfil() {
         setFotoUrl(data.foto_url || '');
         setCiudadesVisitadas(data.ciudades_visitadas || []);
         setWalletSaldo(data.wallet_saldo || 0);
+        setCuentaNombre(data.nombre || '');
+        setCuentaTelefono(data.telefono || '');
+        setCuentaCiudad(data.ciudad || '');
 
         const { data: docs } = await supabase.from('documentos').select('*').eq('usuario_id', user.id);
         setDocumentos(docs || []);
@@ -114,7 +144,6 @@ export default function Perfil() {
       const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', user.id);
       setBadges(badgesData || []);
 
-      // Solo reseñas que OTROS hicieron al flekser (es_del_prestador = false)
       const { data: reseñasData } = await supabase
         .from('reseñas')
         .select('*, usuarios!reseñas_cliente_id_fkey(nombre, foto_url)')
@@ -189,6 +218,48 @@ export default function Perfil() {
     cargarPerfil();
   };
 
+  const guardarCuenta = async () => {
+    setGuardandoCuenta(true);
+    setErrorCuenta('');
+    setExitoCuenta('');
+    try {
+      await supabase.from('usuarios').update({
+        nombre: cuentaNombre,
+        telefono: cuentaTelefono,
+        ciudad: cuentaCiudad,
+      }).eq('id', usuario.id);
+      setExitoCuenta('✅ Datos actualizados correctamente');
+      setEditandoCuenta(false);
+      cargarPerfil();
+      setTimeout(() => setExitoCuenta(''), 3000);
+    } catch (err: any) {
+      setErrorCuenta('Error al guardar. Intenta de nuevo.');
+    } finally {
+      setGuardandoCuenta(false);
+    }
+  };
+
+  const cambiarPassword = async () => {
+    setErrorPass('');
+    setExitoPass('');
+    if (!passNueva || !passConfirmar) { setErrorPass('Llena todos los campos'); return; }
+    if (passNueva.length < 8) { setErrorPass('La contraseña debe tener al menos 8 caracteres'); return; }
+    if (passNueva !== passConfirmar) { setErrorPass('Las contraseñas no coinciden'); return; }
+    setGuardandoPass(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passNueva });
+      if (error) throw error;
+      setExitoPass('✅ Contraseña actualizada correctamente');
+      setPassActual(''); setPassNueva(''); setPassConfirmar('');
+      setMostrarCambiarPass(false);
+      setTimeout(() => setExitoPass(''), 3000);
+    } catch (err: any) {
+      setErrorPass('No se pudo actualizar la contraseña. Intenta de nuevo.');
+    } finally {
+      setGuardandoPass(false);
+    }
+  };
+
   const toggleHabilidad = (h: string) => {
     setHabilidadesSeleccionadas(prev =>
       prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]
@@ -247,6 +318,24 @@ export default function Perfil() {
     if (docsAprobados < docsRequeridos.length) pasos.push('Sube y espera aprobación de documentos');
     return pasos;
   };
+
+  const OjitoBTN = ({ ver, toggle }: { ver: boolean; toggle: () => void }) => (
+    <button type="button" onClick={toggle}
+      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+      {ver ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      )}
+    </button>
+  );
 
   if (cargando) {
     return (
@@ -574,6 +663,165 @@ export default function Perfil() {
           )}
           {!editando && habilidadesSeleccionadas.length === 0 && (
             <p className="text-gray-400 text-sm">Edita tu perfil para agregar habilidades</p>
+          )}
+        </div>
+
+        {/* ── SECCIÓN MI CUENTA ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
+          <button onClick={() => setMostrarCuenta(!mostrarCuenta)}
+            className="w-full flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚙️</span>
+              <h3 className="font-extrabold text-gray-900">Mi cuenta</h3>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              className={`text-gray-400 transition-transform ${mostrarCuenta ? 'rotate-180' : ''}`}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+
+          {mostrarCuenta && (
+            <div className="px-5 pb-5 flex flex-col gap-4 border-t border-gray-100 pt-4">
+
+              {exitoCuenta && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoCuenta}</div>}
+              {exitoPass && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoPass}</div>}
+
+              {/* Datos personales */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-bold text-gray-700 text-sm">👤 Datos personales</p>
+                  {!editandoCuenta ? (
+                    <button onClick={() => setEditandoCuenta(true)}
+                      className="text-xs text-purple-600 font-semibold hover:underline">
+                      Editar
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditandoCuenta(false)}
+                        className="text-xs text-gray-400 font-semibold hover:underline">Cancelar</button>
+                      <button onClick={guardarCuenta} disabled={guardandoCuenta}
+                        className="text-xs text-purple-600 font-bold hover:underline disabled:opacity-50">
+                        {guardandoCuenta ? 'Guardando...' : 'Guardar ✓'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Nombre</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaNombre} onChange={(e) => setCuentaNombre(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-purple-300 outline-none text-gray-900 text-sm bg-white"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.nombre || '—'}</p>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Correo electrónico</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.email || '—'}</p>
+                      <span className="text-xs bg-green-100 text-green-600 font-bold px-2 py-0.5 rounded-full">✓ Verificado</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Para cambiar el correo contáctanos</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Teléfono</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaTelefono} onChange={(e) => setCuentaTelefono(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-purple-300 outline-none text-gray-900 text-sm bg-white"
+                        placeholder="+52 55 1234 5678"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.telefono || '—'}</p>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Ciudad</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaCiudad} onChange={(e) => setCuentaCiudad(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-purple-300 outline-none text-gray-900 text-sm bg-white"
+                        placeholder="Ej. Guadalajara"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.ciudad || '—'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {errorCuenta && <p className="text-xs text-red-500 mt-2">{errorCuenta}</p>}
+              </div>
+
+              {/* Seguridad */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="font-bold text-gray-700 text-sm mb-3">🔐 Seguridad</p>
+                <button onClick={() => setMostrarCambiarPass(!mostrarCambiarPass)}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                  <span className="text-sm font-semibold text-gray-700">Cambiar contraseña</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    className={`text-gray-400 transition-transform ${mostrarCambiarPass ? 'rotate-180' : ''}`}>
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+
+                {mostrarCambiarPass && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    {errorPass && <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-xl text-xs">{errorPass}</div>}
+                    <div className="relative">
+                      <input type={verPassNueva ? 'text' : 'password'}
+                        placeholder="Nueva contraseña"
+                        value={passNueva} onChange={(e) => setPassNueva(e.target.value)}
+                        className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm pr-12"/>
+                      <OjitoBTN ver={verPassNueva} toggle={() => setVerPassNueva(!verPassNueva)}/>
+                    </div>
+                    <div className="relative">
+                      <input type={verPassConfirmar ? 'text' : 'password'}
+                        placeholder="Confirmar nueva contraseña"
+                        value={passConfirmar} onChange={(e) => setPassConfirmar(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && cambiarPassword()}
+                        className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm pr-12"/>
+                      <OjitoBTN ver={verPassConfirmar} toggle={() => setVerPassConfirmar(!verPassConfirmar)}/>
+                    </div>
+                    <button onClick={cambiarPassword} disabled={guardandoPass}
+                      className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                      {guardandoPass ? 'Actualizando...' : 'Actualizar contraseña'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Cerrar sesión y eliminar cuenta */}
+              <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+                <button onClick={cerrarSesion}
+                  className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:border-gray-400 transition">
+                  🚪 Cerrar sesión
+                </button>
+
+                <button onClick={() => setMostrarEliminar(!mostrarEliminar)}
+                  className="w-full py-3 border-2 border-red-200 text-red-500 rounded-xl font-semibold text-sm hover:bg-red-50 transition">
+                  🗑️ Eliminar mi cuenta
+                </button>
+
+                {mostrarEliminar && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="text-sm font-bold text-red-700 mb-2">⚠️ Esta acción es irreversible</p>
+                    <p className="text-xs text-red-600 mb-3">Se eliminarán todos tus datos, historial y calificaciones. Escribe <span className="font-bold">ELIMINAR</span> para confirmar.</p>
+                    <input type="text" placeholder="Escribe ELIMINAR"
+                      value={confirmEliminar} onChange={(e) => setConfirmEliminar(e.target.value)}
+                      className="w-full p-3 rounded-xl border-2 border-red-300 outline-none text-gray-900 text-sm mb-3"/>
+                    <button
+                      disabled={confirmEliminar !== 'ELIMINAR'}
+                      onClick={async () => {
+                        await supabase.from('usuarios').delete().eq('id', usuario.id);
+                        await supabase.auth.signOut();
+                        window.location.href = '/';
+                      }}
+                      className="w-full py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-40 hover:bg-red-600 transition">
+                      Eliminar cuenta definitivamente
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
           )}
         </div>
 
