@@ -35,6 +35,7 @@ export default function Catalogo() {
         .from('usuarios')
         .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas')
         .in('rol', ['flekser', 'viajero'])
+        .neq('id', user.id)
         .order('calificacion', { ascending: false });
       setFleksers(data || []);
     } catch (err) {
