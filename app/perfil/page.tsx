@@ -14,6 +14,8 @@ const habilidades = [
 ];
 
 const todosLosBadges = [
+  { tipo: 'fundador', nombre: 'Fundador', emoji: '🏅', desc: 'Uno de los primeros 50 en Fleksi' },
+  { tipo: 'pionero', nombre: 'Pionero', emoji: '🚀', desc: 'Uno de los primeros 100 en Fleksi' },
   { tipo: 'nuevo', nombre: 'Nuevo', emoji: '🆕', desc: 'Recién unido a Fleksi' },
   { tipo: 'primer_trabajo', nombre: 'Primer trabajo', emoji: '🎯', desc: 'Completó su primer trabajo' },
   { tipo: 'cinco_trabajos', nombre: '5 trabajos', emoji: '🔥', desc: 'Completó 5 trabajos' },
@@ -87,10 +89,8 @@ export default function Perfil() {
 
   // Cambiar contraseña
   const [mostrarCambiarPass, setMostrarCambiarPass] = useState(false);
-  const [passActual, setPassActual] = useState('');
   const [passNueva, setPassNueva] = useState('');
   const [passConfirmar, setPassConfirmar] = useState('');
-  const [verPassActual, setVerPassActual] = useState(false);
   const [verPassNueva, setVerPassNueva] = useState(false);
   const [verPassConfirmar, setVerPassConfirmar] = useState(false);
   const [guardandoPass, setGuardandoPass] = useState(false);
@@ -135,7 +135,7 @@ export default function Perfil() {
         if (progreso === 100) {
           try {
             await supabase.from('badges').upsert({
-              usuario_id: user.id, tipo: 'perfil_completo',
+              usuario_id: user.id, tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆',
             }, { onConflict: 'usuario_id,tipo' });
           } catch (e) {}
         }
@@ -250,7 +250,7 @@ export default function Perfil() {
       const { error } = await supabase.auth.updateUser({ password: passNueva });
       if (error) throw error;
       setExitoPass('✅ Contraseña actualizada correctamente');
-      setPassActual(''); setPassNueva(''); setPassConfirmar('');
+      setPassNueva(''); setPassConfirmar('');
       setMostrarCambiarPass(false);
       setTimeout(() => setExitoPass(''), 3000);
     } catch (err: any) {
@@ -403,6 +403,8 @@ export default function Perfil() {
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
                 </span>
+                {tieneBadge('fundador') && <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">🏅 Fundador</span>}
+                {tieneBadge('pionero') && <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">🚀 Pionero</span>}
                 {tieneBadge('verificado') && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>}
                 {tieneBadge('top_rated') && <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">⭐ Top Rated</span>}
                 {perfilCompleto && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>}
@@ -686,7 +688,6 @@ export default function Perfil() {
               {exitoCuenta && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoCuenta}</div>}
               {exitoPass && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoPass}</div>}
 
-              {/* Datos personales */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-bold text-gray-700 text-sm">👤 Datos personales</p>
@@ -750,7 +751,6 @@ export default function Perfil() {
                 {errorCuenta && <p className="text-xs text-red-500 mt-2">{errorCuenta}</p>}
               </div>
 
-              {/* Seguridad */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="font-bold text-gray-700 text-sm mb-3">🔐 Seguridad</p>
                 <button onClick={() => setMostrarCambiarPass(!mostrarCambiarPass)}
@@ -788,7 +788,6 @@ export default function Perfil() {
                 )}
               </div>
 
-              {/* Cerrar sesión y eliminar cuenta */}
               <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
                 <button onClick={cerrarSesion}
                   className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:border-gray-400 transition">
@@ -820,7 +819,6 @@ export default function Perfil() {
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>
