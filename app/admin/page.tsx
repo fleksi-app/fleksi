@@ -14,6 +14,14 @@ const LABEL_DOCS: Record<string, string> = {
   constancia_fiscal: 'Constancia fiscal',
 };
 
+const PERIODOS = [
+  { key: '1m', label: 'Mensual', meses: 1 },
+  { key: '2m', label: 'Bimestral', meses: 2 },
+  { key: '3m', label: 'Trimestral', meses: 3 },
+  { key: '6m', label: 'Semestral', meses: 6 },
+  { key: '12m', label: 'Anual', meses: 12 },
+];
+
 export default function Admin() {
   const [usuario, setUsuario] = useState<any>(null);
   const [verificaciones, setVerificaciones] = useState<any[]>([]);
@@ -28,22 +36,15 @@ export default function Admin() {
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
   const [procesandoDoc, setProcesandoDoc] = useState('');
+  const [periodoReporte, setPeriodoReporte] = useState('1m');
+  const [generandoReporte, setGenerandoReporte] = useState('');
 
-  // Dashboard metrics
   const [metrics, setMetrics] = useState({
-    totalUsuarios: 0,
-    fleksers: 0,
-    empresas: 0,
-    nuevosHoy: 0,
-    nuevosEsteMes: 0,
-    serviciosPublicados: 0,
-    serviciosCompletados: 0,
-    serviciosCancelados: 0,
-    ingresosDia: 0,
-    ingresosMes: 0,
-    comisionAcumulada: 0,
-    ciudadTopNombre: '—',
-    ciudadTopCount: 0,
+    totalUsuarios: 0, fleksers: 0, empresas: 0,
+    nuevosHoy: 0, nuevosEsteMes: 0,
+    serviciosPublicados: 0, serviciosCompletados: 0, serviciosCancelados: 0,
+    ingresosDia: 0, ingresosMes: 0, comisionAcumulada: 0,
+    ciudadTopNombre: '—', ciudadTopCount: 0,
   });
   const [cargandoMetrics, setCargandoMetrics] = useState(true);
 
@@ -52,11 +53,9 @@ export default function Admin() {
   const cargarMetrics = async () => {
     setCargandoMetrics(true);
     try {
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
-      // Usuarios
       const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad');
       const totalUsuarios = usuarios?.length || 0;
       const fleksers = usuarios?.filter(u => u.rol === 'flekser' || u.rol === 'viajero').length || 0;
@@ -64,55 +63,30 @@ export default function Admin() {
       const nuevosHoy = usuarios?.filter(u => new Date(u.created_at) >= hoy).length || 0;
       const nuevosEsteMes = usuarios?.filter(u => new Date(u.created_at) >= inicioMes).length || 0;
 
-      // Ciudad con más actividad
       const ciudadCount: Record<string, number> = {};
-      usuarios?.forEach(u => {
-        if (u.ciudad) ciudadCount[u.ciudad] = (ciudadCount[u.ciudad] || 0) + 1;
-      });
+      usuarios?.forEach(u => { if (u.ciudad) ciudadCount[u.ciudad] = (ciudadCount[u.ciudad] || 0) + 1; });
       const ciudadTop = Object.entries(ciudadCount).sort((a, b) => b[1] - a[1])[0];
 
-      // Servicios
-      const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto, metodo_pago');
-      const serviciosPublicados = servicios?.filter(s => ['activo', 'publicado', 'en_proceso'].includes(s.estado)).length || 0;
+      const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto');
+      const serviciosPublicados = servicios?.filter(s => ['activo','publicado','en_proceso'].includes(s.estado)).length || 0;
       const serviciosCompletados = servicios?.filter(s => s.estado === 'completado' || s.estado === 'pagado').length || 0;
       const serviciosCancelados = servicios?.filter(s => s.estado === 'cancelado').length || 0;
 
-      // Ingresos (comisión de Fleksi = 25% del presupuesto)
-      const serviciosPagadosHoy = servicios?.filter(s =>
-        (s.estado === 'completado' || s.estado === 'pagado') &&
-        new Date(s.created_at) >= hoy
-      ) || [];
-      const serviciosPagadosMes = servicios?.filter(s =>
-        (s.estado === 'completado' || s.estado === 'pagado') &&
-        new Date(s.created_at) >= inicioMes
-      ) || [];
+      const pagadosHoy = servicios?.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && new Date(s.created_at) >= hoy) || [];
+      const pagadosMes = servicios?.filter(s => (s.estado === 'completado' || s.estado === 'pagado') && new Date(s.created_at) >= inicioMes) || [];
 
-      const ingresosDia = serviciosPagadosHoy.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
-      const ingresosMes = serviciosPagadosMes.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
-      const comisionAcumulada = (servicios || [])
-        .filter(s => s.estado === 'completado' || s.estado === 'pagado')
-        .reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0);
+      const ingresosDia = pagadosHoy.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
+      const ingresosMes = pagadosMes.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
+      const comisionAcumulada = (servicios || []).filter(s => s.estado === 'completado' || s.estado === 'pagado').reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0);
 
       setMetrics({
-        totalUsuarios,
-        fleksers,
-        empresas,
-        nuevosHoy,
-        nuevosEsteMes,
-        serviciosPublicados,
-        serviciosCompletados,
-        serviciosCancelados,
-        ingresosDia,
-        ingresosMes,
-        comisionAcumulada,
-        ciudadTopNombre: ciudadTop?.[0] || '—',
-        ciudadTopCount: ciudadTop?.[1] || 0,
+        totalUsuarios, fleksers, empresas, nuevosHoy, nuevosEsteMes,
+        serviciosPublicados, serviciosCompletados, serviciosCancelados,
+        ingresosDia, ingresosMes, comisionAcumulada,
+        ciudadTopNombre: ciudadTop?.[0] || '—', ciudadTopCount: ciudadTop?.[1] || 0,
       });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCargandoMetrics(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setCargandoMetrics(false); }
   };
 
   const cargarDatos = async () => {
@@ -121,44 +95,235 @@ export default function Admin() {
     if (user.email !== ADMIN_EMAIL) { window.location.href = '/home'; return; }
     setUsuario(user);
 
-    const { data: verifs } = await supabase
-      .from('verificaciones')
-      .select('*, usuarios(nombre, foto_url, rol, ciudad, telefono)')
-      .order('created_at', { ascending: false });
+    const { data: verifs } = await supabase.from('verificaciones').select('*, usuarios(nombre, foto_url, rol, ciudad, telefono)').order('created_at', { ascending: false });
     setVerificaciones(verifs || []);
 
-    const { data: docs } = await supabase
-      .from('documentos')
-      .select('*, usuarios(id, nombre, foto_url, rol, ciudad, email)')
-      .order('updated_at', { ascending: false });
+    const { data: docs } = await supabase.from('documentos').select('*, usuarios(id, nombre, foto_url, rol, ciudad, email)').order('updated_at', { ascending: false });
 
     const agrupados: Record<string, any> = {};
     (docs || []).forEach((doc: any) => {
       const uid = doc.usuario_id;
-      if (!agrupados[uid]) {
-        agrupados[uid] = {
-          usuario: doc.usuarios,
-          usuario_id: uid,
-          documentos: [],
-          ultima_actualizacion: doc.updated_at,
-        };
-      }
+      if (!agrupados[uid]) agrupados[uid] = { usuario: doc.usuarios, usuario_id: uid, documentos: [], ultima_actualizacion: doc.updated_at };
       agrupados[uid].documentos.push(doc);
-      if (doc.updated_at > agrupados[uid].ultima_actualizacion) {
-        agrupados[uid].ultima_actualizacion = doc.updated_at;
-      }
+      if (doc.updated_at > agrupados[uid].ultima_actualizacion) agrupados[uid].ultima_actualizacion = doc.updated_at;
     });
 
     setDocumentosPorUsuario(Object.values(agrupados));
     setCargando(false);
   };
 
+  const obtenerDatosReporte = async (meses: number) => {
+    const fin = new Date();
+    const inicio = new Date();
+    inicio.setMonth(inicio.getMonth() - meses);
+
+    const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad');
+    const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto');
+
+    const usuariosPeriodo = (usuarios || []).filter(u => new Date(u.created_at) >= inicio);
+    const serviciosPeriodo = (servicios || []).filter(s => new Date(s.created_at) >= inicio);
+    const completadosPeriodo = serviciosPeriodo.filter(s => s.estado === 'completado' || s.estado === 'pagado');
+
+    const ciudadCount: Record<string, number> = {};
+    (usuarios || []).forEach(u => { if (u.ciudad) ciudadCount[u.ciudad] = (ciudadCount[u.ciudad] || 0) + 1; });
+    const ciudadTop = Object.entries(ciudadCount).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      periodo: { inicio: inicio.toLocaleDateString('es-MX'), fin: fin.toLocaleDateString('es-MX') },
+      usuarios: {
+        total: usuarios?.length || 0,
+        nuevosEnPeriodo: usuariosPeriodo.length,
+        fleksers: (usuarios || []).filter(u => u.rol === 'flekser').length,
+        empresas: (usuarios || []).filter(u => u.rol === 'empresa').length,
+      },
+      servicios: {
+        total: servicios?.length || 0,
+        enPeriodo: serviciosPeriodo.length,
+        activos: serviciosPeriodo.filter(s => ['activo','publicado','en_proceso'].includes(s.estado)).length,
+        completados: completadosPeriodo.length,
+        cancelados: serviciosPeriodo.filter(s => s.estado === 'cancelado').length,
+      },
+      ingresos: {
+        transaccionadoPeriodo: completadosPeriodo.reduce((acc, s) => acc + (s.presupuesto || 0), 0),
+        comisionPeriodo: completadosPeriodo.reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0),
+        comisionAcumulada: (servicios || []).filter(s => s.estado === 'completado' || s.estado === 'pagado').reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0),
+        ticketPromedio: completadosPeriodo.length > 0
+          ? completadosPeriodo.reduce((acc, s) => acc + (s.presupuesto || 0), 0) / completadosPeriodo.length
+          : 0,
+      },
+      ciudad: { nombre: ciudadTop?.[0] || '—', usuarios: ciudadTop?.[1] || 0 },
+    };
+  };
+
+  const descargarExcel = async () => {
+    setGenerandoReporte('excel');
+    try {
+      const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
+      const datos = await obtenerDatosReporte(periodo.meses);
+      const fechaGen = new Date().toLocaleDateString('es-MX');
+
+      const csvRows = [
+        ['REPORTE FLEKSI', '', ''],
+        [`Período: ${periodo.label}`, `${datos.periodo.inicio} — ${datos.periodo.fin}`, ''],
+        [`Generado: ${fechaGen}`, '', ''],
+        ['', '', ''],
+        ['USUARIOS', '', ''],
+        ['Métrica', 'Valor', ''],
+        ['Total registrados', datos.usuarios.total, ''],
+        [`Nuevos en el período (${periodo.label})`, datos.usuarios.nuevosEnPeriodo, ''],
+        ['Fleksers', datos.usuarios.fleksers, ''],
+        ['Empresas', datos.usuarios.empresas, ''],
+        ['', '', ''],
+        ['SERVICIOS', '', ''],
+        ['Métrica', 'Valor', ''],
+        ['Total histórico', datos.servicios.total, ''],
+        [`Publicados en período`, datos.servicios.enPeriodo, ''],
+        ['Activos', datos.servicios.activos, ''],
+        ['Completados en período', datos.servicios.completados, ''],
+        ['Cancelados en período', datos.servicios.cancelados, ''],
+        ['', '', ''],
+        ['INGRESOS (MXN)', '', ''],
+        ['Métrica', 'Valor', ''],
+        [`Transaccionado en período`, `$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        [`Comisión Fleksi en período (25%)`, `$${datos.ingresos.comisionPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        ['Comisión acumulada histórica', `$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        ['Ticket promedio', `$${datos.ingresos.ticketPromedio.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        ['', '', ''],
+        ['GEOGRAFÍA', '', ''],
+        ['Ciudad con más actividad', datos.ciudad.nombre, ''],
+        ['Usuarios en esa ciudad', datos.ciudad.usuarios, ''],
+      ];
+
+      const csvContent = csvRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally { setGenerandoReporte(''); }
+  };
+
+  const descargarPDF = async () => {
+    setGenerandoReporte('pdf');
+    try {
+      const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
+      const datos = await obtenerDatosReporte(periodo.meses);
+      const fechaGen = new Date().toLocaleDateString('es-MX');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Reporte Fleksi</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; color: #111827; }
+            .header { background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .header p { margin: 4px 0 0; opacity: 0.8; font-size: 14px; }
+            .seccion { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+            .seccion h2 { margin: 0 0 16px; font-size: 16px; color: #374151; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+            .card { background: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; text-align: center; }
+            .card .valor { font-size: 28px; font-weight: 800; color: #2563EB; }
+            .card .label { font-size: 11px; color: #6B7280; margin-top: 4px; }
+            .card.verde .valor { color: #059669; }
+            .card.gris .valor { color: #374151; }
+            .card.rojo .valor { color: #DC2626; }
+            .comision { background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; border-radius: 12px; padding: 20px; text-align: center; margin-top: 12px; }
+            .comision .valor { font-size: 36px; font-weight: 800; }
+            .comision .label { opacity: 0.8; font-size: 12px; margin-top: 4px; }
+            .ciudad { background: white; border: 1px solid #DBEAFE; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 16px; }
+            .ciudad .emoji { font-size: 36px; }
+            .ciudad .nombre { font-size: 20px; font-weight: 800; }
+            .ciudad .sub { font-size: 12px; color: #6B7280; }
+            .footer { text-align: center; color: #9CA3AF; font-size: 11px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>⚡ Fleksi — Reporte ${periodo.label}</h1>
+            <p>Período: ${datos.periodo.inicio} — ${datos.periodo.fin} &nbsp;|&nbsp; Generado: ${fechaGen}</p>
+          </div>
+
+          <div class="seccion">
+            <h2>👥 Usuarios</h2>
+            <div class="grid">
+              <div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div>
+              <div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en el período</div></div>
+            </div>
+            <div class="grid3" style="margin-top:12px">
+              <div class="card"><div class="valor" style="color:#7C3AED">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div>
+              <div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div>
+              <div class="card"><div class="valor" style="color:#0891B2">${datos.usuarios.total - datos.usuarios.fleksers - datos.usuarios.empresas}</div><div class="label">Otros</div></div>
+            </div>
+          </div>
+
+          <div class="seccion">
+            <h2>⚡ Servicios</h2>
+            <div class="grid3">
+              <div class="card"><div class="valor" style="color:#2563EB">${datos.servicios.activos}</div><div class="label">Activos</div></div>
+              <div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div>
+              <div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div>
+            </div>
+          </div>
+
+          <div class="seccion">
+            <h2>💰 Ingresos (MXN)</h2>
+            <div class="grid">
+              <div class="card verde">
+                <div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</div>
+                <div class="label">Transaccionado en el período</div>
+              </div>
+              <div class="card">
+                <div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</div>
+                <div class="label">Ticket promedio</div>
+              </div>
+            </div>
+            <div class="comision">
+              <div class="label">Comisión Fleksi acumulada (25%)</div>
+              <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN</div>
+              <div class="label">En el período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN</div>
+            </div>
+          </div>
+
+          <div class="seccion">
+            <h2>📍 Ciudad con más actividad</h2>
+            <div class="ciudad">
+              <div class="emoji">🏙️</div>
+              <div>
+                <div class="nombre">${datos.ciudad.nombre}</div>
+                <div class="sub">${datos.ciudad.usuarios} usuario${datos.ciudad.usuarios !== 1 ? 's' : ''} registrado${datos.ciudad.usuarios !== 1 ? 's' : ''}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            Fleksi · Irapuato, Guanajuato · Reporte generado automáticamente el ${fechaGen}
+          </div>
+
+          <script>window.onload = () => { window.print(); }</script>
+        </body>
+        </html>
+      `;
+
+      const ventana = window.open('', '_blank');
+      if (ventana) {
+        ventana.document.write(html);
+        ventana.document.close();
+      }
+    } finally { setGenerandoReporte(''); }
+  };
+
   const verDocumento = async (url: string, usuarioId: string, tipo: string) => {
     if (url.includes('token=')) { window.open(url, '_blank'); return; }
     try {
       const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-      const path = `${usuarioId}/${tipo}.${ext}`;
-      const { data } = await supabase.storage.from('documentos-verificacion').createSignedUrl(path, 60 * 60);
+      const { data } = await supabase.storage.from('documentos-verificacion').createSignedUrl(`${usuarioId}/${tipo}.${ext}`, 3600);
       if (data?.signedUrl) window.open(data.signedUrl, '_blank');
     } catch (e) { window.open(url, '_blank'); }
   };
@@ -170,13 +335,13 @@ export default function Admin() {
       const { data: todosLosDocs } = await supabase.from('documentos').select('*').eq('usuario_id', usuarioId);
       const { data: usuarioData } = await supabase.from('usuarios').select('rol').eq('id', usuarioId).single();
       const rol = usuarioData?.rol || 'flekser';
-      const requeridos = rol === 'empresa' ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes'] : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
+      const requeridos = rol === 'empresa' ? ['ine_frente','ine_reverso','constancia_fiscal','antecedentes'] : ['ine_frente','ine_reverso','curp','comprobante_domicilio','antecedentes'];
       const docsActualizados = (todosLosDocs || []).map(d => d.id === docId ? { ...d, estado: 'aprobado' } : d);
       const todosAprobados = requeridos.every(tipo => docsActualizados.some(d => d.tipo === tipo && d.estado === 'aprobado'));
       if (todosAprobados) {
         await supabase.from('usuarios').update({ verificado: true }).eq('id', usuarioId);
         await supabase.from('badges').upsert({ usuario_id: usuarioId, tipo: 'verificado', nombre: 'Verificado', emoji: '✅' }, { onConflict: 'usuario_id,tipo' });
-        try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'verificacion_aprobada', titulo: '🏆 ¡Verificación completada!', mensaje: 'Todos tus documentos fueron aprobados. Ya puedes usar Fleksi al 100%.', link: '/perfil' }); } catch (e) {}
+        try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'verificacion_aprobada', titulo: '🏆 ¡Verificación completada!', mensaje: 'Todos tus documentos fueron aprobados.', link: '/perfil' }); } catch (e) {}
       } else {
         try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'documento_aprobado', titulo: '✅ Documento aprobado', mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado.`, link: '/verificacion' }); } catch (e) {}
       }
@@ -221,10 +386,8 @@ export default function Admin() {
   };
 
   const estadoColor = (estado: string) => ({
-    pendiente: 'bg-gray-100 text-gray-600',
-    subido: 'bg-yellow-100 text-yellow-700',
-    en_revision: 'bg-yellow-100 text-yellow-700',
-    aprobado: 'bg-green-100 text-green-700',
+    pendiente: 'bg-gray-100 text-gray-600', subido: 'bg-yellow-100 text-yellow-700',
+    en_revision: 'bg-yellow-100 text-yellow-700', aprobado: 'bg-green-100 text-green-700',
     rechazado: 'bg-red-100 text-red-700',
   }[estado] || 'bg-gray-100 text-gray-600');
 
@@ -263,7 +426,7 @@ export default function Admin() {
           <div className="flex items-center gap-2">
             <button onClick={() => { cargarMetrics(); cargarDatos(); }}
               className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
-              🔄 Actualizar
+              🔄
             </button>
             <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
               ← Perfil
@@ -289,6 +452,7 @@ export default function Admin() {
           </button>
         </div>
 
+        {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
           <div>
             {cargandoMetrics ? (
@@ -300,9 +464,7 @@ export default function Admin() {
 
                 {/* Usuarios */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-lg">👥</span> Usuarios
-                  </h2>
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>👥</span> Usuarios</h2>
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
                       <p className="text-3xl font-extrabold text-blue-700">{metrics.totalUsuarios}</p>
@@ -331,9 +493,7 @@ export default function Admin() {
 
                 {/* Servicios */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-lg">⚡</span> Servicios
-                  </h2>
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>⚡</span> Servicios</h2>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
                       <p className="text-2xl font-extrabold text-blue-700">{metrics.serviciosPublicados}</p>
@@ -352,19 +512,17 @@ export default function Admin() {
 
                 {/* Ingresos */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-lg">💰</span> Ingresos
-                  </h2>
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>💰</span> Ingresos</h2>
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                    <div className="bg-green-50 rounded-xl p-4 border border-green-100">
                       <p className="text-xs text-gray-500 font-semibold mb-1">Hoy</p>
                       <p className="text-2xl font-extrabold text-green-700">${metrics.ingresosDia.toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">MXN transaccionado</p>
+                      <p className="text-xs text-gray-400">MXN</p>
                     </div>
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                    <div className="bg-green-50 rounded-xl p-4 border border-green-100">
                       <p className="text-xs text-gray-500 font-semibold mb-1">Este mes</p>
                       <p className="text-2xl font-extrabold text-green-700">${metrics.ingresosMes.toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">MXN transaccionado</p>
+                      <p className="text-xs text-gray-400">MXN</p>
                     </div>
                   </div>
                   <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4">
@@ -376,9 +534,7 @@ export default function Admin() {
 
                 {/* Ciudad top */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-lg">📍</span> Ciudad con más actividad
-                  </h2>
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📍</span> Ciudad con más actividad</h2>
                   <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
                     <span className="text-4xl">🏙️</span>
                     <div>
@@ -388,7 +544,54 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {/* Última actualización */}
+                {/* ── SECCIÓN DE REPORTES ── */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📥</span> Descargar reporte</h2>
+
+                  <p className="text-xs text-gray-500 mb-3">Selecciona el período y descarga el reporte en el formato que prefieras.</p>
+
+                  {/* Selector de período */}
+                  <div className="flex gap-2 flex-wrap mb-4">
+                    {PERIODOS.map(p => (
+                      <button key={p.key} onClick={() => setPeriodoReporte(p.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                          periodoReporte === p.key
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Botones de descarga */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={descargarExcel}
+                      disabled={!!generandoReporte}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
+                      {generandoReporte === 'excel' ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                      ) : '📊'}
+                      Excel / CSV
+                    </button>
+                    <button
+                      onClick={descargarPDF}
+                      disabled={!!generandoReporte}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                      {generandoReporte === 'pdf' ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                      ) : '📄'}
+                      PDF / Imprimir
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-400 mt-3 text-center">
+                    El PDF se abre en una nueva ventana para imprimir o guardar.
+                    El Excel descarga como archivo CSV compatible con Excel.
+                  </p>
+                </div>
+
                 <p className="text-xs text-gray-400 text-center">
                   Última actualización: {new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -398,6 +601,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -446,7 +650,6 @@ export default function Admin() {
                           <span className="text-gray-400 text-sm">{expandido ? '▲' : '▼'}</span>
                         </div>
                       </button>
-
                       {expandido && (
                         <div className="border-t border-gray-100 p-5">
                           <div className="flex flex-col gap-3">
@@ -498,6 +701,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
