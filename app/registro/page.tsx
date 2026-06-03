@@ -17,6 +17,7 @@ function RegistroForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verPassword, setVerPassword] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +36,10 @@ function RegistroForm() {
     }
     if (password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    if (!aceptaTerminos) {
+      setError('Debes aceptar los Términos y Condiciones y el Aviso de Privacidad para continuar');
       return;
     }
     setCargando(true);
@@ -65,7 +70,6 @@ function RegistroForm() {
       }
 
       if (data.user) {
-        // Contar usuarios antes de insertar
         const { count } = await supabase
           .from('usuarios')
           .select('*', { count: 'exact', head: true });
@@ -79,10 +83,10 @@ function RegistroForm() {
           roles: [rol],
           email,
           modo_viajero: false,
+          terminos_aceptados_at: new Date().toISOString(),
         });
         if (dbError) throw dbError;
 
-        // Asignar badge según número de usuario
         const totalUsuarios = (count || 0) + 1;
         if (totalUsuarios <= 50) {
           await supabase.from('badges').insert({
@@ -230,7 +234,35 @@ function RegistroForm() {
                 </div>
               </div>
 
-              <button onClick={handleRegistro} disabled={cargando}
+              {/* Checkbox T&C */}
+              <div
+                onClick={() => setAceptaTerminos(!aceptaTerminos)}
+                className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
+                  aceptaTerminos ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-200'
+                }`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition ${
+                  aceptaTerminos ? 'bg-purple-600 border-purple-600' : 'border-gray-300'
+                }`}>
+                  {aceptaTerminos && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed" onClick={(e) => e.stopPropagation()}>
+                  He leído y acepto los{" "}
+                  <a href="/terminos" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
+                    Términos y Condiciones
+                  </a>
+                  {" "}y el{" "}
+                  <a href="/privacidad" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
+                    Aviso de Privacidad
+                  </a>
+                  {" "}de Fleksi.
+                </p>
+              </div>
+
+              <button onClick={handleRegistro} disabled={cargando || !aceptaTerminos}
                 className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mt-2 disabled:opacity-50">
                 {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
               </button>
