@@ -23,13 +23,97 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'documentos' | 'verificaciones'>('documentos');
+  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
   const [procesandoDoc, setProcesandoDoc] = useState('');
 
-  useEffect(() => { cargarDatos(); }, []);
+  // Dashboard metrics
+  const [metrics, setMetrics] = useState({
+    totalUsuarios: 0,
+    fleksers: 0,
+    empresas: 0,
+    nuevosHoy: 0,
+    nuevosEsteMes: 0,
+    serviciosPublicados: 0,
+    serviciosCompletados: 0,
+    serviciosCancelados: 0,
+    ingresosDia: 0,
+    ingresosMes: 0,
+    comisionAcumulada: 0,
+    ciudadTopNombre: '—',
+    ciudadTopCount: 0,
+  });
+  const [cargandoMetrics, setCargandoMetrics] = useState(true);
+
+  useEffect(() => { cargarDatos(); cargarMetrics(); }, []);
+
+  const cargarMetrics = async () => {
+    setCargandoMetrics(true);
+    try {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+      // Usuarios
+      const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad');
+      const totalUsuarios = usuarios?.length || 0;
+      const fleksers = usuarios?.filter(u => u.rol === 'flekser' || u.rol === 'viajero').length || 0;
+      const empresas = usuarios?.filter(u => u.rol === 'empresa').length || 0;
+      const nuevosHoy = usuarios?.filter(u => new Date(u.created_at) >= hoy).length || 0;
+      const nuevosEsteMes = usuarios?.filter(u => new Date(u.created_at) >= inicioMes).length || 0;
+
+      // Ciudad con más actividad
+      const ciudadCount: Record<string, number> = {};
+      usuarios?.forEach(u => {
+        if (u.ciudad) ciudadCount[u.ciudad] = (ciudadCount[u.ciudad] || 0) + 1;
+      });
+      const ciudadTop = Object.entries(ciudadCount).sort((a, b) => b[1] - a[1])[0];
+
+      // Servicios
+      const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto, metodo_pago');
+      const serviciosPublicados = servicios?.filter(s => ['activo', 'publicado', 'en_proceso'].includes(s.estado)).length || 0;
+      const serviciosCompletados = servicios?.filter(s => s.estado === 'completado' || s.estado === 'pagado').length || 0;
+      const serviciosCancelados = servicios?.filter(s => s.estado === 'cancelado').length || 0;
+
+      // Ingresos (comisión de Fleksi = 25% del presupuesto)
+      const serviciosPagadosHoy = servicios?.filter(s =>
+        (s.estado === 'completado' || s.estado === 'pagado') &&
+        new Date(s.created_at) >= hoy
+      ) || [];
+      const serviciosPagadosMes = servicios?.filter(s =>
+        (s.estado === 'completado' || s.estado === 'pagado') &&
+        new Date(s.created_at) >= inicioMes
+      ) || [];
+
+      const ingresosDia = serviciosPagadosHoy.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
+      const ingresosMes = serviciosPagadosMes.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
+      const comisionAcumulada = (servicios || [])
+        .filter(s => s.estado === 'completado' || s.estado === 'pagado')
+        .reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0);
+
+      setMetrics({
+        totalUsuarios,
+        fleksers,
+        empresas,
+        nuevosHoy,
+        nuevosEsteMes,
+        serviciosPublicados,
+        serviciosCompletados,
+        serviciosCancelados,
+        ingresosDia,
+        ingresosMes,
+        comisionAcumulada,
+        ciudadTopNombre: ciudadTop?.[0] || '—',
+        ciudadTopCount: ciudadTop?.[1] || 0,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargandoMetrics(false);
+    }
+  };
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -70,136 +154,54 @@ export default function Admin() {
   };
 
   const verDocumento = async (url: string, usuarioId: string, tipo: string) => {
-    if (url.includes('token=')) {
-      window.open(url, '_blank');
-      return;
-    }
+    if (url.includes('token=')) { window.open(url, '_blank'); return; }
     try {
       const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
       const path = `${usuarioId}/${tipo}.${ext}`;
-      const { data } = await supabase.storage
-        .from('documentos-verificacion')
-        .createSignedUrl(path, 60 * 60);
+      const { data } = await supabase.storage.from('documentos-verificacion').createSignedUrl(path, 60 * 60);
       if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-    } catch (e) {
-      window.open(url, '_blank');
-    }
+    } catch (e) { window.open(url, '_blank'); }
   };
 
   const aprobarDoc = async (docId: string, usuarioId: string, nombreUsuario: string, tipoDoc: string) => {
     setProcesandoDoc(docId);
     try {
-      await supabase.from('documentos').update({
-        estado: 'aprobado',
-        motivo_rechazo: null,
-        updated_at: new Date().toISOString(),
-      }).eq('id', docId);
-
-      const { data: todosLosDocs } = await supabase
-        .from('documentos').select('*').eq('usuario_id', usuarioId);
-
-      const { data: usuarioData } = await supabase
-        .from('usuarios').select('rol').eq('id', usuarioId).single();
-
+      await supabase.from('documentos').update({ estado: 'aprobado', motivo_rechazo: null, updated_at: new Date().toISOString() }).eq('id', docId);
+      const { data: todosLosDocs } = await supabase.from('documentos').select('*').eq('usuario_id', usuarioId);
+      const { data: usuarioData } = await supabase.from('usuarios').select('rol').eq('id', usuarioId).single();
       const rol = usuarioData?.rol || 'flekser';
-      const requeridos = rol === 'empresa'
-        ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes']
-        : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
-
-      const docsActualizados = (todosLosDocs || []).map(d =>
-        d.id === docId ? { ...d, estado: 'aprobado' } : d
-      );
-
-      const todosAprobados = requeridos.every(tipo =>
-        docsActualizados.some(d => d.tipo === tipo && d.estado === 'aprobado')
-      );
-
+      const requeridos = rol === 'empresa' ? ['ine_frente', 'ine_reverso', 'constancia_fiscal', 'antecedentes'] : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio', 'antecedentes'];
+      const docsActualizados = (todosLosDocs || []).map(d => d.id === docId ? { ...d, estado: 'aprobado' } : d);
+      const todosAprobados = requeridos.every(tipo => docsActualizados.some(d => d.tipo === tipo && d.estado === 'aprobado'));
       if (todosAprobados) {
         await supabase.from('usuarios').update({ verificado: true }).eq('id', usuarioId);
-        await supabase.from('badges').upsert(
-          { usuario_id: usuarioId, tipo: 'verificado' },
-          { onConflict: 'usuario_id,tipo' }
-        );
-        try {
-          await supabase.from('notificaciones').insert({
-            usuario_id: usuarioId,
-            tipo: 'verificacion_aprobada',
-            titulo: '🏆 ¡Verificación completada!',
-            mensaje: 'Todos tus documentos fueron aprobados. Ya puedes usar Fleksi al 100%.',
-            link: '/perfil',
-          });
-        } catch (e) {}
+        await supabase.from('badges').upsert({ usuario_id: usuarioId, tipo: 'verificado', nombre: 'Verificado', emoji: '✅' }, { onConflict: 'usuario_id,tipo' });
+        try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'verificacion_aprobada', titulo: '🏆 ¡Verificación completada!', mensaje: 'Todos tus documentos fueron aprobados. Ya puedes usar Fleksi al 100%.', link: '/perfil' }); } catch (e) {}
       } else {
-        try {
-          await supabase.from('notificaciones').insert({
-            usuario_id: usuarioId,
-            tipo: 'documento_aprobado',
-            titulo: '✅ Documento aprobado',
-            mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado. Sigue subiendo los documentos restantes.`,
-            link: '/verificacion',
-          });
-        } catch (e) {}
+        try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'documento_aprobado', titulo: '✅ Documento aprobado', mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue aprobado.`, link: '/verificacion' }); } catch (e) {}
       }
-
       await cargarDatos();
-    } finally {
-      setProcesandoDoc('');
-    }
+    } finally { setProcesandoDoc(''); }
   };
 
   const rechazarDoc = async (docId: string, usuarioId: string, tipoDoc: string) => {
     if (!motivoDoc.trim()) { alert('Escribe el motivo del rechazo'); return; }
     setProcesandoDoc(docId);
     try {
-      await supabase.from('documentos').update({
-        estado: 'rechazado',
-        motivo_rechazo: motivoDoc,
-        updated_at: new Date().toISOString(),
-      }).eq('id', docId);
-
-      try {
-        await supabase.from('notificaciones').insert({
-          usuario_id: usuarioId,
-          tipo: 'documento_rechazado',
-          titulo: '❌ Documento rechazado',
-          mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue rechazado: ${motivoDoc}. Por favor súbelo de nuevo.`,
-          link: '/verificacion',
-        });
-      } catch (e) {}
-
-      setRechazandoDoc('');
-      setMotivoDoc('');
+      await supabase.from('documentos').update({ estado: 'rechazado', motivo_rechazo: motivoDoc, updated_at: new Date().toISOString() }).eq('id', docId);
+      try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'documento_rechazado', titulo: '❌ Documento rechazado', mensaje: `Tu ${LABEL_DOCS[tipoDoc] || tipoDoc} fue rechazado: ${motivoDoc}.`, link: '/verificacion' }); } catch (e) {}
+      setRechazandoDoc(''); setMotivoDoc('');
       await cargarDatos();
-    } finally {
-      setProcesandoDoc('');
-    }
+    } finally { setProcesandoDoc(''); }
   };
 
   const aprobar = async (id: string, usuarioId: string, nombreUsuario: string) => {
     setProcesando(id);
     try {
-      await supabase.from('verificaciones').update({
-        estado: 'aprobado',
-        revisado_por: usuario.email,
-        revisado_at: new Date().toISOString(),
-      }).eq('id', id);
-
+      await supabase.from('verificaciones').update({ estado: 'aprobado', revisado_por: usuario.email, revisado_at: new Date().toISOString() }).eq('id', id);
       await supabase.from('usuarios').update({ verificado: true }).eq('id', usuarioId);
-      await supabase.from('badges').upsert(
-        { usuario_id: usuarioId, tipo: 'verificado' },
-        { onConflict: 'usuario_id,tipo' }
-      );
-
-      try {
-        await supabase.from('notificaciones').insert({
-          usuario_id: usuarioId,
-          tipo: 'verificacion_aprobada',
-          titulo: '🏆 ¡Verificación aprobada!',
-          mensaje: 'Tu identidad fue verificada. Ahora apareces con el badge de confianza en tu perfil.',
-          link: '/perfil',
-        });
-      } catch (e) {}
-
+      await supabase.from('badges').upsert({ usuario_id: usuarioId, tipo: 'verificado', nombre: 'Verificado', emoji: '✅' }, { onConflict: 'usuario_id,tipo' });
+      try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'verificacion_aprobada', titulo: '🏆 ¡Verificación aprobada!', mensaje: 'Tu identidad fue verificada.', link: '/perfil' }); } catch (e) {}
       await cargarDatos();
     } finally { setProcesando(''); }
   };
@@ -208,30 +210,12 @@ export default function Admin() {
     if (!motivoRechazo.trim()) { alert('Escribe el motivo del rechazo'); return; }
     setProcesando(id);
     try {
-      const { data: verifData } = await supabase
-        .from('verificaciones').select('usuario_id').eq('id', id).single();
-
-      await supabase.from('verificaciones').update({
-        estado: 'rechazado',
-        motivo_rechazo: motivoRechazo,
-        revisado_por: usuario.email,
-        revisado_at: new Date().toISOString(),
-      }).eq('id', id);
-
+      const { data: verifData } = await supabase.from('verificaciones').select('usuario_id').eq('id', id).single();
+      await supabase.from('verificaciones').update({ estado: 'rechazado', motivo_rechazo: motivoRechazo, revisado_por: usuario.email, revisado_at: new Date().toISOString() }).eq('id', id);
       if (verifData?.usuario_id) {
-        try {
-          await supabase.from('notificaciones').insert({
-            usuario_id: verifData.usuario_id,
-            tipo: 'documento_rechazado',
-            titulo: '❌ Verificación rechazada',
-            mensaje: `Tu verificación fue rechazada: ${motivoRechazo}. Por favor corrige y vuelve a intentarlo.`,
-            link: '/verificacion',
-          });
-        } catch (e) {}
+        try { await supabase.from('notificaciones').insert({ usuario_id: verifData.usuario_id, tipo: 'documento_rechazado', titulo: '❌ Verificación rechazada', mensaje: `Tu verificación fue rechazada: ${motivoRechazo}.`, link: '/verificacion' }); } catch (e) {}
       }
-
-      setRechazando('');
-      setMotivoRechazo('');
+      setRechazando(''); setMotivoRechazo('');
       await cargarDatos();
     } finally { setProcesando(''); }
   };
@@ -244,23 +228,16 @@ export default function Admin() {
     rechazado: 'bg-red-100 text-red-700',
   }[estado] || 'bg-gray-100 text-gray-600');
 
-  const filtradas = verificaciones.filter(v =>
-    filtro === 'todas' ? true : v.estado === filtro
-  );
-
+  const filtradas = verificaciones.filter(v => filtro === 'todas' ? true : v.estado === filtro);
   const conteoVerifs = {
     en_revision: verificaciones.filter(v => v.estado === 'en_revision').length,
     aprobado: verificaciones.filter(v => v.estado === 'aprobado').length,
     rechazado: verificaciones.filter(v => v.estado === 'rechazado').length,
     todas: verificaciones.length,
   };
-
-  const totalDocsSubidos = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'subido').length, 0);
-  const totalDocsAprobados = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'aprobado').length, 0);
-  const totalDocsRechazados = documentosPorUsuario.reduce((acc, u) =>
-    acc + u.documentos.filter((d: any) => d.estado === 'rechazado').length, 0);
+  const totalDocsSubidos = documentosPorUsuario.reduce((acc, u) => acc + u.documentos.filter((d: any) => d.estado === 'subido').length, 0);
+  const totalDocsAprobados = documentosPorUsuario.reduce((acc, u) => acc + u.documentos.filter((d: any) => d.estado === 'aprobado').length, 0);
+  const totalDocsRechazados = documentosPorUsuario.reduce((acc, u) => acc + u.documentos.filter((d: any) => d.estado === 'rechazado').length, 0);
 
   if (cargando) {
     return (
@@ -283,24 +260,143 @@ export default function Admin() {
             <h1 className="text-white font-extrabold text-2xl mb-1">Fleksi Admin</h1>
             <p className="text-white/70 text-sm">{usuario?.email}</p>
           </div>
-          <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
-            ← Perfil
-          </a>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { cargarMetrics(); cargarDatos(); }}
+              className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
+              🔄 Actualizar
+            </button>
+            <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
+              ← Perfil
+            </a>
+          </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-6 py-6">
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+          <button onClick={() => setTab('dashboard')}
+            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            📊 Dashboard
+          </button>
           <button onClick={() => setTab('documentos')}
-            className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             📄 Documentos {totalDocsSubidos > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalDocsSubidos}</span>}
           </button>
           <button onClick={() => setTab('verificaciones')}
-            className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             🪪 Verificaciones {conteoVerifs.en_revision > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{conteoVerifs.en_revision}</span>}
           </button>
         </div>
+
+        {tab === 'dashboard' && (
+          <div>
+            {cargandoMetrics ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+
+                {/* Usuarios */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="text-lg">👥</span> Usuarios
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                      <p className="text-3xl font-extrabold text-blue-700">{metrics.totalUsuarios}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">Total registrados</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-3xl font-extrabold text-green-600">{metrics.nuevosHoy}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">Nuevos hoy</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Fleksers</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Empresas</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <p className="text-xl font-extrabold text-emerald-600">{metrics.nuevosEsteMes}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Este mes</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Servicios */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="text-lg">⚡</span> Servicios
+                  </h2>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+                      <p className="text-2xl font-extrabold text-blue-700">{metrics.serviciosPublicados}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">Activos</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4 border border-green-100 text-center">
+                      <p className="text-2xl font-extrabold text-green-700">{metrics.serviciosCompletados}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">Completados</p>
+                    </div>
+                    <div className="bg-red-50 rounded-xl p-4 border border-red-100 text-center">
+                      <p className="text-2xl font-extrabold text-red-600">{metrics.serviciosCancelados}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">Cancelados</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ingresos */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="text-lg">💰</span> Ingresos
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                      <p className="text-xs text-gray-500 font-semibold mb-1">Hoy</p>
+                      <p className="text-2xl font-extrabold text-green-700">${metrics.ingresosDia.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">MXN transaccionado</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                      <p className="text-xs text-gray-500 font-semibold mb-1">Este mes</p>
+                      <p className="text-2xl font-extrabold text-green-700">${metrics.ingresosMes.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">MXN transaccionado</p>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4">
+                    <p className="text-white/70 text-xs font-semibold mb-1">Comisión acumulada Fleksi (25%)</p>
+                    <p className="text-3xl font-extrabold text-white">${metrics.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-white/60 text-xs mt-1">MXN ganados por Fleksi</p>
+                  </div>
+                </div>
+
+                {/* Ciudad top */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="text-lg">📍</span> Ciudad con más actividad
+                  </h2>
+                  <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                    <span className="text-4xl">🏙️</span>
+                    <div>
+                      <p className="font-extrabold text-gray-900 text-xl">{metrics.ciudadTopNombre}</p>
+                      <p className="text-sm text-gray-500">{metrics.ciudadTopCount} usuario{metrics.ciudadTopCount !== 1 ? 's' : ''} registrado{metrics.ciudadTopCount !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Última actualización */}
+                <p className="text-xs text-gray-400 text-center">
+                  Última actualización: {new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+
+              </div>
+            )}
+          </div>
+        )}
 
         {tab === 'documentos' && (
           <div>
@@ -329,19 +425,13 @@ export default function Admin() {
                 {documentosPorUsuario.map((grupo) => {
                   const docsSubidos = grupo.documentos.filter((d: any) => d.estado === 'subido').length;
                   const expandido = usuarioExpandido === grupo.usuario_id;
-
                   return (
                     <div key={grupo.usuario_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                      <button
-                        onClick={() => setUsuarioExpandido(expandido ? null : grupo.usuario_id)}
+                      <button onClick={() => setUsuarioExpandido(expandido ? null : grupo.usuario_id)}
                         className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                            {grupo.usuario?.foto_url ? (
-                              <img src={grupo.usuario.foto_url} className="w-full h-full object-cover rounded-xl"/>
-                            ) : (
-                              <span className="text-white font-bold text-sm">{grupo.usuario?.nombre?.charAt(0) || '?'}</span>
-                            )}
+                            {grupo.usuario?.foto_url ? <img src={grupo.usuario.foto_url} className="w-full h-full object-cover rounded-xl"/> : <span className="text-white font-bold text-sm">{grupo.usuario?.nombre?.charAt(0) || '?'}</span>}
                           </div>
                           <div className="text-left">
                             <p className="font-extrabold text-gray-900 text-sm">{grupo.usuario?.nombre}</p>
@@ -352,11 +442,7 @@ export default function Admin() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {docsSubidos > 0 && (
-                            <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded-full">
-                              {docsSubidos} por revisar
-                            </span>
-                          )}
+                          {docsSubidos > 0 && <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded-full">{docsSubidos} por revisar</span>}
                           <span className="text-gray-400 text-sm">{expandido ? '▲' : '▼'}</span>
                         </div>
                       </button>
@@ -368,83 +454,37 @@ export default function Admin() {
                               <div key={doc.id} className={`rounded-xl p-4 border ${doc.estado === 'aprobado' ? 'bg-green-50 border-green-100' : doc.estado === 'rechazado' ? 'bg-red-50 border-red-100' : 'bg-yellow-50 border-yellow-100'}`}>
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-gray-900">
-                                      {LABEL_DOCS[doc.tipo] || doc.tipo}
-                                    </span>
-                                    {doc.tipo === 'licencia' && (
-                                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Opcional</span>
-                                    )}
+                                    <span className="text-sm font-bold text-gray-900">{LABEL_DOCS[doc.tipo] || doc.tipo}</span>
+                                    {doc.tipo === 'licencia' && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Opcional</span>}
                                   </div>
                                   <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoColor(doc.estado)}`}>
                                     {doc.estado === 'subido' ? '🔍 Por revisar' : doc.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}
                                   </span>
                                 </div>
-
-                                {doc.motivo_rechazo && (
-                                  <div className="bg-red-100 rounded-lg p-2 mb-2">
-                                    <p className="text-xs text-red-700 font-semibold">Motivo: {doc.motivo_rechazo}</p>
-                                  </div>
-                                )}
-
+                                {doc.motivo_rechazo && <div className="bg-red-100 rounded-lg p-2 mb-2"><p className="text-xs text-red-700 font-semibold">Motivo: {doc.motivo_rechazo}</p></div>}
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  {doc.url && (
-                                    <button
-                                      onClick={() => verDocumento(doc.url, grupo.usuario_id, doc.tipo)}
-                                      className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition">
-                                      👁️ Ver documento
-                                    </button>
-                                  )}
-
+                                  {doc.url && <button onClick={() => verDocumento(doc.url, grupo.usuario_id, doc.tipo)} className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition">👁️ Ver documento</button>}
                                   {doc.estado === 'subido' && (
                                     <>
                                       {rechazandoDoc === doc.id ? (
                                         <div className="w-full flex flex-col gap-2 mt-2">
-                                          <textarea
-                                            value={motivoDoc}
-                                            onChange={(e) => setMotivoDoc(e.target.value)}
-                                            placeholder="Motivo del rechazo..."
-                                            rows={2}
-                                            className="w-full p-2 rounded-lg border-2 border-red-300 outline-none text-gray-900 text-xs resize-none"/>
+                                          <textarea value={motivoDoc} onChange={(e) => setMotivoDoc(e.target.value)} placeholder="Motivo del rechazo..." rows={2} className="w-full p-2 rounded-lg border-2 border-red-300 outline-none text-gray-900 text-xs resize-none"/>
                                           <div className="flex gap-2">
-                                            <button onClick={() => { setRechazandoDoc(''); setMotivoDoc(''); }}
-                                              className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-lg font-semibold text-xs">
-                                              Cancelar
-                                            </button>
-                                            <button
-                                              onClick={() => rechazarDoc(doc.id, grupo.usuario_id, doc.tipo)}
-                                              disabled={procesandoDoc === doc.id}
-                                              className="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold text-xs disabled:opacity-50">
-                                              {procesandoDoc === doc.id ? '...' : 'Confirmar'}
-                                            </button>
+                                            <button onClick={() => { setRechazandoDoc(''); setMotivoDoc(''); }} className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-lg font-semibold text-xs">Cancelar</button>
+                                            <button onClick={() => rechazarDoc(doc.id, grupo.usuario_id, doc.tipo)} disabled={procesandoDoc === doc.id} className="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold text-xs disabled:opacity-50">{procesandoDoc === doc.id ? '...' : 'Confirmar'}</button>
                                           </div>
                                         </div>
                                       ) : (
                                         <div className="flex gap-2 ml-auto">
-                                          <button onClick={() => setRechazandoDoc(doc.id)}
-                                            className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg font-bold text-xs hover:bg-red-50 transition">
-                                            ❌ Rechazar
-                                          </button>
-                                          <button
-                                            onClick={() => aprobarDoc(doc.id, grupo.usuario_id, grupo.usuario?.nombre, doc.tipo)}
-                                            disabled={procesandoDoc === doc.id}
-                                            className="px-3 py-1.5 bg-green-500 text-white rounded-lg font-bold text-xs disabled:opacity-50 hover:bg-green-600 transition">
-                                            {procesandoDoc === doc.id ? '...' : '✅ Aprobar'}
-                                          </button>
+                                          <button onClick={() => setRechazandoDoc(doc.id)} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg font-bold text-xs hover:bg-red-50 transition">❌ Rechazar</button>
+                                          <button onClick={() => aprobarDoc(doc.id, grupo.usuario_id, grupo.usuario?.nombre, doc.tipo)} disabled={procesandoDoc === doc.id} className="px-3 py-1.5 bg-green-500 text-white rounded-lg font-bold text-xs disabled:opacity-50 hover:bg-green-600 transition">{procesandoDoc === doc.id ? '...' : '✅ Aprobar'}</button>
                                         </div>
                                       )}
                                     </>
                                   )}
-
-                                  {doc.estado === 'aprobado' && (
-                                    <span className="text-xs text-green-600 font-semibold ml-auto">Aprobado ✓</span>
-                                  )}
+                                  {doc.estado === 'aprobado' && <span className="text-xs text-green-600 font-semibold ml-auto">Aprobado ✓</span>}
                                 </div>
-
-                                <p className="text-xs text-gray-400 mt-2">
-                                  Actualizado: {new Date(doc.updated_at).toLocaleDateString('es-MX', {
-                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                                  })}
-                                </p>
+                                <p className="text-xs text-gray-400 mt-2">Actualizado: {new Date(doc.updated_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                               </div>
                             ))}
                           </div>
@@ -482,9 +522,7 @@ export default function Admin() {
                 { key: 'todas', label: '📋 Todas' },
               ].map(f => (
                 <button key={f.key} onClick={() => setFiltro(f.key)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${
-                    filtro === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'
-                  }`}>
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtro === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
                   {f.label}
                 </button>
               ))}
@@ -502,11 +540,7 @@ export default function Admin() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                          {v.usuarios?.foto_url ? (
-                            <img src={v.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/>
-                          ) : (
-                            <span className="text-white font-bold">{v.usuarios?.nombre?.charAt(0) || '?'}</span>
-                          )}
+                          {v.usuarios?.foto_url ? <img src={v.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/> : <span className="text-white font-bold">{v.usuarios?.nombre?.charAt(0) || '?'}</span>}
                         </div>
                         <div>
                           <p className="font-extrabold text-gray-900">{v.usuarios?.nombre}</p>
@@ -518,51 +552,26 @@ export default function Admin() {
                       </div>
                       <span className={`text-xs font-bold px-3 py-1 rounded-full ${estadoColor(v.estado)}`}>{v.estado}</span>
                     </div>
-
-                    <p className="text-xs text-gray-400 mb-4">
-                      Enviado: {new Date(v.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-
-                    {v.motivo_rechazo && (
-                      <div className="bg-red-50 rounded-xl p-3 mb-4">
-                        <p className="text-xs font-bold text-red-700">Motivo de rechazo:</p>
-                        <p className="text-xs text-red-600 mt-1">{v.motivo_rechazo}</p>
-                      </div>
-                    )}
-
+                    <p className="text-xs text-gray-400 mb-4">Enviado: {new Date(v.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    {v.motivo_rechazo && <div className="bg-red-50 rounded-xl p-3 mb-4"><p className="text-xs font-bold text-red-700">Motivo de rechazo:</p><p className="text-xs text-red-600 mt-1">{v.motivo_rechazo}</p></div>}
                     {v.estado === 'en_revision' && (
                       <div>
                         {rechazando === v.id ? (
                           <div className="flex flex-col gap-2">
-                            <textarea value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)}
-                              placeholder="Motivo del rechazo..." rows={3}
-                              className="w-full p-3 rounded-xl border-2 border-red-300 outline-none text-gray-900 text-sm resize-none"/>
+                            <textarea value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} placeholder="Motivo del rechazo..." rows={3} className="w-full p-3 rounded-xl border-2 border-red-300 outline-none text-gray-900 text-sm resize-none"/>
                             <div className="flex gap-2">
-                              <button onClick={() => { setRechazando(''); setMotivoRechazo(''); }}
-                                className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">Cancelar</button>
-                              <button onClick={() => rechazar(v.id, v.usuarios?.nombre)}
-                                disabled={procesando === v.id}
-                                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
-                                {procesando === v.id ? 'Rechazando...' : 'Confirmar rechazo'}
-                              </button>
+                              <button onClick={() => { setRechazando(''); setMotivoRechazo(''); }} className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">Cancelar</button>
+                              <button onClick={() => rechazar(v.id, v.usuarios?.nombre)} disabled={procesando === v.id} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">{procesando === v.id ? 'Rechazando...' : 'Confirmar rechazo'}</button>
                             </div>
                           </div>
                         ) : (
                           <div className="flex gap-2">
-                            <button onClick={() => setRechazando(v.id)}
-                              className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">
-                              ❌ Rechazar
-                            </button>
-                            <button onClick={() => aprobar(v.id, v.usuario_id, v.usuarios?.nombre)}
-                              disabled={procesando === v.id}
-                              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">
-                              {procesando === v.id ? 'Aprobando...' : '✅ Aprobar'}
-                            </button>
+                            <button onClick={() => setRechazando(v.id)} className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">❌ Rechazar</button>
+                            <button onClick={() => aprobar(v.id, v.usuario_id, v.usuarios?.nombre)} disabled={procesando === v.id} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">{procesando === v.id ? 'Aprobando...' : '✅ Aprobar'}</button>
                           </div>
                         )}
                       </div>
                     )}
-
                     {v.estado === 'aprobado' && (
                       <div className="bg-green-50 rounded-xl p-3 text-center">
                         <p className="text-green-700 font-bold text-sm">✅ Aprobado por {v.revisado_por}</p>
