@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get('type');
   const token_hash = requestUrl.searchParams.get('token_hash');
 
-  // Recuperación de contraseña
   if (type === 'recovery' && token_hash) {
     return NextResponse.redirect(
       `${requestUrl.origin}/reset-password?token_hash=${token_hash}&type=recovery`
@@ -22,7 +21,6 @@ export async function GET(request: NextRequest) {
     );
 
     await supabase.auth.exchangeCodeForSession(code);
-
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
@@ -30,6 +28,11 @@ export async function GET(request: NextRequest) {
         .from('usuarios').select('id, rol, rol_activo').eq('id', user.id).single();
 
       if (!usuario) {
+        // Contar usuarios antes de insertar
+        const { count } = await supabase
+          .from('usuarios')
+          .select('*', { count: 'exact', head: true });
+
         await supabase.from('usuarios').insert({
           id: user.id,
           nombre: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
@@ -40,6 +43,19 @@ export async function GET(request: NextRequest) {
           roles: ['flekser'],
           modo_viajero: false,
         });
+
+        // Asignar badge según número de usuario
+        const totalUsuarios = (count || 0) + 1;
+        if (totalUsuarios <= 50) {
+          await supabase.from('badges').insert({
+            usuario_id: user.id, tipo: 'fundador', nombre: 'Fundador', emoji: '🏅'
+          });
+        } else if (totalUsuarios <= 100) {
+          await supabase.from('badges').insert({
+            usuario_id: user.id, tipo: 'pionero', nombre: 'Pionero', emoji: '🚀'
+          });
+        }
+
         return NextResponse.redirect(`${requestUrl.origin}/onboarding?rol=flekser&social=true`);
       }
 

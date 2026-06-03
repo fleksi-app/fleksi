@@ -63,7 +63,13 @@ function RegistroForm() {
         }
         return;
       }
+
       if (data.user) {
+        // Contar usuarios antes de insertar
+        const { count } = await supabase
+          .from('usuarios')
+          .select('*', { count: 'exact', head: true });
+
         const { error: dbError } = await supabase.from('usuarios').insert({
           id: data.user.id,
           nombre,
@@ -75,6 +81,18 @@ function RegistroForm() {
           modo_viajero: false,
         });
         if (dbError) throw dbError;
+
+        // Asignar badge según número de usuario
+        const totalUsuarios = (count || 0) + 1;
+        if (totalUsuarios <= 50) {
+          await supabase.from('badges').insert({
+            usuario_id: data.user.id, tipo: 'fundador', nombre: 'Fundador', emoji: '🏅'
+          });
+        } else if (totalUsuarios <= 100) {
+          await supabase.from('badges').insert({
+            usuario_id: data.user.id, tipo: 'pionero', nombre: 'Pionero', emoji: '🚀'
+          });
+        }
 
         try {
           await fetch('/api/enviar-email', {
