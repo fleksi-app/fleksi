@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const ADMIN_EMAIL = 'fernando.najera.nm@gmail.com';
 
@@ -21,6 +22,24 @@ const PERIODOS = [
   { key: '6m', label: 'Semestral', meses: 6 },
   { key: '12m', label: 'Anual', meses: 12 },
 ];
+
+function semanaLabel(fecha: Date) {
+  return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+
+function generarSemanas(semanas: number) {
+  const resultado = [];
+  const hoy = new Date();
+  for (let i = semanas - 1; i >= 0; i--) {
+    const inicio = new Date(hoy);
+    inicio.setDate(inicio.getDate() - i * 7);
+    inicio.setHours(0, 0, 0, 0);
+    const fin = new Date(inicio);
+    fin.setDate(fin.getDate() + 6);
+    resultado.push({ inicio, fin, label: semanaLabel(inicio) });
+  }
+  return resultado;
+}
 
 export default function Admin() {
   const [usuario, setUsuario] = useState<any>(null);
@@ -48,6 +67,10 @@ export default function Admin() {
   });
   const [cargandoMetrics, setCargandoMetrics] = useState(true);
 
+  const [datosUsuarios, setDatosUsuarios] = useState<any[]>([]);
+  const [datosServicios, setDatosServicios] = useState<any[]>([]);
+  const [datosIngresos, setDatosIngresos] = useState<any[]>([]);
+
   useEffect(() => { cargarDatos(); cargarMetrics(); }, []);
 
   const cargarMetrics = async () => {
@@ -57,6 +80,8 @@ export default function Admin() {
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
       const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad');
+      const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto');
+
       const totalUsuarios = usuarios?.length || 0;
       const fleksers = usuarios?.filter(u => u.rol === 'flekser' || u.rol === 'viajero').length || 0;
       const empresas = usuarios?.filter(u => u.rol === 'empresa').length || 0;
@@ -67,7 +92,6 @@ export default function Admin() {
       usuarios?.forEach(u => { if (u.ciudad) ciudadCount[u.ciudad] = (ciudadCount[u.ciudad] || 0) + 1; });
       const ciudadTop = Object.entries(ciudadCount).sort((a, b) => b[1] - a[1])[0];
 
-      const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto');
       const serviciosPublicados = servicios?.filter(s => ['activo','publicado','en_proceso'].includes(s.estado)).length || 0;
       const serviciosCompletados = servicios?.filter(s => s.estado === 'completado' || s.estado === 'pagado').length || 0;
       const serviciosCancelados = servicios?.filter(s => s.estado === 'cancelado').length || 0;
@@ -85,6 +109,51 @@ export default function Admin() {
         ingresosDia, ingresosMes, comisionAcumulada,
         ciudadTopNombre: ciudadTop?.[0] || '—', ciudadTopCount: ciudadTop?.[1] || 0,
       });
+
+      // Gráficas — últimas 8 semanas
+      const semanas = generarSemanas(8);
+
+      const grafUsuarios = semanas.map(s => ({
+        semana: s.label,
+        usuarios: (usuarios || []).filter(u => {
+          const f = new Date(u.created_at);
+          return f >= s.inicio && f <= s.fin;
+        }).length,
+        acumulado: (usuarios || []).filter(u => new Date(u.created_at) <= s.fin).length,
+      }));
+
+      const grafServicios = semanas.map(s => ({
+        semana: s.label,
+        completados: (servicios || []).filter(sv => {
+          const f = new Date(sv.created_at);
+          return (sv.estado === 'completado' || sv.estado === 'pagado') && f >= s.inicio && f <= s.fin;
+        }).length,
+        cancelados: (servicios || []).filter(sv => {
+          const f = new Date(sv.created_at);
+          return sv.estado === 'cancelado' && f >= s.inicio && f <= s.fin;
+        }).length,
+        publicados: (servicios || []).filter(sv => {
+          const f = new Date(sv.created_at);
+          return f >= s.inicio && f <= s.fin;
+        }).length,
+      }));
+
+      const grafIngresos = semanas.map(s => ({
+        semana: s.label,
+        ingresos: (servicios || []).filter(sv => {
+          const f = new Date(sv.created_at);
+          return (sv.estado === 'completado' || sv.estado === 'pagado') && f >= s.inicio && f <= s.fin;
+        }).reduce((acc, sv) => acc + (sv.presupuesto || 0), 0),
+        comision: (servicios || []).filter(sv => {
+          const f = new Date(sv.created_at);
+          return (sv.estado === 'completado' || sv.estado === 'pagado') && f >= s.inicio && f <= s.fin;
+        }).reduce((acc, sv) => acc + (sv.presupuesto || 0) * 0.25, 0),
+      }));
+
+      setDatosUsuarios(grafUsuarios);
+      setDatosServicios(grafServicios);
+      setDatosIngresos(grafIngresos);
+
     } catch (e) { console.error(e); }
     finally { setCargandoMetrics(false); }
   };
@@ -170,22 +239,21 @@ export default function Admin() {
         ['USUARIOS', '', ''],
         ['Métrica', 'Valor', ''],
         ['Total registrados', datos.usuarios.total, ''],
-        [`Nuevos en el período (${periodo.label})`, datos.usuarios.nuevosEnPeriodo, ''],
+        [`Nuevos en el período`, datos.usuarios.nuevosEnPeriodo, ''],
         ['Fleksers', datos.usuarios.fleksers, ''],
         ['Empresas', datos.usuarios.empresas, ''],
         ['', '', ''],
         ['SERVICIOS', '', ''],
         ['Métrica', 'Valor', ''],
         ['Total histórico', datos.servicios.total, ''],
-        [`Publicados en período`, datos.servicios.enPeriodo, ''],
-        ['Activos', datos.servicios.activos, ''],
+        ['Publicados en período', datos.servicios.enPeriodo, ''],
         ['Completados en período', datos.servicios.completados, ''],
         ['Cancelados en período', datos.servicios.cancelados, ''],
         ['', '', ''],
         ['INGRESOS (MXN)', '', ''],
         ['Métrica', 'Valor', ''],
-        [`Transaccionado en período`, `$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
-        [`Comisión Fleksi en período (25%)`, `$${datos.ingresos.comisionPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        ['Transaccionado en período', `$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
+        ['Comisión Fleksi en período (25%)', `$${datos.ingresos.comisionPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
         ['Comisión acumulada histórica', `$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
         ['Ticket promedio', `$${datos.ingresos.ticketPromedio.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`, ''],
         ['', '', ''],
@@ -212,110 +280,63 @@ export default function Admin() {
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
 
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Reporte Fleksi</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 40px; color: #111827; }
-            .header { background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; }
-            .header h1 { margin: 0; font-size: 28px; }
-            .header p { margin: 4px 0 0; opacity: 0.8; font-size: 14px; }
-            .seccion { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-            .seccion h2 { margin: 0 0 16px; font-size: 16px; color: #374151; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-            .card { background: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; text-align: center; }
-            .card .valor { font-size: 28px; font-weight: 800; color: #2563EB; }
-            .card .label { font-size: 11px; color: #6B7280; margin-top: 4px; }
-            .card.verde .valor { color: #059669; }
-            .card.gris .valor { color: #374151; }
-            .card.rojo .valor { color: #DC2626; }
-            .comision { background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; border-radius: 12px; padding: 20px; text-align: center; margin-top: 12px; }
-            .comision .valor { font-size: 36px; font-weight: 800; }
-            .comision .label { opacity: 0.8; font-size: 12px; margin-top: 4px; }
-            .ciudad { background: white; border: 1px solid #DBEAFE; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 16px; }
-            .ciudad .emoji { font-size: 36px; }
-            .ciudad .nombre { font-size: 20px; font-weight: 800; }
-            .ciudad .sub { font-size: 12px; color: #6B7280; }
-            .footer { text-align: center; color: #9CA3AF; font-size: 11px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; }
-            @media print { body { margin: 20px; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>⚡ Fleksi — Reporte ${periodo.label}</h1>
-            <p>Período: ${datos.periodo.inicio} — ${datos.periodo.fin} &nbsp;|&nbsp; Generado: ${fechaGen}</p>
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Fleksi</title>
+        <style>
+          body{font-family:Arial,sans-serif;margin:40px;color:#111827}
+          .header{background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;padding:30px;border-radius:12px;margin-bottom:30px}
+          .header h1{margin:0;font-size:28px}.header p{margin:4px 0 0;opacity:.8;font-size:14px}
+          .seccion{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:20px;margin-bottom:20px}
+          .seccion h2{margin:0 0 16px;font-size:16px;color:#374151;border-bottom:2px solid #E5E7EB;padding-bottom:8px}
+          .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+          .card{background:white;border:1px solid #E5E7EB;border-radius:8px;padding:16px;text-align:center}
+          .card .valor{font-size:28px;font-weight:800;color:#2563EB}
+          .card .label{font-size:11px;color:#6B7280;margin-top:4px}
+          .card.verde .valor{color:#059669}.card.gris .valor{color:#374151}.card.rojo .valor{color:#DC2626}
+          .comision{background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:12px;padding:20px;text-align:center;margin-top:12px}
+          .comision .valor{font-size:36px;font-weight:800}.comision .label{opacity:.8;font-size:12px;margin-top:4px}
+          .ciudad{background:white;border:1px solid #DBEAFE;border-radius:8px;padding:16px;display:flex;align-items:center;gap:16px}
+          .ciudad .emoji{font-size:36px}.ciudad .nombre{font-size:20px;font-weight:800}.ciudad .sub{font-size:12px;color:#6B7280}
+          .footer{text-align:center;color:#9CA3AF;font-size:11px;margin-top:30px;padding-top:20px;border-top:1px solid #E5E7EB}
+        </style></head><body>
+        <div class="header"><h1>⚡ Fleksi — Reporte ${periodo.label}</h1><p>Período: ${datos.periodo.inicio} — ${datos.periodo.fin} | Generado: ${fechaGen}</p></div>
+        <div class="seccion"><h2>👥 Usuarios</h2>
+          <div class="grid">
+            <div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div>
+            <div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en el período</div></div>
           </div>
-
-          <div class="seccion">
-            <h2>👥 Usuarios</h2>
-            <div class="grid">
-              <div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div>
-              <div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en el período</div></div>
-            </div>
-            <div class="grid3" style="margin-top:12px">
-              <div class="card"><div class="valor" style="color:#7C3AED">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div>
-              <div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div>
-              <div class="card"><div class="valor" style="color:#0891B2">${datos.usuarios.total - datos.usuarios.fleksers - datos.usuarios.empresas}</div><div class="label">Otros</div></div>
-            </div>
+          <div class="grid3" style="margin-top:12px">
+            <div class="card"><div class="valor" style="color:#7C3AED">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div>
+            <div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div>
+            <div class="card"><div class="valor" style="color:#0891B2">${datos.usuarios.total - datos.usuarios.fleksers - datos.usuarios.empresas}</div><div class="label">Otros</div></div>
           </div>
-
-          <div class="seccion">
-            <h2>⚡ Servicios</h2>
-            <div class="grid3">
-              <div class="card"><div class="valor" style="color:#2563EB">${datos.servicios.activos}</div><div class="label">Activos</div></div>
-              <div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div>
-              <div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div>
-            </div>
+        </div>
+        <div class="seccion"><h2>⚡ Servicios</h2>
+          <div class="grid3">
+            <div class="card"><div class="valor" style="color:#2563EB">${datos.servicios.activos}</div><div class="label">Activos</div></div>
+            <div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div>
+            <div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div>
           </div>
-
-          <div class="seccion">
-            <h2>💰 Ingresos (MXN)</h2>
-            <div class="grid">
-              <div class="card verde">
-                <div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</div>
-                <div class="label">Transaccionado en el período</div>
-              </div>
-              <div class="card">
-                <div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</div>
-                <div class="label">Ticket promedio</div>
-              </div>
-            </div>
-            <div class="comision">
-              <div class="label">Comisión Fleksi acumulada (25%)</div>
-              <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN</div>
-              <div class="label">En el período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN</div>
-            </div>
+        </div>
+        <div class="seccion"><h2>💰 Ingresos (MXN)</h2>
+          <div class="grid">
+            <div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div>
+            <div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div>
           </div>
-
-          <div class="seccion">
-            <h2>📍 Ciudad con más actividad</h2>
-            <div class="ciudad">
-              <div class="emoji">🏙️</div>
-              <div>
-                <div class="nombre">${datos.ciudad.nombre}</div>
-                <div class="sub">${datos.ciudad.usuarios} usuario${datos.ciudad.usuarios !== 1 ? 's' : ''} registrado${datos.ciudad.usuarios !== 1 ? 's' : ''}</div>
-              </div>
-            </div>
+          <div class="comision">
+            <div class="label">Comisión Fleksi acumulada (25%)</div>
+            <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
+            <div class="label">En el período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
           </div>
-
-          <div class="footer">
-            Fleksi · Irapuato, Guanajuato · Reporte generado automáticamente el ${fechaGen}
-          </div>
-
-          <script>window.onload = () => { window.print(); }</script>
-        </body>
-        </html>
-      `;
+        </div>
+        <div class="seccion"><h2>📍 Ciudad con más actividad</h2>
+          <div class="ciudad"><div class="emoji">🏙️</div><div><div class="nombre">${datos.ciudad.nombre}</div><div class="sub">${datos.ciudad.usuarios} usuario${datos.ciudad.usuarios!==1?'s':''} registrado${datos.ciudad.usuarios!==1?'s':''}</div></div></div>
+        </div>
+        <div class="footer">Fleksi · Irapuato, Guanajuato · Reporte generado automáticamente el ${fechaGen}</div>
+        <script>window.onload=()=>{window.print()}</script></body></html>`;
 
       const ventana = window.open('', '_blank');
-      if (ventana) {
-        ventana.document.write(html);
-        ventana.document.close();
-      }
+      if (ventana) { ventana.document.write(html); ventana.document.close(); }
     } finally { setGenerandoReporte(''); }
   };
 
@@ -402,6 +423,8 @@ export default function Admin() {
   const totalDocsAprobados = documentosPorUsuario.reduce((acc, u) => acc + u.documentos.filter((d: any) => d.estado === 'aprobado').length, 0);
   const totalDocsRechazados = documentosPorUsuario.reduce((acc, u) => acc + u.documentos.filter((d: any) => d.estado === 'rechazado').length, 0);
 
+  const hayDatosGraficas = datosUsuarios.some(d => d.usuarios > 0 || d.acumulado > 0);
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -424,13 +447,8 @@ export default function Admin() {
             <p className="text-white/70 text-sm">{usuario?.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { cargarMetrics(); cargarDatos(); }}
-              className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
-              🔄
-            </button>
-            <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">
-              ← Perfil
-            </a>
+            <button onClick={() => { cargarMetrics(); cargarDatos(); }} className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">🔄</button>
+            <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">← Perfil</a>
           </div>
         </div>
       </div>
@@ -438,21 +456,15 @@ export default function Admin() {
       <div className="max-w-2xl mx-auto px-6 py-6">
 
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          <button onClick={() => setTab('dashboard')}
-            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
-            📊 Dashboard
-          </button>
-          <button onClick={() => setTab('documentos')}
-            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('dashboard')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📊 Dashboard</button>
+          <button onClick={() => setTab('documentos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             📄 Documentos {totalDocsSubidos > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalDocsSubidos}</span>}
           </button>
-          <button onClick={() => setTab('verificaciones')}
-            className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('verificaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             🪪 Verificaciones {conteoVerifs.en_revision > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{conteoVerifs.en_revision}</span>}
           </button>
         </div>
 
-        {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
           <div>
             {cargandoMetrics ? (
@@ -462,7 +474,7 @@ export default function Admin() {
             ) : (
               <div className="flex flex-col gap-4">
 
-                {/* Usuarios */}
+                {/* Métricas */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>👥</span> Usuarios</h2>
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -491,7 +503,6 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {/* Servicios */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>⚡</span> Servicios</h2>
                   <div className="grid grid-cols-3 gap-3">
@@ -510,7 +521,6 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {/* Ingresos */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>💰</span> Ingresos</h2>
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -532,7 +542,6 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {/* Ciudad top */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📍</span> Ciudad con más actividad</h2>
                   <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
@@ -544,52 +553,111 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {/* ── SECCIÓN DE REPORTES ── */}
+                {/* ── GRÁFICAS DE TENDENCIA ── */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-1 flex items-center gap-2"><span>📈</span> Tendencias — últimas 8 semanas</h2>
+                  <p className="text-xs text-gray-400 mb-4">Las gráficas se llenarán conforme crezca Fleksi.</p>
+
+                  {!hayDatosGraficas ? (
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 text-center border border-blue-100">
+                      <p className="text-3xl mb-2">🌱</p>
+                      <p className="font-bold text-gray-700 mb-1">Desde cero</p>
+                      <p className="text-xs text-gray-500">Aquí verás el crecimiento de Fleksi semana a semana. Comparte la app con tus primeros usuarios para ver la primera barra aparecer.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-6">
+                      {/* Gráfica 1: Usuarios acumulados */}
+                      <div>
+                        <p className="text-sm font-bold text-gray-700 mb-3">👥 Crecimiento de usuarios</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <AreaChart data={datosUsuarios} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                            <defs>
+                              <linearGradient id="gradUsuarios" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6"/>
+                            <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#9CA3AF' }}/>
+                            <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} allowDecimals={false}/>
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: 12 }} labelStyle={{ fontWeight: 'bold' }}/>
+                            <Area type="monotone" dataKey="acumulado" stroke="#2563EB" strokeWidth={2} fill="url(#gradUsuarios)" name="Total acumulado"/>
+                            <Area type="monotone" dataKey="usuarios" stroke="#7C3AED" strokeWidth={2} fill="none" name="Nuevos esta semana" strokeDasharray="4 2"/>
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Gráfica 2: Servicios */}
+                      <div>
+                        <p className="text-sm font-bold text-gray-700 mb-3">⚡ Servicios por semana</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart data={datosServicios} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6"/>
+                            <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#9CA3AF' }}/>
+                            <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} allowDecimals={false}/>
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: 12 }} labelStyle={{ fontWeight: 'bold' }}/>
+                            <Legend wrapperStyle={{ fontSize: 11 }}/>
+                            <Bar dataKey="publicados" name="Publicados" fill="#DBEAFE" radius={[4, 4, 0, 0]}/>
+                            <Bar dataKey="completados" name="Completados" fill="#059669" radius={[4, 4, 0, 0]}/>
+                            <Bar dataKey="cancelados" name="Cancelados" fill="#FCA5A5" radius={[4, 4, 0, 0]}/>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Gráfica 3: Ingresos */}
+                      <div>
+                        <p className="text-sm font-bold text-gray-700 mb-3">💰 Ingresos y comisión por semana (MXN)</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <AreaChart data={datosIngresos} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
+                            <defs>
+                              <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#059669" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                              </linearGradient>
+                              <linearGradient id="gradComision" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6"/>
+                            <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#9CA3AF' }}/>
+                            <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickFormatter={v => `$${v}`}/>
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: 12 }} labelStyle={{ fontWeight: 'bold' }} formatter={(v: any) => `$${v.toLocaleString('es-MX')} MXN`}/>
+                            <Legend wrapperStyle={{ fontSize: 11 }}/>
+                            <Area type="monotone" dataKey="ingresos" stroke="#059669" strokeWidth={2} fill="url(#gradIngresos)" name="Transaccionado"/>
+                            <Area type="monotone" dataKey="comision" stroke="#7C3AED" strokeWidth={2} fill="url(#gradComision)" name="Comisión Fleksi"/>
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reportes */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📥</span> Descargar reporte</h2>
-
-                  <p className="text-xs text-gray-500 mb-3">Selecciona el período y descarga el reporte en el formato que prefieras.</p>
-
-                  {/* Selector de período */}
+                  <p className="text-xs text-gray-500 mb-3">Selecciona el período y descarga el reporte.</p>
                   <div className="flex gap-2 flex-wrap mb-4">
                     {PERIODOS.map(p => (
                       <button key={p.key} onClick={() => setPeriodoReporte(p.key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
-                          periodoReporte === p.key
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}>
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
                         {p.label}
                       </button>
                     ))}
                   </div>
-
-                  {/* Botones de descarga */}
                   <div className="flex gap-3">
-                    <button
-                      onClick={descargarExcel}
-                      disabled={!!generandoReporte}
+                    <button onClick={descargarExcel} disabled={!!generandoReporte}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
-                      {generandoReporte === 'excel' ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-                      ) : '📊'}
+                      {generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'}
                       Excel / CSV
                     </button>
-                    <button
-                      onClick={descargarPDF}
-                      disabled={!!generandoReporte}
+                    <button onClick={descargarPDF} disabled={!!generandoReporte}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
-                      {generandoReporte === 'pdf' ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-                      ) : '📄'}
+                      {generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'}
                       PDF / Imprimir
                     </button>
                   </div>
-
-                  <p className="text-xs text-gray-400 mt-3 text-center">
-                    El PDF se abre en una nueva ventana para imprimir o guardar.
-                    El Excel descarga como archivo CSV compatible con Excel.
-                  </p>
+                  <p className="text-xs text-gray-400 mt-3 text-center">El PDF se abre en nueva ventana para imprimir o guardar.</p>
                 </div>
 
                 <p className="text-xs text-gray-400 text-center">
@@ -601,7 +669,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -701,7 +768,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
