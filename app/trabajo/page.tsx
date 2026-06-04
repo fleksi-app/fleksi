@@ -100,21 +100,36 @@ function DetalleTrabajoContent() {
     setCargando(true); setError('');
     try {
       const { error: dbError } = await supabase.from('aplicaciones').insert({
-        servicio_id: trabajo.id, prestador_id: usuario.id,
+        servicio_id: trabajo.id,
+        prestador_id: usuario.id,
         precio_ofrecido: Number(miPrecio) || trabajo.presupuesto,
-        mensaje: mensaje || null, estado: 'pendiente',
+        mensaje: mensaje || null,
+        estado: 'pendiente',
       });
       if (dbError) throw dbError;
       try {
-        await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo: 'nueva_aplicacion', destinatario: trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com',
-            datos: { cliente: trabajo.usuarios?.nombre || 'Cliente', cliente_id: trabajo.cliente_id,
-              prestador: usuario.nombre, prestador_id: usuario.id, trabajo: trabajo.titulo,
-              servicio_id: trabajo.id, precio: miPrecio || trabajo.presupuesto } }) });
+        await fetch('/api/enviar-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'nueva_aplicacion',
+            destinatario: trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com',
+            datos: {
+              cliente: trabajo.usuarios?.nombre || 'Cliente',
+              cliente_id: trabajo.cliente_id,
+              prestador: usuario.nombre,
+              prestador_id: usuario.id,
+              trabajo: trabajo.titulo,
+              servicio_id: trabajo.id,
+              precio: miPrecio || trabajo.presupuesto,
+            },
+          }),
+        });
       } catch (e) {}
       setAplicado(true); setYaAplico(true);
-    } catch { setError('Hubo un error al enviar tu aplicación. Intenta de nuevo.'); }
-    finally { setCargando(false); }
+    } catch (err: any) {
+      setError('Hubo un error al enviar tu aplicación. Intenta de nuevo.');
+    } finally { setCargando(false); }
   };
 
   const categoriaEmoji: any = {
@@ -185,6 +200,7 @@ function DetalleTrabajoContent() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
+
         {!tieneFoto && !esPropioServicio && !sinSesion && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
             <div className="flex items-start gap-3">
@@ -246,18 +262,6 @@ function DetalleTrabajoContent() {
             </div>
           </div>
         </div>
-
-        {trabajo.seguro && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 border border-purple-100 mb-4">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🛡️</span>
-              <div>
-                <h3 className="font-extrabold text-gray-900 mb-1">Fleksi Protege activado</h3>
-                <p className="text-gray-600 text-sm">Cubre daños accidentales durante el trabajo.</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {yaAplico && !aplicado && (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4 text-center">
