@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { calcularBonoReferidor } from '@/lib/comisiones';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +44,51 @@ export async function GET(request: NextRequest) {
         await supabase.from('aplicaciones').update({ pago_liberado: true, estado: 'completado' }).eq('id', appAceptada.id);
 
         try { await supabase.rpc('incrementar_trabajos', { user_id: appAceptada.prestador_id }); } catch (e) {}
+
+        // --- LÓGICA DE REFERIDOS ---
+        const { data: flekser } = await supabase
+          .from('usuarios')
+          .select('referido_por, primer_trabajo_completado')
+          .eq('id', appAceptada.prestador_id)
+          .single();
+
+        if (flekser && !flekser.primer_trabajo_completado) {
+          // Marcar primer trabajo completado
+          await supabase.from('usuarios').update({ primer_trabajo_completado: true }).eq('id', appAceptada.prestador_id);
+
+          // Si tiene referidor, acreditar bono en su Wallet
+          if (flekser.referido_por) {
+            const { data: referidor } = await supabase
+              .from('usuarios')
+              .select('id, nombre, saldo_wallet')
+              .eq('codigo_referido', flekser.referido_por)
+              .single();
+
+            if (referidor) {
+              const bono = calcularBonoReferidor(precio);
+              const nuevoSaldo = (referidor.saldo_wallet || 0) + bono;
+
+              await supabase.from('usuarios').update({ saldo_wallet: nuevoSaldo }).eq('id', referidor.id);
+
+              await supabase.from('transacciones_wallet').insert({
+                usuario_id: referidor.id,
+                tipo: 'bono_referido',
+                monto: bono,
+                descripcion: `Bono por referido — primer trabajo completado ($${precio} MXN)`,
+                estado: 'completado',
+              });
+
+              await supabase.from('notificaciones').insert({
+                usuario_id: referidor.id,
+                tipo: 'pago_liberado',
+                titulo: '🎉 ¡Ganaste un bono por referido!',
+                mensaje: `Tu referido completó su primer trabajo. Recibiste $${bono} MXN en tu Wallet.`,
+                link: '/wallet',
+              });
+            }
+          }
+        }
+        // --- FIN LÓGICA DE REFERIDOS ---
 
         await supabase.from('notificaciones').insert({
           usuario_id: appAceptada.prestador_id,

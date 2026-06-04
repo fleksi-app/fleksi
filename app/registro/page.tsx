@@ -18,6 +18,8 @@ function RegistroForm() {
   const [password, setPassword] = useState('');
   const [verPassword, setVerPassword] = useState(false);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [codigoReferido, setCodigoReferido] = useState('');
+  const [codigoValido, setCodigoValido] = useState<boolean | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,96 +29,74 @@ function RegistroForm() {
       setRol(rolParam);
       setPaso(2);
     }
+    const refParam = searchParams.get('ref');
+    if (refParam) setCodigoReferido(refParam.toUpperCase());
   }, [searchParams]);
 
+  const validarCodigo = async (codigo: string) => {
+    if (!codigo || codigo.length < 4) { setCodigoValido(null); return; }
+    const { data } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigo.toUpperCase()).maybeSingle();
+    setCodigoValido(!!data);
+  };
+
   const handleRegistro = async () => {
-    if (!nombre || !email || !password) {
-      setError('Por favor llena todos los campos');
-      return;
-    }
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-    if (!aceptaTerminos) {
-      setError('Debes aceptar los Términos y Condiciones y el Aviso de Privacidad para continuar');
-      return;
-    }
-    setCargando(true);
-    setError('');
+    if (!nombre || !email || !password) { setError('Por favor llena todos los campos'); return; }
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
+    if (!aceptaTerminos) { setError('Debes aceptar los Términos y Condiciones y el Aviso de Privacidad para continuar'); return; }
+    setCargando(true); setError('');
     try {
       if (telefono) {
         const telefonoCompleto = `+52${telefono.replace(/\s/g, '')}`;
-        const { data: existente } = await supabase
-          .from('usuarios')
-          .select('id')
-          .eq('telefono', telefonoCompleto)
-          .maybeSingle();
-        if (existente) {
-          setError('Este número de teléfono ya está registrado. ¿Ya tienes cuenta?');
-          setCargando(false);
-          return;
-        }
+        const { data: existente } = await supabase.from('usuarios').select('id').eq('telefono', telefonoCompleto).maybeSingle();
+        if (existente) { setError('Este número de teléfono ya está registrado. ¿Ya tienes cuenta?'); setCargando(false); return; }
       }
 
       const { data, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) {
-        if (authError.message.includes('already registered')) {
-          setError('Este correo ya está registrado. ¿Ya tienes cuenta?');
-        } else {
-          throw authError;
-        }
+        if (authError.message.includes('already registered')) setError('Este correo ya está registrado. ¿Ya tienes cuenta?');
+        else throw authError;
         return;
       }
 
       if (data.user) {
-        const { count } = await supabase
-          .from('usuarios')
-          .select('*', { count: 'exact', head: true });
+        const { count } = await supabase.from('usuarios').select('*', { count: 'exact', head: true });
+
+        // Validar código de referido
+        let referidoPor = null;
+        if (codigoReferido) {
+          const { data: referidor } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigoReferido.toUpperCase()).maybeSingle();
+          if (referidor) referidoPor = codigoReferido.toUpperCase();
+        }
 
         const { error: dbError } = await supabase.from('usuarios').insert({
           id: data.user.id,
           nombre,
           telefono: telefono ? `+52${telefono.replace(/\s/g, '')}` : null,
-          rol,
-          rol_activo: rol,
-          roles: [rol],
-          email,
+          rol, rol_activo: rol, roles: [rol], email,
           modo_viajero: false,
           terminos_aceptados_at: new Date().toISOString(),
+          referido_por: referidoPor,
+          primer_trabajo_completado: false,
         });
         if (dbError) throw dbError;
 
         const totalUsuarios = (count || 0) + 1;
         if (totalUsuarios <= 50) {
-          await supabase.from('badges').insert({
-            usuario_id: data.user.id, tipo: 'fundador', nombre: 'Fundador', emoji: '🏅'
-          });
+          await supabase.from('badges').insert({ usuario_id: data.user.id, tipo: 'fundador', nombre: 'Fundador', emoji: '🏅' });
         } else if (totalUsuarios <= 100) {
-          await supabase.from('badges').insert({
-            usuario_id: data.user.id, tipo: 'pionero', nombre: 'Pionero', emoji: '🚀'
-          });
+          await supabase.from('badges').insert({ usuario_id: data.user.id, tipo: 'pionero', nombre: 'Pionero', emoji: '🚀' });
         }
 
         try {
-          await fetch('/api/enviar-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tipo: 'bienvenida',
-              destinatario: email,
-              datos: { nombre, rol, usuario_id: data.user.id },
-            }),
-          });
+          await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'bienvenida', destinatario: email, datos: { nombre, rol, usuario_id: data.user.id } }) });
         } catch (e) {}
 
         window.location.href = `/onboarding?rol=${rol}`;
       }
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
-    } finally {
-      setCargando(false);
-    }
+    } finally { setCargando(false); }
   };
 
   return (
@@ -136,9 +116,7 @@ function RegistroForm() {
             <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
             <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
           </svg>
-          <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            fleksi
-          </span>
+          <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">fleksi</span>
         </div>
 
         {paso === 1 && (
@@ -166,8 +144,7 @@ function RegistroForm() {
 
         {paso === 2 && (
           <div>
-            <button onClick={() => { setPaso(1); setRol(''); }}
-              className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
+            <button onClick={() => { setPaso(1); setRol(''); }} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
               ← Regresar
             </button>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Crea tu cuenta</h1>
@@ -175,19 +152,14 @@ function RegistroForm() {
               Registrándote como <span className="font-semibold text-purple-600">{roles.find(r => r.id === rol)?.titulo}</span>
             </p>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">
-                {error}
-              </div>
-            )}
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
 
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   {rol === 'empresa' ? 'Nombre de la empresa' : 'Nombre completo'}
                 </label>
-                <input type="text"
-                  placeholder={rol === 'empresa' ? 'Ej. Servicios Limpios SA' : 'Ej. María López'}
+                <input type="text" placeholder={rol === 'empresa' ? 'Ej. Servicios Limpios SA' : 'Ej. María López'}
                   value={nombre} onChange={(e) => setNombre(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
@@ -195,25 +167,20 @@ function RegistroForm() {
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Teléfono celular</label>
                 <div className="flex gap-2">
                   <div className="p-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold whitespace-nowrap">🇲🇽 +52</div>
-                  <input type="tel" placeholder="55 1234 5678" value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
+                  <input type="tel" placeholder="55 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)}
                     className="flex-1 p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
                 </div>
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Correo electrónico</label>
-                <input type="email" placeholder="tu@correo.com" value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                <input type="email" placeholder="tu@correo.com" value={email} onChange={(e) => setEmail(e.target.value)}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Contraseña</label>
                 <div className="relative">
-                  <input
-                    type={verPassword ? 'text' : 'password'}
-                    placeholder="Mínimo 8 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                  <input type={verPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres"
+                    value={password} onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRegistro()}
                     className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 pr-14"/>
                   <button type="button" onClick={() => setVerPassword(!verPassword)}
@@ -234,9 +201,39 @@ function RegistroForm() {
                 </div>
               </div>
 
+              {/* Campo código de referido */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">Código de referido <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <div className="relative">
+                  <input type="text" placeholder="Ej. FLEK-MARI1234"
+                    value={codigoReferido}
+                    onChange={(e) => { setCodigoReferido(e.target.value.toUpperCase()); validarCodigo(e.target.value); }}
+                    className={`w-full p-4 rounded-2xl border-2 outline-none transition text-gray-900 uppercase pr-12 ${
+                      codigoValido === true ? 'border-green-400 bg-green-50' :
+                      codigoValido === false ? 'border-red-300 bg-red-50' :
+                      'border-gray-200 focus:border-purple-400'
+                    }`}/>
+                  {codigoValido !== null && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg">
+                      {codigoValido ? '✅' : '❌'}
+                    </span>
+                  )}
+                </div>
+                {codigoValido === true && (
+                  <p className="text-green-600 text-xs font-semibold mt-1.5 flex items-center gap-1">
+                    🎉 ¡Código válido! Pagarás menos comisión en tu primer trabajo
+                  </p>
+                )}
+                {codigoValido === false && (
+                  <p className="text-red-500 text-xs mt-1.5">Código no encontrado, verifica e intenta de nuevo</p>
+                )}
+                {!codigoReferido && (
+                  <p className="text-gray-400 text-xs mt-1.5">Si alguien te refirió y tienes un código, captúralo para ganar hasta $200 extra en tu primer trabajo</p>
+                )}
+              </div>
+
               {/* Checkbox T&C */}
-              <div
-                onClick={() => setAceptaTerminos(!aceptaTerminos)}
+              <div onClick={() => setAceptaTerminos(!aceptaTerminos)}
                 className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                   aceptaTerminos ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-200'
                 }`}>
@@ -251,13 +248,9 @@ function RegistroForm() {
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed" onClick={(e) => e.stopPropagation()}>
                   He leído y acepto los{" "}
-                  <a href="/terminos" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
-                    Términos y Condiciones
-                  </a>
+                  <a href="/terminos" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>Términos y Condiciones</a>
                   {" "}y el{" "}
-                  <a href="/privacidad" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
-                    Aviso de Privacidad
-                  </a>
+                  <a href="/privacidad" target="_blank" className="text-purple-600 font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>Aviso de Privacidad</a>
                   {" "}de Fleksi.
                 </p>
               </div>
@@ -276,7 +269,6 @@ function RegistroForm() {
             </p>
           </div>
         )}
-
       </div>
     </main>
   );
