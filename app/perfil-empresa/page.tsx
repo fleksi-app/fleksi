@@ -63,6 +63,30 @@ export default function PerfilEmpresa() {
   const [verificacion, setVerificacion] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Mi Cuenta
+  const [mostrarCuenta, setMostrarCuenta] = useState(false);
+  const [editandoCuenta, setEditandoCuenta] = useState(false);
+  const [cuentaNombre, setCuentaNombre] = useState('');
+  const [cuentaTelefono, setCuentaTelefono] = useState('');
+  const [cuentaCiudad, setCuentaCiudad] = useState('');
+  const [guardandoCuenta, setGuardandoCuenta] = useState(false);
+  const [exitoCuenta, setExitoCuenta] = useState('');
+  const [errorCuenta, setErrorCuenta] = useState('');
+
+  // Cambiar contraseña
+  const [mostrarCambiarPass, setMostrarCambiarPass] = useState(false);
+  const [passNueva, setPassNueva] = useState('');
+  const [passConfirmar, setPassConfirmar] = useState('');
+  const [verPassNueva, setVerPassNueva] = useState(false);
+  const [verPassConfirmar, setVerPassConfirmar] = useState(false);
+  const [guardandoPass, setGuardandoPass] = useState(false);
+  const [exitoPass, setExitoPass] = useState('');
+  const [errorPass, setErrorPass] = useState('');
+
+  // Eliminar cuenta
+  const [mostrarEliminar, setMostrarEliminar] = useState(false);
+  const [confirmEliminar, setConfirmEliminar] = useState('');
+
   useEffect(() => { cargarPerfil(); }, []);
 
   const cargarPerfil = async () => {
@@ -71,7 +95,7 @@ export default function PerfilEmpresa() {
 
     const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     if (data) {
-      setUsuario({ ...data, id: user.id });
+      setUsuario({ ...data, id: user.id, email: user.email });
       setNombre(data.nombre || '');
       setTelefono(data.telefono || '');
       setDescripcion(data.descripcion || '');
@@ -82,6 +106,9 @@ export default function PerfilEmpresa() {
       setCiudad(data.ciudad || '');
       setFotoUrl(data.foto_url || '');
       setCiudadesCobertura(data.ciudades_cobertura || []);
+      setCuentaNombre(data.nombre || '');
+      setCuentaTelefono(data.telefono || '');
+      setCuentaCiudad(data.ciudad || '');
 
       const { data: docs } = await supabase.from('documentos').select('*').eq('usuario_id', user.id);
       setDocumentos(docs || []);
@@ -90,9 +117,7 @@ export default function PerfilEmpresa() {
 
       if (progreso === 100) {
         try {
-          await supabase.from('badges').upsert({
-            usuario_id: user.id, tipo: 'perfil_completo',
-          }, { onConflict: 'usuario_id,tipo' });
+          await supabase.from('badges').upsert({ usuario_id: user.id, tipo: 'perfil_completo' }, { onConflict: 'usuario_id,tipo' });
         } catch (e) {}
       }
     }
@@ -100,7 +125,6 @@ export default function PerfilEmpresa() {
     const { count } = await supabase.from('servicios').select('id', { count: 'exact' }).eq('cliente_id', user.id);
     setTotalServicios(count || 0);
 
-    // Solo reseñas que prestadores hicieron a la empresa (es_del_prestador = true)
     const { data: reseñasData } = await supabase
       .from('reseñas')
       .select('*, usuarios!reseñas_prestador_id_fkey(nombre, foto_url)')
@@ -110,8 +134,7 @@ export default function PerfilEmpresa() {
       .limit(5);
     setReseñas(reseñasData || []);
 
-    const { data: verifData } = await supabase
-      .from('verificaciones').select('*').eq('usuario_id', user.id).single();
+    const { data: verifData } = await supabase.from('verificaciones').select('*').eq('usuario_id', user.id).single();
     setVerificacion(verifData || null);
 
     setCargando(false);
@@ -164,10 +187,66 @@ export default function PerfilEmpresa() {
     cargarPerfil();
   };
 
+  const guardarCuenta = async () => {
+    setGuardandoCuenta(true);
+    setErrorCuenta('');
+    setExitoCuenta('');
+    try {
+      await supabase.from('usuarios').update({
+        nombre: cuentaNombre,
+        telefono: cuentaTelefono,
+        ciudad: cuentaCiudad,
+      }).eq('id', usuario.id);
+      setExitoCuenta('✅ Datos actualizados correctamente');
+      setEditandoCuenta(false);
+      cargarPerfil();
+      setTimeout(() => setExitoCuenta(''), 3000);
+    } catch (err: any) {
+      setErrorCuenta('Error al guardar. Intenta de nuevo.');
+    } finally { setGuardandoCuenta(false); }
+  };
+
+  const cambiarPassword = async () => {
+    setErrorPass('');
+    setExitoPass('');
+    if (!passNueva || !passConfirmar) { setErrorPass('Llena todos los campos'); return; }
+    if (passNueva.length < 8) { setErrorPass('La contraseña debe tener al menos 8 caracteres'); return; }
+    if (passNueva !== passConfirmar) { setErrorPass('Las contraseñas no coinciden'); return; }
+    setGuardandoPass(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passNueva });
+      if (error) throw error;
+      setExitoPass('✅ Contraseña actualizada correctamente');
+      setPassNueva(''); setPassConfirmar('');
+      setMostrarCambiarPass(false);
+      setTimeout(() => setExitoPass(''), 3000);
+    } catch (err: any) {
+      setErrorPass('No se pudo actualizar la contraseña. Intenta de nuevo.');
+    } finally { setGuardandoPass(false); }
+  };
+
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
   };
+
+  const OjitoBTN = ({ ver, toggle }: { ver: boolean; toggle: () => void }) => (
+    <button type="button" onClick={toggle}
+      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+      {ver ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      )}
+    </button>
+  );
 
   const verificacionInfo = () => {
     if (!verificacion) return {
@@ -203,7 +282,7 @@ export default function PerfilEmpresa() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-blue-700 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">Cargando perfil...</p>
         </div>
       </main>
@@ -235,6 +314,7 @@ export default function PerfilEmpresa() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
+        {/* Card principal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
@@ -273,10 +353,7 @@ export default function PerfilEmpresa() {
               </div>
               <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
                 <div className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${progresoPerfil}%`,
-                    background: progresoPerfil < 40 ? '#EF4444' : progresoPerfil < 70 ? '#F59E0B' : 'linear-gradient(90deg, #334155, #1e3a8a)',
-                  }}/>
+                  style={{ width: `${progresoPerfil}%`, background: progresoPerfil < 40 ? '#EF4444' : progresoPerfil < 70 ? '#F59E0B' : 'linear-gradient(90deg, #334155, #1e3a8a)' }}/>
               </div>
               {faltantes.length > 0 && (
                 <div className="flex flex-col gap-1">
@@ -286,9 +363,7 @@ export default function PerfilEmpresa() {
                       <p className="text-xs text-gray-500">{paso}</p>
                     </div>
                   ))}
-                  {faltantes.length > 3 && (
-                    <p className="text-xs text-blue-500 font-semibold ml-3.5">+{faltantes.length - 3} más</p>
-                  )}
+                  {faltantes.length > 3 && <p className="text-xs text-blue-500 font-semibold ml-3.5">+{faltantes.length - 3} más</p>}
                 </div>
               )}
             </div>
@@ -335,6 +410,7 @@ export default function PerfilEmpresa() {
           )}
         </div>
 
+        {/* Verificación */}
         <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -350,11 +426,12 @@ export default function PerfilEmpresa() {
           </div>
         </a>
 
+        {/* Cobertura multi-ciudad */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="font-extrabold text-gray-900">🗺️ Cobertura multi-ciudad</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Ciudades donde tu empresa opera y publica servicios</p>
+              <p className="text-xs text-gray-400 mt-0.5">Ciudades donde tu empresa opera</p>
             </div>
             {ciudadesCobertura.length > 0 && (
               <span className="text-xs bg-blue-100 text-blue-600 font-bold px-2 py-1 rounded-full">
@@ -385,6 +462,7 @@ export default function PerfilEmpresa() {
           {ciudadesCobertura.length === 0 && <p className="text-xs text-gray-400 mt-2 text-center">Agrega las ciudades donde tu empresa busca talento</p>}
         </div>
 
+        {/* Información empresa */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">📋 Información</h3>
           <div className="flex flex-col gap-4">
@@ -413,7 +491,7 @@ export default function PerfilEmpresa() {
             </div>
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Ciudad principal</label>
-              {editando ? <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ej. Ciudad de México" className="w-full p-3 rounded-xl border-2 border-blue-400 outline-none text-gray-900"/> : <p className="text-gray-700">{ciudad || 'Sin ciudad registrada'}</p>}
+              {editando ? <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ej. Irapuato" className="w-full p-3 rounded-xl border-2 border-blue-400 outline-none text-gray-900"/> : <p className="text-gray-700">{ciudad || 'Sin ciudad registrada'}</p>}
             </div>
             <div>
               <label className="text-sm font-semibold text-gray-500 mb-1 block">Teléfono</label>
@@ -434,6 +512,7 @@ export default function PerfilEmpresa() {
           </div>
         </div>
 
+        {/* Reseñas */}
         {reseñas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas de prestadores</h3>
@@ -455,6 +534,156 @@ export default function PerfilEmpresa() {
             </div>
           </div>
         )}
+
+        {/* ── SECCIÓN MI CUENTA ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
+          <button onClick={() => setMostrarCuenta(!mostrarCuenta)}
+            className="w-full flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚙️</span>
+              <h3 className="font-extrabold text-gray-900">Mi cuenta</h3>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              className={`text-gray-400 transition-transform ${mostrarCuenta ? 'rotate-180' : ''}`}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+
+          {mostrarCuenta && (
+            <div className="px-5 pb-5 flex flex-col gap-4 border-t border-gray-100 pt-4">
+
+              {exitoCuenta && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoCuenta}</div>}
+              {exitoPass && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoPass}</div>}
+
+              {/* Datos personales */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-bold text-gray-700 text-sm">🏢 Datos de la cuenta</p>
+                  {!editandoCuenta ? (
+                    <button onClick={() => setEditandoCuenta(true)} className="text-xs text-blue-700 font-semibold hover:underline">Editar</button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditandoCuenta(false)} className="text-xs text-gray-400 font-semibold hover:underline">Cancelar</button>
+                      <button onClick={guardarCuenta} disabled={guardandoCuenta} className="text-xs text-blue-700 font-bold hover:underline disabled:opacity-50">
+                        {guardandoCuenta ? 'Guardando...' : 'Guardar ✓'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Nombre / Razón social</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaNombre} onChange={(e) => setCuentaNombre(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-blue-300 outline-none text-gray-900 text-sm bg-white"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.nombre || '—'}</p>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Correo electrónico</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.email || '—'}</p>
+                      <span className="text-xs bg-green-100 text-green-600 font-bold px-2 py-0.5 rounded-full">✓ Verificado</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Para cambiar el correo contáctanos</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Teléfono</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaTelefono} onChange={(e) => setCuentaTelefono(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-blue-300 outline-none text-gray-900 text-sm bg-white"
+                        placeholder="+52 55 1234 5678"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.telefono || '—'}</p>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-1">Ciudad principal</p>
+                    {editandoCuenta ? (
+                      <input value={cuentaCiudad} onChange={(e) => setCuentaCiudad(e.target.value)}
+                        className="w-full p-2 rounded-lg border-2 border-blue-300 outline-none text-gray-900 text-sm bg-white"
+                        placeholder="Ej. Irapuato"/>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{usuario?.ciudad || '—'}</p>
+                    )}
+                  </div>
+                </div>
+                {errorCuenta && <p className="text-xs text-red-500 mt-2">{errorCuenta}</p>}
+              </div>
+
+              {/* Seguridad */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="font-bold text-gray-700 text-sm mb-3">🔐 Seguridad</p>
+                <button onClick={() => setMostrarCambiarPass(!mostrarCambiarPass)}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                  <span className="text-sm font-semibold text-gray-700">Cambiar contraseña</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    className={`text-gray-400 transition-transform ${mostrarCambiarPass ? 'rotate-180' : ''}`}>
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+
+                {mostrarCambiarPass && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    {errorPass && <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-xl text-xs">{errorPass}</div>}
+                    <div className="relative">
+                      <input type={verPassNueva ? 'text' : 'password'}
+                        placeholder="Nueva contraseña"
+                        value={passNueva} onChange={(e) => setPassNueva(e.target.value)}
+                        className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-400 outline-none text-gray-900 text-sm pr-12"/>
+                      <OjitoBTN ver={verPassNueva} toggle={() => setVerPassNueva(!verPassNueva)}/>
+                    </div>
+                    <div className="relative">
+                      <input type={verPassConfirmar ? 'text' : 'password'}
+                        placeholder="Confirmar nueva contraseña"
+                        value={passConfirmar} onChange={(e) => setPassConfirmar(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && cambiarPassword()}
+                        className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-400 outline-none text-gray-900 text-sm pr-12"/>
+                      <OjitoBTN ver={verPassConfirmar} toggle={() => setVerPassConfirmar(!verPassConfirmar)}/>
+                    </div>
+                    <button onClick={cambiarPassword} disabled={guardandoPass}
+                      className="w-full py-3 bg-gradient-to-r from-slate-700 to-blue-900 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                      {guardandoPass ? 'Actualizando...' : 'Actualizar contraseña'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Sesión y eliminar */}
+              <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+                <button onClick={cerrarSesion}
+                  className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:border-gray-400 transition">
+                  🚪 Cerrar sesión
+                </button>
+                <button onClick={() => setMostrarEliminar(!mostrarEliminar)}
+                  className="w-full py-3 border-2 border-red-200 text-red-500 rounded-xl font-semibold text-sm hover:bg-red-50 transition">
+                  🗑️ Eliminar mi cuenta
+                </button>
+                {mostrarEliminar && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="text-sm font-bold text-red-700 mb-2">⚠️ Esta acción es irreversible</p>
+                    <p className="text-xs text-red-600 mb-3">Se eliminarán todos tus datos. Escribe <span className="font-bold">ELIMINAR</span> para confirmar.</p>
+                    <input type="text" placeholder="Escribe ELIMINAR"
+                      value={confirmEliminar} onChange={(e) => setConfirmEliminar(e.target.value)}
+                      className="w-full p-3 rounded-xl border-2 border-red-300 outline-none text-gray-900 text-sm mb-3"/>
+                    <button
+                      disabled={confirmEliminar !== 'ELIMINAR'}
+                      onClick={async () => {
+                        await supabase.from('usuarios').delete().eq('id', usuario.id);
+                        await supabase.auth.signOut();
+                        window.location.href = '/';
+                      }}
+                      className="w-full py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-40 hover:bg-red-600 transition">
+                      Eliminar cuenta definitivamente
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
 
       </div>
 
