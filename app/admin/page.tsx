@@ -50,7 +50,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones' | 'dispersion'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -64,6 +64,14 @@ export default function Admin() {
   const [filtroDispersion, setFiltroDispersion] = useState<'pendiente' | 'dispersado'>('pendiente');
   const [marcandoDispersado, setMarcandoDispersado] = useState('');
   const [notaDispersion, setNotaDispersion] = useState<Record<string, string>>({});
+
+  // Retiros wallet
+  const [retiros, setRetiros] = useState<any[]>([]);
+  const [cargandoRetiros, setCargandoRetiros] = useState(false);
+  const [filtroRetiros, setFiltroRetiros] = useState<'pendiente' | 'completado' | 'rechazado'>('pendiente');
+  const [procesandoRetiro, setProcesandoRetiro] = useState('');
+  const [notaRetiro, setNotaRetiro] = useState<Record<string, string>>({});
+  const [rechazandoRetiro, setRechazandoRetiro] = useState('');
 
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
@@ -79,6 +87,45 @@ export default function Admin() {
 
   useEffect(() => { cargarDatos(); cargarMetrics(); }, []);
   useEffect(() => { if (tab === 'dispersion') cargarDispersion(); }, [tab]);
+  useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
+
+
+  const cargarRetiros = async () => {
+    setCargandoRetiros(true);
+    try {
+      const { data } = await supabase
+        .from("retiros")
+        .select("*, usuarios(id, nombre, email, telefono, foto_url)")
+        .order("created_at", { ascending: false });
+      setRetiros(data || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoRetiros(false); }
+  };
+
+  const procesarRetiro = async (retiroId: string, usuarioId: string, monto: number, nota: string) => {
+    setProcesandoRetiro(retiroId);
+    try {
+      await supabase.from("retiros").update({ estado: "completado", notas: nota || null, procesado_por: usuario.email, procesado_at: new Date().toISOString() }).eq("id", retiroId);
+      try { await supabase.from("notificaciones").insert({ usuario_id: usuarioId, tipo: "retiro_completado", titulo: "✅ Retiro completado", mensaje: `Tu retiro de $${monto.toFixed(2)} MXN ha sido procesado y enviado a tu cuenta bancaria.`, link: "/wallet" }); } catch (e) {}
+      await cargarRetiros();
+    } catch (e) { console.error(e); }
+    finally { setProcesandoRetiro(""); }
+  };
+
+  const rechazarRetiroFn = async (retiroId: string, usuarioId: string, monto: number, nota: string) => {
+    if (!nota.trim()) { alert("Escribe el motivo del rechazo"); return; }
+    setProcesandoRetiro(retiroId);
+    try {
+      const { data: ud } = await supabase.from("usuarios").select("wallet_saldo").eq("id", usuarioId).single();
+      await supabase.from("usuarios").update({ wallet_saldo: (ud?.wallet_saldo || 0) + monto }).eq("id", usuarioId);
+      await supabase.from("wallet_movimientos").insert({ usuario_id: usuarioId, tipo: "reembolso", monto: monto, descripcion: `Retiro rechazado — saldo reintegrado: ${nota}` });
+      await supabase.from("retiros").update({ estado: "rechazado", notas: nota, procesado_por: usuario.email, procesado_at: new Date().toISOString() }).eq("id", retiroId);
+      try { await supabase.from("notificaciones").insert({ usuario_id: usuarioId, tipo: "retiro_rechazado", titulo: "❌ Retiro no procesado", mensaje: `Tu solicitud de retiro de $${monto.toFixed(2)} MXN no pudo procesarse: ${nota}. El saldo fue reintegrado a tu wallet.`, link: "/wallet" }); } catch (e) {}
+      setRechazandoRetiro("");
+      await cargarRetiros();
+    } catch (e) { console.error(e); }
+    finally { setProcesandoRetiro(""); }
+  };
 
   const cargarDispersion = async () => {
     setCargandoDispersion(true);
@@ -342,6 +389,9 @@ export default function Admin() {
           </button>
           <button onClick={() => setTab('verificaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             🪪 Verificaciones {conteoVerifs.en_revision > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{conteoVerifs.en_revision}</span>}
+          </button>
+          <button onClick={() => setTab('retiros')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'retiros' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
 
@@ -718,6 +768,175 @@ export default function Admin() {
                         <p className="text-green-600 text-xs mt-1">{new Date(v.revisado_at).toLocaleDateString('es-MX')}</p>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── RETIROS ── */}
+        {tab === 'retiros' && (
+          <div>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                <p className="text-2xl font-extrabold text-yellow-600">{retiros.filter(r => r.estado === 'pendiente').length}</p>
+                <p className="text-xs text-gray-400 mt-1">Pendientes</p>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                <p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p>
+                <p className="text-xs text-gray-400 mt-1">Completados</p>
+              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                <p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                <p className="text-xs text-gray-400 mt-1">MXN por enviar</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
+              <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p>
+              <p className="text-blue-700 text-xs leading-relaxed">El flekser solicitó el retiro desde su wallet. Haz la transferencia SPEI desde tu banco o Stripe a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p>
+            </div>
+
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+              {[
+                { key: 'pendiente', label: '⏳ Pendientes' },
+                { key: 'completado', label: '✅ Completados' },
+                { key: 'rechazado', label: '❌ Rechazados' },
+              ].map(f => (
+                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {cargandoRetiros ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : retiros.filter(r => r.estado === filtroRetiros).length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                <p className="text-4xl mb-3">{filtroRetiros === 'pendiente' ? '🎉' : '📭'}</p>
+                <p className="font-bold text-gray-900">{filtroRetiros === 'pendiente' ? '¡Sin retiros pendientes!' : 'Sin retiros en esta categoría'}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {retiros.filter(r => r.estado === filtroRetiros).map((retiro) => (
+                  <div key={retiro.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                          {retiro.usuarios?.foto_url
+                            ? <img src={retiro.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/>
+                            : <span className="text-white font-bold text-sm">{retiro.usuarios?.nombre?.charAt(0) || '?'}</span>}
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-gray-900">{retiro.usuarios?.nombre || '—'}</p>
+                          <div className="flex flex-col gap-0.5">
+                            {retiro.usuarios?.email && <p className="text-xs text-gray-400">✉️ {retiro.usuarios.email}</p>}
+                            {retiro.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {retiro.usuarios.telefono}</p>}
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
+                        retiro.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                        retiro.estado === 'completado' ? 'bg-green-100 text-green-700' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        {retiro.estado === 'pendiente' ? '⏳ Pendiente' : retiro.estado === 'completado' ? '✅ Completado' : '❌ Rechazado'}
+                      </span>
+                    </div>
+
+                    {/* Monto */}
+                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-100 mb-3">
+                      <p className="text-xs text-gray-500 mb-0.5">Monto a transferir</p>
+                      <p className="text-3xl font-extrabold text-teal-600">${retiro.monto?.toFixed(2)} <span className="text-lg font-normal text-gray-400">MXN</span></p>
+                    </div>
+
+                    {/* Datos bancarios */}
+                    <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden mb-3">
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                        <span className="text-xs text-gray-500 font-semibold">Banco</span>
+                        <span className="font-bold text-gray-900 text-sm">{retiro.banco || '—'}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                        <span className="text-xs text-gray-500 font-semibold">CLABE</span>
+                        <span className="font-bold text-gray-900 text-sm font-mono">{retiro.clabe?.replace(/(\d{4})/g, '$1 ').trim() || '—'}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5">
+                        <span className="text-xs text-gray-500 font-semibold">Titular</span>
+                        <span className="font-bold text-gray-900 text-sm">{retiro.titular || '—'}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-400 mb-3">
+                      Solicitado: {new Date(retiro.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+
+                    {/* Notas si ya fue procesado */}
+                    {retiro.estado !== 'pendiente' && retiro.notas && (
+                      <div className={`rounded-xl p-3 mb-3 ${retiro.estado === 'completado' ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <p className={`text-xs font-semibold ${retiro.estado === 'completado' ? 'text-green-700' : 'text-red-700'}`}>
+                          📝 {retiro.notas}
+                        </p>
+                        {retiro.procesado_at && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Por {retiro.procesado_por} · {new Date(retiro.procesado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Acciones solo para pendientes */}
+                    {retiro.estado === 'pendiente' && (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)"
+                          value={notaRetiro[retiro.id] || ''}
+                          onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))}
+                          className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"
+                        />
+                        {rechazandoRetiro === retiro.id ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="text"
+                              placeholder="Motivo del rechazo (obligatorio)"
+                              value={notaRetiro[retiro.id + '_rechazo'] || ''}
+                              onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id + '_rechazo']: e.target.value }))}
+                              className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => setRechazandoRetiro('')}
+                                className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={() => rechazarRetiroFn(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id + '_rechazo'] || '')}
+                                disabled={procesandoRetiro === retiro.id}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                                {procesandoRetiro === retiro.id ? 'Procesando...' : 'Confirmar rechazo'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button onClick={() => setRechazandoRetiro(retiro.id)}
+                              className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">
+                              ❌ Rechazar
+                            </button>
+                            <button
+                              onClick={() => procesarRetiro(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id] || '')}
+                              disabled={procesandoRetiro === retiro.id}
+                              className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:opacity-90 transition">
+                              {procesandoRetiro === retiro.id ? 'Procesando...' : '✅ Marcar enviado'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                   </div>
                 ))}
               </div>
