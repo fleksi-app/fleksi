@@ -50,7 +50,36 @@ export default function HomeWorker() {
   const [filtroUrgente, setFiltroUrgente] = useState(false);
   const [filtroSeguro, setFiltroSeguro] = useState(false);
 
+  // Banner instalación PWA
+  const [mostrarBannerInstalar, setMostrarBannerInstalar] = useState(false);
+  const [esIOS, setEsIOS] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [instalando, setInstalando] = useState(false);
+
   useEffect(() => { cargarDatos(); }, []);
+
+  useEffect(() => {
+    const yaInstalada = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true;
+    if (yaInstalada) return;
+
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    setEsIOS(ios);
+
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setMostrarBannerInstalar(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    if (ios) {
+      const yaVioBanner = localStorage.getItem('fleksi_install_dismissed');
+      if (!yaVioBanner) setMostrarBannerInstalar(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -73,7 +102,6 @@ export default function HomeWorker() {
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
 
-    // ── FIX PUSH: registrar suscripción sin importar si el permiso ya estaba dado ──
     if ('Notification' in window) {
       if (Notification.permission === 'default') {
         setMostrarBannerPush(true);
@@ -120,6 +148,22 @@ export default function HomeWorker() {
       await fetch('/api/push', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }) });
       setMostrarBannerPush(false);
     } catch (err) { setMostrarBannerPush(false); }
+  };
+
+  const instalarPWA = async () => {
+    if (deferredPrompt) {
+      setInstalando(true);
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setMostrarBannerInstalar(false);
+      setDeferredPrompt(null);
+      setInstalando(false);
+    }
+  };
+
+  const cerrarBannerInstalar = () => {
+    localStorage.setItem('fleksi_install_dismissed', '1');
+    setMostrarBannerInstalar(false);
   };
 
   const abrirNotifs = async () => {
@@ -192,9 +236,7 @@ export default function HomeWorker() {
     return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
   };
 
-  const headerGradient = modoViajero
-    ? 'from-sky-500 via-teal-500 to-emerald-600'
-    : 'from-blue-600 via-purple-600 to-purple-700';
+  const headerGradient = modoViajero ? 'from-sky-500 via-teal-500 to-emerald-600' : 'from-blue-600 via-purple-600 to-purple-700';
   const categoriaActivaBg = modoViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
   const aplicarBg = modoViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
 
@@ -225,19 +267,11 @@ export default function HomeWorker() {
                 <span className="text-white text-xs font-extrabold">Flekser</span>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
               </button>
-
-              <button
-                onClick={toggleModoViajero}
-                disabled={cambiandoViajero}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition text-xs font-bold ${
-                  modoViajero
-                    ? 'bg-white text-teal-600 border-white'
-                    : 'bg-white/15 border-white/25 text-white hover:bg-white/25'
-                }`}>
+              <button onClick={toggleModoViajero} disabled={cambiandoViajero}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition text-xs font-bold ${modoViajero ? 'bg-white text-teal-600 border-white' : 'bg-white/15 border-white/25 text-white hover:bg-white/25'}`}>
                 ✈️ {modoViajero ? 'Viajero ON' : 'Viajero'}
               </button>
             </div>
-
             <button onClick={abrirNotifs}
               className="tour-notifs relative w-9 h-9 bg-white/15 border border-white/25 rounded-full flex items-center justify-center hover:bg-white/25 transition">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -256,15 +290,11 @@ export default function HomeWorker() {
             <h1 className="text-2xl font-extrabold text-white">
               {usuario?.nombre?.split(' ')[0] || 'Bienvenido'} {modoViajero ? '✈️' : '⚡'}
             </h1>
-            {modoViajero && (
-              <p className="text-white/70 text-xs mt-1 font-semibold">🌍 Modo viajero activo — ves trabajos de todo el país</p>
-            )}
+            {modoViajero && <p className="text-white/70 text-xs mt-1 font-semibold">🌍 Modo viajero activo — ves trabajos de todo el país</p>}
           </div>
 
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
-            <p className="text-white/70 text-xs font-semibold mb-1">
-              {modoViajero ? '✈️ Trabajos en todo el país' : '⚡ Trabajos disponibles ahora'}
-            </p>
+            <p className="text-white/70 text-xs font-semibold mb-1">{modoViajero ? '✈️ Trabajos en todo el país' : '⚡ Trabajos disponibles ahora'}</p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
               <p className="text-white/60 text-sm mb-1">{filtrosActivos > 0 ? 'con tus filtros' : modoViajero ? 'en México' : 'cerca de ti'}</p>
@@ -278,8 +308,7 @@ export default function HomeWorker() {
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
-              <input type="text" placeholder="Buscar trabajos..."
-                value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+              <input type="text" placeholder="Buscar trabajos..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
             </div>
             <button onClick={() => setMostrarFiltros(true)}
@@ -328,6 +357,52 @@ export default function HomeWorker() {
         </div>
       )}
 
+      {mostrarBannerInstalar && (
+        <div className="max-w-md mx-auto px-6 pt-4">
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl">⚡</span>
+                </div>
+                <div>
+                  <p className="font-extrabold text-white text-sm">Instala Fleksi en tu celular</p>
+                  <p className="text-white/70 text-xs mt-0.5">Recibe notificaciones y accede más rápido</p>
+                </div>
+              </div>
+              <button onClick={cerrarBannerInstalar} className="text-white/50 hover:text-white font-bold text-lg leading-none ml-2">✕</button>
+            </div>
+
+            {esIOS ? (
+              <div className="bg-white/15 rounded-xl p-3 mb-3">
+                <p className="text-white text-xs font-semibold mb-2">Cómo instalar en iPhone/iPad:</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">1</span>
+                    <p className="text-white/80 text-xs">Toca el botón de compartir <span className="bg-white/20 px-1 rounded">⬆️</span> en Safari</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</span>
+                    <p className="text-white/80 text-xs">Selecciona <span className="font-bold text-white">"Agregar a pantalla de inicio"</span></p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">3</span>
+                    <p className="text-white/80 text-xs">Toca <span className="font-bold text-white">"Agregar"</span> y listo ✅</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button onClick={instalarPWA} disabled={instalando}
+                className="w-full py-3 bg-white text-purple-700 rounded-xl font-extrabold text-sm hover:bg-white/90 transition disabled:opacity-50 mb-2">
+                {instalando ? 'Instalando...' : '📲 Instalar Fleksi gratis'}
+              </button>
+            )}
+
+            <p className="text-white/50 text-xs text-center">Sin App Store · Sin costo · 2 segundos</p>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-md mx-auto px-6 py-4">
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
@@ -350,9 +425,7 @@ export default function HomeWorker() {
         )}
 
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-extrabold text-gray-900">
-            {modoViajero ? '🌍 Trabajos en todo el país' : 'Trabajos cerca de ti'}
-          </h2>
+          <h2 className="font-extrabold text-gray-900">{modoViajero ? '🌍 Trabajos en todo el país' : 'Trabajos cerca de ti'}</h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
         </div>
 
@@ -360,9 +433,7 @@ export default function HomeWorker() {
           <div className="text-center py-16">
             <p className="text-4xl mb-4">🔍</p>
             <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
-            <p className="text-gray-400 text-sm mb-4">
-              {filtrosActivos > 0 ? 'Prueba cambiando los filtros' : 'Vuelve más tarde para ver nuevas solicitudes'}
-            </p>
+            <p className="text-gray-400 text-sm mb-4">{filtrosActivos > 0 ? 'Prueba cambiando los filtros' : 'Vuelve más tarde para ver nuevas solicitudes'}</p>
             {filtrosActivos > 0 && <button onClick={limpiarFiltros} className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">Limpiar filtros</button>}
           </div>
         ) : (
@@ -392,9 +463,7 @@ export default function HomeWorker() {
                         </div>
                         <div className="text-right">
                           <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
-                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r ${aplicarBg} text-white`}>
-                            Aplicar
-                          </span>
+                          <span className={`mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r ${aplicarBg} text-white`}>Aplicar</span>
                         </div>
                       </div>
                     </div>
