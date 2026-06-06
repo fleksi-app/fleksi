@@ -41,6 +41,60 @@ function generarSemanas(semanas: number) {
   return resultado;
 }
 
+function generarMensajeWhatsApp(notif: any, usuario: any): string {
+  const nombre = usuario?.nombre?.split(' ')[0] || 'usuario';
+  const link = 'bit.ly/fleksiapp';
+  switch (notif.tipo) {
+    case 'nueva_aplicacion':
+      return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
+    case 'aplicacion_aceptada':
+      return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
+    case 'aplicacion_rechazada':
+      return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
+    case 'pago_liberado':
+      return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
+    case 'trabajo_completado':
+      return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
+    case 'verificacion_aprobada':
+      return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
+    case 'documento_aprobado':
+      return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
+    case 'documento_rechazado':
+      return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
+    case 'retiro_completado':
+      return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
+    case 'retiro_rechazado':
+      return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
+    case 'mensaje_nuevo':
+      return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
+    case 'disputa':
+      return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
+    case 'admin_mensaje':
+      return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
+    default:
+      return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
+  }
+}
+
+function tipoLabel(tipo: string): { emoji: string; label: string; color: string } {
+  const map: Record<string, { emoji: string; label: string; color: string }> = {
+    nueva_aplicacion: { emoji: '✋', label: 'Nueva aplicación', color: 'bg-blue-100 text-blue-700' },
+    aplicacion_aceptada: { emoji: '✅', label: 'Aplicación aceptada', color: 'bg-green-100 text-green-700' },
+    aplicacion_rechazada: { emoji: '❌', label: 'Aplicación rechazada', color: 'bg-red-100 text-red-600' },
+    pago_liberado: { emoji: '💰', label: 'Pago liberado', color: 'bg-green-100 text-green-700' },
+    trabajo_completado: { emoji: '🎉', label: 'Trabajo completado', color: 'bg-purple-100 text-purple-700' },
+    verificacion_aprobada: { emoji: '🏆', label: 'Verificación aprobada', color: 'bg-green-100 text-green-700' },
+    documento_aprobado: { emoji: '✅', label: 'Documento aprobado', color: 'bg-green-100 text-green-700' },
+    documento_rechazado: { emoji: '❌', label: 'Documento rechazado', color: 'bg-red-100 text-red-600' },
+    retiro_completado: { emoji: '🏦', label: 'Retiro completado', color: 'bg-teal-100 text-teal-700' },
+    retiro_rechazado: { emoji: '❌', label: 'Retiro rechazado', color: 'bg-red-100 text-red-600' },
+    mensaje_nuevo: { emoji: '💬', label: 'Mensaje nuevo', color: 'bg-blue-100 text-blue-700' },
+    disputa: { emoji: '⚠️', label: 'Disputa abierta', color: 'bg-amber-100 text-amber-700' },
+    admin_mensaje: { emoji: '📢', label: 'Mensaje admin', color: 'bg-gray-100 text-gray-600' },
+  };
+  return map[tipo] || { emoji: '🔔', label: tipo, color: 'bg-gray-100 text-gray-600' };
+}
+
 export default function Admin() {
   const [usuario, setUsuario] = useState<any>(null);
   const [verificaciones, setVerificaciones] = useState<any[]>([]);
@@ -50,7 +104,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -92,6 +146,12 @@ export default function Admin() {
   const [mensajeMasivoEnviado, setMensajeMasivoEnviado] = useState('');
   const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo'>('individual');
 
+  // Acciones pendientes
+  const [acciones, setAcciones] = useState<any[]>([]);
+  const [cargandoAcciones, setCargandoAcciones] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
+
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
     nuevosHoy: 0, nuevosEsteMes: 0,
@@ -107,6 +167,36 @@ export default function Admin() {
   useEffect(() => { cargarDatos(); cargarMetrics(); }, []);
   useEffect(() => { if (tab === 'dispersion') cargarDispersion(); }, [tab]);
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
+  useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
+
+  const cargarAcciones = async () => {
+    setCargandoAcciones(true);
+    try {
+      const { data } = await supabase
+        .from('notificaciones')
+        .select('*, usuarios!usuario_id(id, nombre, telefono, foto_url)')
+        .eq('leida', false)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setAcciones(data || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoAcciones(false); }
+  };
+
+  const marcarLeida = async (notifId: string) => {
+    setMarcandoLeida(notifId);
+    try {
+      await supabase.from('notificaciones').update({ leida: true }).eq('id', notifId);
+      setAcciones(prev => prev.filter(a => a.id !== notifId));
+    } catch (e) { console.error(e); }
+    finally { setMarcandoLeida(null); }
+  };
+
+  const copiarMensaje = (texto: string, id: string) => {
+    navigator.clipboard.writeText(texto);
+    setCopiado(id);
+    setTimeout(() => setCopiado(null), 2000);
+  };
 
   const buscarUsuario = async (query: string) => {
     setBusquedaUsuario(query);
@@ -139,23 +229,13 @@ export default function Admin() {
         body: JSON.stringify({
           tipo: 'admin_mensaje',
           destinatario: usuarioSeleccionado.email,
-          datos: {
-            nombre: usuarioSeleccionado.nombre,
-            titulo: tituloMensaje,
-            mensaje: cuerpoMensaje,
-            usuario_id: usuarioSeleccionado.id,
-          },
+          datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id },
         }),
       });
       setMensajeEnviado(`✅ Mensaje enviado a ${usuarioSeleccionado.nombre}`);
-      setTituloMensaje('');
-      setCuerpoMensaje('');
-      setUsuarioSeleccionado(null);
-      setBusquedaUsuario('');
-      setResultadosBusqueda([]);
-    } catch (e) {
-      setMensajeEnviado('❌ Error al enviar el mensaje');
-    } finally { setEnviandoMensaje(false); }
+      setTituloMensaje(''); setCuerpoMensaje(''); setUsuarioSeleccionado(null); setBusquedaUsuario(''); setResultadosBusqueda([]);
+    } catch (e) { setMensajeEnviado('❌ Error al enviar el mensaje'); }
+    finally { setEnviandoMensaje(false); }
   };
 
   const enviarMensajeMasivo = async () => {
@@ -167,57 +247,21 @@ export default function Admin() {
       if (segmentoMasivo === 'fleksers') query = query.in('rol', ['flekser', 'viajero']);
       else if (segmentoMasivo === 'empresas') query = query.eq('rol', 'empresa');
       else if (segmentoMasivo === 'verificados') query = query.eq('verificado', true);
-
       const { data: destinatarios } = await query;
-      if (!destinatarios || destinatarios.length === 0) {
-        setMensajeMasivoEnviado('❌ No hay usuarios en ese segmento');
-        return;
-      }
-
-      // Insertar notificaciones en lote
-      await supabase.from('notificaciones').insert(
-        destinatarios.map(u => ({
-          usuario_id: u.id,
-          tipo: 'admin_mensaje',
-          titulo: tituloMasivo,
-          mensaje: cuerpoMasivo,
-          link: '/notificaciones',
-        }))
-      );
-
-      // Enviar correo (va a tu gmail por ahora)
-      await fetch('/api/enviar-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'admin_mensaje_masivo',
-          destinatario: ADMIN_EMAIL,
-          datos: {
-            titulo: tituloMasivo,
-            mensaje: cuerpoMasivo,
-            segmento: segmentoMasivo,
-            total: destinatarios.length,
-          },
-        }),
-      });
-
+      if (!destinatarios || destinatarios.length === 0) { setMensajeMasivoEnviado('❌ No hay usuarios en ese segmento'); return; }
+      await supabase.from('notificaciones').insert(destinatarios.map(u => ({ usuario_id: u.id, tipo: 'admin_mensaje', titulo: tituloMasivo, mensaje: cuerpoMasivo, link: '/notificaciones' })));
+      await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'admin_mensaje_masivo', destinatario: ADMIN_EMAIL, datos: { titulo: tituloMasivo, mensaje: cuerpoMasivo, segmento: segmentoMasivo, total: destinatarios.length } }) });
       setMensajeMasivoEnviado(`✅ Mensaje enviado a ${destinatarios.length} usuarios`);
-      setTituloMasivo('');
-      setCuerpoMasivo('');
-    } catch (e) {
-      setMensajeMasivoEnviado('❌ Error al enviar el mensaje masivo');
-    } finally { setEnviandoMasivo(false); }
+      setTituloMasivo(''); setCuerpoMasivo('');
+    } catch (e) { setMensajeMasivoEnviado('❌ Error al enviar el mensaje masivo'); }
+    finally { setEnviandoMasivo(false); }
   };
 
   const abrirModalUsuarios = async (rol: string) => {
     setCargandoModal(true);
     setModalUsuarios({ visible: true, rol, lista: [] });
     try {
-      const { data } = await supabase
-        .from('usuarios')
-        .select('id, nombre, email, telefono, ciudad, foto_url, created_at, verificado, rol')
-        .eq('rol', rol)
-        .order('created_at', { ascending: false });
+      const { data } = await supabase.from('usuarios').select('id, nombre, email, telefono, ciudad, foto_url, created_at, verificado, rol').eq('rol', rol).order('created_at', { ascending: false });
       setModalUsuarios({ visible: true, rol, lista: data || [] });
     } catch (e) { console.error(e); }
     finally { setCargandoModal(false); }
@@ -497,6 +541,9 @@ export default function Admin() {
       <div className="max-w-2xl mx-auto px-6 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           <button onClick={() => setTab('dashboard')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📊 Dashboard</button>
+          <button onClick={() => setTab('acciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
+          </button>
           <button onClick={() => setTab('comunicaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📢 Comunicaciones</button>
           <button onClick={() => setTab('dispersion')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
@@ -512,139 +559,157 @@ export default function Admin() {
           </button>
         </div>
 
+        {/* ── ACCIONES PENDIENTES ── */}
+        {tab === 'acciones' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-extrabold text-gray-900">📋 Acciones pendientes</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Notificaciones no leídas — copia el mensaje y avisa por WhatsApp</p>
+              </div>
+              <button onClick={cargarAcciones} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl hover:bg-purple-100 transition">🔄 Actualizar</button>
+            </div>
+
+            {cargandoAcciones ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : acciones.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100">
+                <p className="text-4xl mb-3">🎉</p>
+                <p className="font-bold text-gray-900 mb-1">¡Todo al día!</p>
+                <p className="text-gray-400 text-sm">No hay notificaciones pendientes de avisar</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {acciones.map((accion) => {
+                  const usr = accion.usuarios;
+                  const tipo = tipoLabel(accion.tipo);
+                  const msgWA = generarMensajeWhatsApp(accion, usr);
+                  const yaCopiado = copiado === accion.id;
+                  return (
+                    <div key={accion.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {usr?.foto_url ? <img src={usr.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{usr?.nombre?.charAt(0) || '?'}</span>}
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-gray-900 text-sm">{usr?.nombre || 'Usuario'}</p>
+                            {usr?.telefono && <p className="text-xs text-gray-500">📱 {usr.telefono}</p>}
+                          </div>
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>
+                          {tipo.emoji} {tipo.label}
+                        </span>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-3 mb-3">
+                        <p className="text-xs text-gray-400 font-semibold mb-1">📩 Notificación en app:</p>
+                        <p className="text-xs font-bold text-gray-800">{accion.titulo}</p>
+                        {accion.mensaje && <p className="text-xs text-gray-500 mt-0.5">{accion.mensaje}</p>}
+                        <p className="text-xs text-gray-400 mt-1">{new Date(accion.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+
+                      <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-3">
+                        <p className="text-xs text-green-700 font-semibold mb-1">💬 Mensaje para WhatsApp:</p>
+                        <p className="text-xs text-gray-700 leading-relaxed">{msgWA}</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button onClick={() => copiarMensaje(msgWA, accion.id)}
+                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+                          {yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}
+                        </button>
+                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id}
+                          className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">
+                          {marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── COMUNICACIONES ── */}
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
-              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                👤 Mensaje individual
-              </button>
-              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                📣 Mensaje masivo
-              </button>
+              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>👤 Mensaje individual</button>
+              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📣 Mensaje masivo</button>
             </div>
-
             {modoComunicacion === 'individual' && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-extrabold text-gray-900 mb-4">👤 Enviar mensaje a usuario</h3>
-
                 <div className="mb-4 relative">
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Buscar usuario</label>
-                  <input
-                    type="text"
-                    placeholder="Nombre o correo..."
-                    value={busquedaUsuario}
-                    onChange={(e) => buscarUsuario(e.target.value)}
-                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"
-                  />
+                  <input type="text" placeholder="Nombre o correo..." value={busquedaUsuario} onChange={(e) => buscarUsuario(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
                   {resultadosBusqueda.length > 0 && !usuarioSeleccionado && (
                     <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 overflow-hidden">
                       {resultadosBusqueda.map((u) => (
-                        <button key={u.id} onClick={() => { setUsuarioSeleccionado(u); setBusquedaUsuario(u.nombre); setResultadosBusqueda([]); }}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition text-left border-b border-gray-100 last:border-0">
+                        <button key={u.id} onClick={() => { setUsuarioSeleccionado(u); setBusquedaUsuario(u.nombre); setResultadosBusqueda([]); }} className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition text-left border-b border-gray-100 last:border-0">
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{u.nombre?.charAt(0)}</span>}
                           </div>
-                          <div>
-                            <p className="font-bold text-gray-900 text-sm">{u.nombre}</p>
-                            <p className="text-xs text-gray-400">{u.email} · {u.rol}</p>
-                          </div>
+                          <div><p className="font-bold text-gray-900 text-sm">{u.nombre}</p><p className="text-xs text-gray-400">{u.email} · {u.rol}</p></div>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-
                 {usuarioSeleccionado && (
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden">
                         {usuarioSeleccionado.foto_url ? <img src={usuarioSeleccionado.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{usuarioSeleccionado.nombre?.charAt(0)}</span>}
                       </div>
-                      <div>
-                        <p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p>
-                        <p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p>
-                      </div>
+                      <div><p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p><p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p></div>
                     </div>
                     <button onClick={() => { setUsuarioSeleccionado(null); setBusquedaUsuario(''); }} className="text-purple-400 hover:text-purple-600 font-bold">✕</button>
                   </div>
                 )}
-
                 <div className="mb-3">
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label>
-                  <input type="text" placeholder="Ej. Información importante sobre tu cuenta"
-                    value={tituloMensaje} onChange={(e) => setTituloMensaje(e.target.value)}
-                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                  <input type="text" placeholder="Ej. Información importante sobre tu cuenta" value={tituloMensaje} onChange={(e) => setTituloMensaje(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
                 </div>
                 <div className="mb-4">
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label>
-                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMensaje} onChange={(e) => setCuerpoMensaje(e.target.value)} rows={4}
-                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
+                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMensaje} onChange={(e) => setCuerpoMensaje(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
                 </div>
-
-                {mensajeEnviado && (
-                  <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    {mensajeEnviado}
-                  </div>
-                )}
-
-                <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje}
-                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                {mensajeEnviado && (<div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{mensajeEnviado}</div>)}
+                <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}
                 </button>
-
                 <p className="text-xs text-gray-400 mt-2 text-center">El usuario recibirá una notificación en la app y un correo.</p>
               </div>
             )}
-
             {modoComunicacion === 'masivo' && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-extrabold text-gray-900 mb-4">📣 Enviar mensaje masivo</h3>
-
                 <div className="mb-4">
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">Segmento</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { key: 'todos', label: '👥 Todos los usuarios' },
-                      { key: 'fleksers', label: '⚡ Solo Fleksers' },
-                      { key: 'empresas', label: '🏢 Solo Empresas' },
-                      { key: 'verificados', label: '✅ Solo Verificados' },
-                    ].map(s => (
-                      <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ${segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-                        {s.label}
-                      </button>
+                    {[{ key: 'todos', label: '👥 Todos los usuarios' }, { key: 'fleksers', label: '⚡ Solo Fleksers' }, { key: 'empresas', label: '🏢 Solo Empresas' }, { key: 'verificados', label: '✅ Solo Verificados' }].map(s => (
+                      <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)} className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ${segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>{s.label}</button>
                     ))}
                   </div>
                 </div>
-
                 <div className="mb-3">
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label>
-                  <input type="text" placeholder="Ej. ¡Novedad en Fleksi!"
-                    value={tituloMasivo} onChange={(e) => setTituloMasivo(e.target.value)}
-                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                  <input type="text" placeholder="Ej. ¡Novedad en Fleksi!" value={tituloMasivo} onChange={(e) => setTituloMasivo(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
                 </div>
                 <div className="mb-4">
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label>
-                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMasivo} onChange={(e) => setCuerpoMasivo(e.target.value)} rows={4}
-                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
+                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMasivo} onChange={(e) => setCuerpoMasivo(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
                 </div>
-
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
                   <p className="text-amber-800 text-xs font-semibold">⚠️ Este mensaje llegará a todos los usuarios del segmento seleccionado como notificación en la app.</p>
                 </div>
-
-                {mensajeMasivoEnviado && (
-                  <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    {mensajeMasivoEnviado}
-                  </div>
-                )}
-
-                <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo}
-                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                {mensajeMasivoEnviado && (<div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{mensajeMasivoEnviado}</div>)}
+                <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}
                 </button>
-
                 <p className="text-xs text-gray-400 mt-2 text-center">Las notificaciones se insertan en la app de todos los usuarios del segmento.</p>
               </div>
             )}
@@ -655,70 +720,37 @@ export default function Admin() {
         {tab === 'dispersion' && (
           <div>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 font-semibold mb-1">💸 Por dispersar</p>
-                <p className="text-3xl font-extrabold text-red-500">${totalPendiente.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-gray-400 mt-1">{pendienteCount} pago{pendienteCount !== 1 ? 's' : ''} pendiente{pendienteCount !== 1 ? 's' : ''}</p>
-              </div>
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 font-semibold mb-1">✅ Ya dispersado</p>
-                <p className="text-3xl font-extrabold text-green-600">${totalDispersado.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-gray-400 mt-1">{pagosDispersion.filter(p => p.dispersado).length} pagos realizados</p>
-              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><p className="text-xs text-gray-400 font-semibold mb-1">💸 Por dispersar</p><p className="text-3xl font-extrabold text-red-500">${totalPendiente.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">{pendienteCount} pago{pendienteCount !== 1 ? 's' : ''} pendiente{pendienteCount !== 1 ? 's' : ''}</p></div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><p className="text-xs text-gray-400 font-semibold mb-1">✅ Ya dispersado</p><p className="text-3xl font-extrabold text-green-600">${totalDispersado.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">{pagosDispersion.filter(p => p.dispersado).length} pagos realizados</p></div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
-              <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p>
-              <p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Aquí ves exactamente cuánto le debes transferir a cada Flekser (precio del trabajo − 10% comisión Fleksi). Haz la transferencia por SPEI o desde Stripe y marca como dispersado.</p>
-            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p><p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Aquí ves exactamente cuánto le debes transferir a cada Flekser (precio del trabajo − 10% comisión Fleksi). Haz la transferencia por SPEI o desde Stripe y marca como dispersado.</p></div>
             <div className="flex gap-2 mb-4">
-              <button onClick={() => setFiltroDispersion('pendiente')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                ⏳ Pendientes {pendienteCount > 0 && `(${pendienteCount})`}
-              </button>
-              <button onClick={() => setFiltroDispersion('dispersado')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'dispersado' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                ✅ Dispersados
-              </button>
+              <button onClick={() => setFiltroDispersion('pendiente')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>⏳ Pendientes {pendienteCount > 0 && `(${pendienteCount})`}</button>
+              <button onClick={() => setFiltroDispersion('dispersado')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'dispersado' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>✅ Dispersados</button>
             </div>
             {cargandoDispersion ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : pagosFiltrados.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
-                <p className="text-4xl mb-3">{filtroDispersion === 'pendiente' ? '🎉' : '📭'}</p>
-                <p className="font-bold text-gray-900">{filtroDispersion === 'pendiente' ? '¡Todo dispersado! Sin pagos pendientes' : 'Sin pagos dispersados aún'}</p>
-              </div>
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">{filtroDispersion === 'pendiente' ? '🎉' : '📭'}</p><p className="font-bold text-gray-900">{filtroDispersion === 'pendiente' ? '¡Todo dispersado! Sin pagos pendientes' : 'Sin pagos dispersados aún'}</p></div>
             ) : (
               <div className="flex flex-col gap-3">
                 {pagosFiltrados.map((pago) => (
                   <div key={pago.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <p className="font-extrabold text-gray-900">{pago.servicios?.titulo || 'Trabajo'}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{pago.servicios?.completado_at ? `Completado: ${new Date(pago.servicios.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Fecha no disponible'}</p>
-                      </div>
+                      <div><p className="font-extrabold text-gray-900">{pago.servicios?.titulo || 'Trabajo'}</p><p className="text-xs text-gray-400 mt-0.5">{pago.servicios?.completado_at ? `Completado: ${new Date(pago.servicios.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Fecha no disponible'}</p></div>
                       {pago.dispersado ? <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">✅ Dispersado</span> : <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">⏳ Pendiente</span>}
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-3 mb-3">
-                      <p className="text-xs text-gray-400 font-semibold mb-1">👤 Flekser a pagar</p>
-                      <p className="font-extrabold text-gray-900">{pago.usuarios?.nombre || '—'}</p>
-                      {pago.usuarios?.email && <p className="text-xs text-gray-500 mt-0.5">✉️ {pago.usuarios.email}</p>}
-                      {pago.usuarios?.telefono && <p className="text-xs text-gray-500 mt-0.5">📱 {pago.usuarios.telefono}</p>}
-                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 mb-3"><p className="text-xs text-gray-400 font-semibold mb-1">👤 Flekser a pagar</p><p className="font-extrabold text-gray-900">{pago.usuarios?.nombre || '—'}</p>{pago.usuarios?.email && <p className="text-xs text-gray-500 mt-0.5">✉️ {pago.usuarios.email}</p>}{pago.usuarios?.telefono && <p className="text-xs text-gray-500 mt-0.5">📱 {pago.usuarios.telefono}</p>}</div>
                     <div className="border border-gray-100 rounded-xl overflow-hidden mb-3">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-sm text-gray-500">Precio del trabajo</span><span className="font-bold text-gray-900">${pago.precio.toLocaleString('es-MX')} MXN</span></div>
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100 bg-red-50"><span className="text-sm text-red-500">− Comisión Fleksi (10%)</span><span className="font-bold text-red-500">−${pago.comision.toLocaleString('es-MX')} MXN</span></div>
                       <div className="flex justify-between items-center px-4 py-3 bg-green-50"><span className="text-sm font-extrabold text-green-700">💰 A transferir al Flekser</span><span className="text-xl font-extrabold text-green-700">${pago.pagoFlekser.toLocaleString('es-MX')} MXN</span></div>
                     </div>
-                    {pago.dispersado && pago.nota_dispersion && (
-                      <div className="bg-green-50 rounded-xl p-3 mb-3">
-                        <p className="text-xs text-green-700 font-semibold">📝 Nota: {pago.nota_dispersion}</p>
-                        {pago.dispersado_at && <p className="text-xs text-green-600 mt-0.5">Dispersado el {new Date(pago.dispersado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>}
-                      </div>
-                    )}
+                    {pago.dispersado && pago.nota_dispersion && (<div className="bg-green-50 rounded-xl p-3 mb-3"><p className="text-xs text-green-700 font-semibold">📝 Nota: {pago.nota_dispersion}</p>{pago.dispersado_at && <p className="text-xs text-green-600 mt-0.5">Dispersado el {new Date(pago.dispersado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>}</div>)}
                     {!pago.dispersado && (
                       <div className="flex flex-col gap-2">
                         <input type="text" placeholder="Nota opcional (ej. SPEI confirmado, ref. 123...)" value={notaDispersion[pago.id] || ''} onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
-                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
-                          {marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}
-                        </button>
+                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}</button>
                       </div>
                     )}
                   </div>
@@ -742,18 +774,9 @@ export default function Admin() {
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-100"><p className="text-3xl font-extrabold text-green-600">{metrics.nuevosHoy}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Nuevos hoy</p></div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <button onClick={() => abrirModalUsuarios('flekser')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition active:scale-95">
-                      <p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Fleksers →</p>
-                    </button>
-                    <button onClick={() => abrirModalUsuarios('empresa')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition active:scale-95">
-                      <p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Empresas →</p>
-                    </button>
-                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                      <p className="text-xl font-extrabold text-emerald-600">{metrics.nuevosEsteMes}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Este mes</p>
-                    </div>
+                    <button onClick={() => abrirModalUsuarios('flekser')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition active:scale-95"><p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p><p className="text-xs text-gray-400 mt-0.5">Fleksers →</p></button>
+                    <button onClick={() => abrirModalUsuarios('empresa')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition active:scale-95"><p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p><p className="text-xs text-gray-400 mt-0.5">Empresas →</p></button>
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100"><p className="text-xl font-extrabold text-emerald-600">{metrics.nuevosEsteMes}</p><p className="text-xs text-gray-400 mt-0.5">Este mes</p></div>
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -770,27 +793,17 @@ export default function Admin() {
                     <div className="bg-green-50 rounded-xl p-4 border border-green-100"><p className="text-xs text-gray-500 font-semibold mb-1">Hoy</p><p className="text-2xl font-extrabold text-green-700">${metrics.ingresosDia.toLocaleString()}</p><p className="text-xs text-gray-400">MXN</p></div>
                     <div className="bg-green-50 rounded-xl p-4 border border-green-100"><p className="text-xs text-gray-500 font-semibold mb-1">Este mes</p><p className="text-2xl font-extrabold text-green-700">${metrics.ingresosMes.toLocaleString()}</p><p className="text-xs text-gray-400">MXN</p></div>
                   </div>
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4">
-                    <p className="text-white/70 text-xs font-semibold mb-1">Comisión acumulada Fleksi (25%)</p>
-                    <p className="text-3xl font-extrabold text-white">${metrics.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
-                    <p className="text-white/60 text-xs mt-1">MXN ganados por Fleksi</p>
-                  </div>
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4"><p className="text-white/70 text-xs font-semibold mb-1">Comisión acumulada Fleksi (25%)</p><p className="text-3xl font-extrabold text-white">${metrics.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-white/60 text-xs mt-1">MXN ganados por Fleksi</p></div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📍</span> Ciudad con más actividad</h2>
-                  <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
-                    <span className="text-4xl">🏙️</span>
-                    <div><p className="font-extrabold text-gray-900 text-xl">{metrics.ciudadTopNombre}</p><p className="text-sm text-gray-500">{metrics.ciudadTopCount} usuario{metrics.ciudadTopCount !== 1 ? 's' : ''} registrado{metrics.ciudadTopCount !== 1 ? 's' : ''}</p></div>
-                  </div>
+                  <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100"><span className="text-4xl">🏙️</span><div><p className="font-extrabold text-gray-900 text-xl">{metrics.ciudadTopNombre}</p><p className="text-sm text-gray-500">{metrics.ciudadTopCount} usuario{metrics.ciudadTopCount !== 1 ? 's' : ''} registrado{metrics.ciudadTopCount !== 1 ? 's' : ''}</p></div></div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-1 flex items-center gap-2"><span>📈</span> Tendencias — últimas 8 semanas</h2>
                   <p className="text-xs text-gray-400 mb-4">Las gráficas se llenarán conforme crezca Fleksi.</p>
                   {!hayDatosGraficas ? (
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 text-center border border-blue-100">
-                      <p className="text-3xl mb-2">🌱</p><p className="font-bold text-gray-700 mb-1">Desde cero</p>
-                      <p className="text-xs text-gray-500">Aquí verás el crecimiento de Fleksi semana a semana.</p>
-                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 text-center border border-blue-100"><p className="text-3xl mb-2">🌱</p><p className="font-bold text-gray-700 mb-1">Desde cero</p><p className="text-xs text-gray-500">Aquí verás el crecimiento de Fleksi semana a semana.</p></div>
                   ) : (
                     <div className="flex flex-col gap-6">
                       <div>
@@ -954,10 +967,7 @@ export default function Admin() {
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
               {[{ key: 'en_revision', label: 'En revisión', color: 'text-yellow-600' }, { key: 'aprobado', label: 'Aprobados', color: 'text-green-600' }, { key: 'rechazado', label: 'Rechazados', color: 'text-red-600' }, { key: 'todas', label: 'Total', color: 'text-purple-600' }].map(s => (
-                <div key={s.key} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p className={`text-2xl font-extrabold ${s.color}`}>{conteoVerifs[s.key as keyof typeof conteoVerifs]}</p>
-                  <p className="text-xs text-gray-400 mt-1">{s.label}</p>
-                </div>
+                <div key={s.key} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className={`text-2xl font-extrabold ${s.color}`}>{conteoVerifs[s.key as keyof typeof conteoVerifs]}</p><p className="text-xs text-gray-400 mt-1">{s.label}</p></div>
               ))}
             </div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -1024,10 +1034,7 @@ export default function Admin() {
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p><p className="text-xs text-gray-400 mt-1">Completados</p></div>
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">MXN por enviar</p></div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
-              <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p>
-              <p className="text-blue-700 text-xs leading-relaxed">El flekser solicitó el retiro desde su wallet. Haz la transferencia SPEI desde tu banco o Stripe a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p>
-            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">El flekser solicitó el retiro desde su wallet. Haz la transferencia SPEI desde tu banco o Stripe a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p></div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
                 <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>{f.label}</button>
@@ -1036,10 +1043,7 @@ export default function Admin() {
             {cargandoRetiros ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : retiros.filter(r => r.estado === filtroRetiros).length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
-                <p className="text-4xl mb-3">{filtroRetiros === 'pendiente' ? '🎉' : '📭'}</p>
-                <p className="font-bold text-gray-900">{filtroRetiros === 'pendiente' ? '¡Sin retiros pendientes!' : 'Sin retiros en esta categoría'}</p>
-              </div>
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">{filtroRetiros === 'pendiente' ? '🎉' : '📭'}</p><p className="font-bold text-gray-900">{filtroRetiros === 'pendiente' ? '¡Sin retiros pendientes!' : 'Sin retiros en esta categoría'}</p></div>
             ) : (
               <div className="flex flex-col gap-4">
                 {retiros.filter(r => r.estado === filtroRetiros).map((retiro) => (
@@ -1061,10 +1065,7 @@ export default function Admin() {
                         {retiro.estado === 'pendiente' ? '⏳ Pendiente' : retiro.estado === 'completado' ? '✅ Completado' : '❌ Rechazado'}
                       </span>
                     </div>
-                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-100 mb-3">
-                      <p className="text-xs text-gray-500 mb-0.5">Monto a transferir</p>
-                      <p className="text-3xl font-extrabold text-teal-600">${retiro.monto?.toFixed(2)} <span className="text-lg font-normal text-gray-400">MXN</span></p>
-                    </div>
+                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-100 mb-3"><p className="text-xs text-gray-500 mb-0.5">Monto a transferir</p><p className="text-3xl font-extrabold text-teal-600">${retiro.monto?.toFixed(2)} <span className="text-lg font-normal text-gray-400">MXN</span></p></div>
                     <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden mb-3">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-xs text-gray-500 font-semibold">Banco</span><span className="font-bold text-gray-900 text-sm">{retiro.banco || '—'}</span></div>
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-xs text-gray-500 font-semibold">CLABE</span><span className="font-bold text-gray-900 text-sm font-mono">{retiro.clabe?.replace(/(\d{4})/g, '$1 ').trim() || '—'}</span></div>
