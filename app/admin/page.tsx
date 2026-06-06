@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const ADMIN_EMAIL = 'fernando.najera.nm@gmail.com';
 
@@ -50,7 +50,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -77,6 +77,21 @@ export default function Admin() {
   const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
   const [cargandoModal, setCargandoModal] = useState(false);
 
+  // Comunicaciones
+  const [busquedaUsuario, setBusquedaUsuario] = useState('');
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null);
+  const [tituloMensaje, setTituloMensaje] = useState('');
+  const [cuerpoMensaje, setCuerpoMensaje] = useState('');
+  const [enviandoMensaje, setEnviandoMensaje] = useState(false);
+  const [mensajeEnviado, setMensajeEnviado] = useState('');
+  const [segmentoMasivo, setSegmentoMasivo] = useState<'todos' | 'fleksers' | 'empresas' | 'verificados'>('todos');
+  const [tituloMasivo, setTituloMasivo] = useState('');
+  const [cuerpoMasivo, setCuerpoMasivo] = useState('');
+  const [enviandoMasivo, setEnviandoMasivo] = useState(false);
+  const [mensajeMasivoEnviado, setMensajeMasivoEnviado] = useState('');
+  const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo'>('individual');
+
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
     nuevosHoy: 0, nuevosEsteMes: 0,
@@ -92,6 +107,107 @@ export default function Admin() {
   useEffect(() => { cargarDatos(); cargarMetrics(); }, []);
   useEffect(() => { if (tab === 'dispersion') cargarDispersion(); }, [tab]);
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
+
+  const buscarUsuario = async (query: string) => {
+    setBusquedaUsuario(query);
+    if (query.length < 2) { setResultadosBusqueda([]); return; }
+    try {
+      const { data } = await supabase
+        .from('usuarios')
+        .select('id, nombre, email, foto_url, rol')
+        .or(`nombre.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(5);
+      setResultadosBusqueda(data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const enviarMensajeIndividual = async () => {
+    if (!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim()) return;
+    setEnviandoMensaje(true);
+    setMensajeEnviado('');
+    try {
+      await supabase.from('notificaciones').insert({
+        usuario_id: usuarioSeleccionado.id,
+        tipo: 'admin_mensaje',
+        titulo: tituloMensaje,
+        mensaje: cuerpoMensaje,
+        link: '/notificaciones',
+      });
+      await fetch('/api/enviar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'admin_mensaje',
+          destinatario: usuarioSeleccionado.email,
+          datos: {
+            nombre: usuarioSeleccionado.nombre,
+            titulo: tituloMensaje,
+            mensaje: cuerpoMensaje,
+            usuario_id: usuarioSeleccionado.id,
+          },
+        }),
+      });
+      setMensajeEnviado(`✅ Mensaje enviado a ${usuarioSeleccionado.nombre}`);
+      setTituloMensaje('');
+      setCuerpoMensaje('');
+      setUsuarioSeleccionado(null);
+      setBusquedaUsuario('');
+      setResultadosBusqueda([]);
+    } catch (e) {
+      setMensajeEnviado('❌ Error al enviar el mensaje');
+    } finally { setEnviandoMensaje(false); }
+  };
+
+  const enviarMensajeMasivo = async () => {
+    if (!tituloMasivo.trim() || !cuerpoMasivo.trim()) return;
+    setEnviandoMasivo(true);
+    setMensajeMasivoEnviado('');
+    try {
+      let query = supabase.from('usuarios').select('id, nombre, email, rol, verificado');
+      if (segmentoMasivo === 'fleksers') query = query.in('rol', ['flekser', 'viajero']);
+      else if (segmentoMasivo === 'empresas') query = query.eq('rol', 'empresa');
+      else if (segmentoMasivo === 'verificados') query = query.eq('verificado', true);
+
+      const { data: destinatarios } = await query;
+      if (!destinatarios || destinatarios.length === 0) {
+        setMensajeMasivoEnviado('❌ No hay usuarios en ese segmento');
+        return;
+      }
+
+      // Insertar notificaciones en lote
+      await supabase.from('notificaciones').insert(
+        destinatarios.map(u => ({
+          usuario_id: u.id,
+          tipo: 'admin_mensaje',
+          titulo: tituloMasivo,
+          mensaje: cuerpoMasivo,
+          link: '/notificaciones',
+        }))
+      );
+
+      // Enviar correo (va a tu gmail por ahora)
+      await fetch('/api/enviar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'admin_mensaje_masivo',
+          destinatario: ADMIN_EMAIL,
+          datos: {
+            titulo: tituloMasivo,
+            mensaje: cuerpoMasivo,
+            segmento: segmentoMasivo,
+            total: destinatarios.length,
+          },
+        }),
+      });
+
+      setMensajeMasivoEnviado(`✅ Mensaje enviado a ${destinatarios.length} usuarios`);
+      setTituloMasivo('');
+      setCuerpoMasivo('');
+    } catch (e) {
+      setMensajeMasivoEnviado('❌ Error al enviar el mensaje masivo');
+    } finally { setEnviandoMasivo(false); }
+  };
 
   const abrirModalUsuarios = async (rol: string) => {
     setCargandoModal(true);
@@ -110,10 +226,7 @@ export default function Admin() {
   const cargarRetiros = async () => {
     setCargandoRetiros(true);
     try {
-      const { data } = await supabase
-        .from("retiros")
-        .select("*, usuarios(id, nombre, email, telefono, foto_url)")
-        .order("created_at", { ascending: false });
+      const { data } = await supabase.from("retiros").select("*, usuarios(id, nombre, email, telefono, foto_url)").order("created_at", { ascending: false });
       setRetiros(data || []);
     } catch (e) { console.error(e); }
     finally { setCargandoRetiros(false); }
@@ -147,17 +260,7 @@ export default function Admin() {
   const cargarDispersion = async () => {
     setCargandoDispersion(true);
     try {
-      const { data } = await supabase
-        .from('aplicaciones')
-        .select(`
-          id, precio_ofrecido, pago_liberado, dispersado, dispersado_at, nota_dispersion,
-          servicios(id, titulo, presupuesto, estado, completado_at),
-          usuarios!prestador_id(id, nombre, email, telefono)
-        `)
-        .eq('estado', 'completado')
-        .eq('pago_liberado', true)
-        .order('dispersado_at', { ascending: false, nullsFirst: true });
-
+      const { data } = await supabase.from('aplicaciones').select(`id, precio_ofrecido, pago_liberado, dispersado, dispersado_at, nota_dispersion, servicios(id, titulo, presupuesto, estado, completado_at), usuarios!prestador_id(id, nombre, email, telefono)`).eq('estado', 'completado').eq('pago_liberado', true).order('dispersado_at', { ascending: false, nullsFirst: true });
       const procesados = (data || []).map((app: any) => {
         const precio = app.precio_ofrecido || app.servicios?.presupuesto || 0;
         const comision = Math.round(precio * 0.10);
@@ -172,11 +275,7 @@ export default function Admin() {
   const marcarDispersado = async (appId: string, nota: string) => {
     setMarcandoDispersado(appId);
     try {
-      await supabase.from('aplicaciones').update({
-        dispersado: true,
-        dispersado_at: new Date().toISOString(),
-        nota_dispersion: nota || null,
-      }).eq('id', appId);
+      await supabase.from('aplicaciones').update({ dispersado: true, dispersado_at: new Date().toISOString(), nota_dispersion: nota || null }).eq('id', appId);
       await cargarDispersion();
     } catch (e) { console.error(e); }
     finally { setMarcandoDispersado(''); }
@@ -398,6 +497,7 @@ export default function Admin() {
       <div className="max-w-2xl mx-auto px-6 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           <button onClick={() => setTab('dashboard')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📊 Dashboard</button>
+          <button onClick={() => setTab('comunicaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📢 Comunicaciones</button>
           <button onClick={() => setTab('dispersion')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
@@ -411,6 +511,145 @@ export default function Admin() {
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
+
+        {/* ── COMUNICACIONES ── */}
+        {tab === 'comunicaciones' && (
+          <div>
+            <div className="flex gap-2 mb-6">
+              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                👤 Mensaje individual
+              </button>
+              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                📣 Mensaje masivo
+              </button>
+            </div>
+
+            {modoComunicacion === 'individual' && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="font-extrabold text-gray-900 mb-4">👤 Enviar mensaje a usuario</h3>
+
+                <div className="mb-4 relative">
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Buscar usuario</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre o correo..."
+                    value={busquedaUsuario}
+                    onChange={(e) => buscarUsuario(e.target.value)}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"
+                  />
+                  {resultadosBusqueda.length > 0 && !usuarioSeleccionado && (
+                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 overflow-hidden">
+                      {resultadosBusqueda.map((u) => (
+                        <button key={u.id} onClick={() => { setUsuarioSeleccionado(u); setBusquedaUsuario(u.nombre); setResultadosBusqueda([]); }}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition text-left border-b border-gray-100 last:border-0">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{u.nombre?.charAt(0)}</span>}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">{u.nombre}</p>
+                            <p className="text-xs text-gray-400">{u.email} · {u.rol}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {usuarioSeleccionado && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden">
+                        {usuarioSeleccionado.foto_url ? <img src={usuarioSeleccionado.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{usuarioSeleccionado.nombre?.charAt(0)}</span>}
+                      </div>
+                      <div>
+                        <p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p>
+                        <p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setUsuarioSeleccionado(null); setBusquedaUsuario(''); }} className="text-purple-400 hover:text-purple-600 font-bold">✕</button>
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label>
+                  <input type="text" placeholder="Ej. Información importante sobre tu cuenta"
+                    value={tituloMensaje} onChange={(e) => setTituloMensaje(e.target.value)}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                </div>
+                <div className="mb-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label>
+                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMensaje} onChange={(e) => setCuerpoMensaje(e.target.value)} rows={4}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
+                </div>
+
+                {mensajeEnviado && (
+                  <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {mensajeEnviado}
+                  </div>
+                )}
+
+                <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                  {enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}
+                </button>
+
+                <p className="text-xs text-gray-400 mt-2 text-center">El usuario recibirá una notificación en la app y un correo.</p>
+              </div>
+            )}
+
+            {modoComunicacion === 'masivo' && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="font-extrabold text-gray-900 mb-4">📣 Enviar mensaje masivo</h3>
+
+                <div className="mb-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Segmento</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'todos', label: '👥 Todos los usuarios' },
+                      { key: 'fleksers', label: '⚡ Solo Fleksers' },
+                      { key: 'empresas', label: '🏢 Solo Empresas' },
+                      { key: 'verificados', label: '✅ Solo Verificados' },
+                    ].map(s => (
+                      <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ${segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label>
+                  <input type="text" placeholder="Ej. ¡Novedad en Fleksi!"
+                    value={tituloMasivo} onChange={(e) => setTituloMasivo(e.target.value)}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                </div>
+                <div className="mb-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label>
+                  <textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMasivo} onChange={(e) => setCuerpoMasivo(e.target.value)} rows={4}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                  <p className="text-amber-800 text-xs font-semibold">⚠️ Este mensaje llegará a todos los usuarios del segmento seleccionado como notificación en la app.</p>
+                </div>
+
+                {mensajeMasivoEnviado && (
+                  <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {mensajeMasivoEnviado}
+                  </div>
+                )}
+
+                <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                  {enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}
+                </button>
+
+                <p className="text-xs text-gray-400 mt-2 text-center">Las notificaciones se insertan en la app de todos los usuarios del segmento.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── DISPERSIÓN ── */}
         {tab === 'dispersion' && (
@@ -455,9 +694,7 @@ export default function Admin() {
                         <p className="font-extrabold text-gray-900">{pago.servicios?.titulo || 'Trabajo'}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{pago.servicios?.completado_at ? `Completado: ${new Date(pago.servicios.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Fecha no disponible'}</p>
                       </div>
-                      {pago.dispersado
-                        ? <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">✅ Dispersado</span>
-                        : <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">⏳ Pendiente</span>}
+                      {pago.dispersado ? <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">✅ Dispersado</span> : <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">⏳ Pendiente</span>}
                     </div>
                     <div className="bg-gray-50 rounded-xl p-3 mb-3">
                       <p className="text-xs text-gray-400 font-semibold mb-1">👤 Flekser a pagar</p>
@@ -466,18 +703,9 @@ export default function Admin() {
                       {pago.usuarios?.telefono && <p className="text-xs text-gray-500 mt-0.5">📱 {pago.usuarios.telefono}</p>}
                     </div>
                     <div className="border border-gray-100 rounded-xl overflow-hidden mb-3">
-                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                        <span className="text-sm text-gray-500">Precio del trabajo</span>
-                        <span className="font-bold text-gray-900">${pago.precio.toLocaleString('es-MX')} MXN</span>
-                      </div>
-                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100 bg-red-50">
-                        <span className="text-sm text-red-500">− Comisión Fleksi (10%)</span>
-                        <span className="font-bold text-red-500">−${pago.comision.toLocaleString('es-MX')} MXN</span>
-                      </div>
-                      <div className="flex justify-between items-center px-4 py-3 bg-green-50">
-                        <span className="text-sm font-extrabold text-green-700">💰 A transferir al Flekser</span>
-                        <span className="text-xl font-extrabold text-green-700">${pago.pagoFlekser.toLocaleString('es-MX')} MXN</span>
-                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-sm text-gray-500">Precio del trabajo</span><span className="font-bold text-gray-900">${pago.precio.toLocaleString('es-MX')} MXN</span></div>
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100 bg-red-50"><span className="text-sm text-red-500">− Comisión Fleksi (10%)</span><span className="font-bold text-red-500">−${pago.comision.toLocaleString('es-MX')} MXN</span></div>
+                      <div className="flex justify-between items-center px-4 py-3 bg-green-50"><span className="text-sm font-extrabold text-green-700">💰 A transferir al Flekser</span><span className="text-xl font-extrabold text-green-700">${pago.pagoFlekser.toLocaleString('es-MX')} MXN</span></div>
                     </div>
                     {pago.dispersado && pago.nota_dispersion && (
                       <div className="bg-green-50 rounded-xl p-3 mb-3">
@@ -487,12 +715,8 @@ export default function Admin() {
                     )}
                     {!pago.dispersado && (
                       <div className="flex flex-col gap-2">
-                        <input type="text" placeholder="Nota opcional (ej. SPEI confirmado, ref. 123...)"
-                          value={notaDispersion[pago.id] || ''}
-                          onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))}
-                          className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
-                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id}
-                          className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                        <input type="text" placeholder="Nota opcional (ej. SPEI confirmado, ref. 123...)" value={notaDispersion[pago.id] || ''} onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                           {marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}
                         </button>
                       </div>
@@ -518,15 +742,11 @@ export default function Admin() {
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-100"><p className="text-3xl font-extrabold text-green-600">{metrics.nuevosHoy}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Nuevos hoy</p></div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    {/* Fleksers — clickeable */}
-                    <button onClick={() => abrirModalUsuarios('flekser')}
-                      className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition active:scale-95">
+                    <button onClick={() => abrirModalUsuarios('flekser')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition active:scale-95">
                       <p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Fleksers →</p>
                     </button>
-                    {/* Empresas — clickeable */}
-                    <button onClick={() => abrirModalUsuarios('empresa')}
-                      className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition active:scale-95">
+                    <button onClick={() => abrirModalUsuarios('empresa')} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition active:scale-95">
                       <p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Empresas →</p>
                     </button>
@@ -569,7 +789,7 @@ export default function Admin() {
                   {!hayDatosGraficas ? (
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 text-center border border-blue-100">
                       <p className="text-3xl mb-2">🌱</p><p className="font-bold text-gray-700 mb-1">Desde cero</p>
-                      <p className="text-xs text-gray-500">Aquí verás el crecimiento de Fleksi semana a semana. Comparte la app con tus primeros usuarios para ver la primera barra aparecer.</p>
+                      <p className="text-xs text-gray-500">Aquí verás el crecimiento de Fleksi semana a semana.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-6">
@@ -627,9 +847,7 @@ export default function Admin() {
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📥</span> Descargar reporte</h2>
                   <p className="text-xs text-gray-500 mb-3">Selecciona el período y descarga el reporte.</p>
                   <div className="flex gap-2 flex-wrap mb-4">
-                    {PERIODOS.map(p => (
-                      <button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{p.label}</button>
-                    ))}
+                    {PERIODOS.map(p => (<button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{p.label}</button>))}
                   </div>
                   <div className="flex gap-3">
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
@@ -802,18 +1020,9 @@ export default function Admin() {
         {tab === 'retiros' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                <p className="text-2xl font-extrabold text-yellow-600">{retiros.filter(r => r.estado === 'pendiente').length}</p>
-                <p className="text-xs text-gray-400 mt-1">Pendientes</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                <p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p>
-                <p className="text-xs text-gray-400 mt-1">Completados</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                <p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-gray-400 mt-1">MXN por enviar</p>
-              </div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-yellow-600">{retiros.filter(r => r.estado === 'pendiente').length}</p><p className="text-xs text-gray-400 mt-1">Pendientes</p></div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p><p className="text-xs text-gray-400 mt-1">Completados</p></div>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">MXN por enviar</p></div>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
               <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p>
@@ -821,10 +1030,7 @@ export default function Admin() {
             </div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
-                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                  {f.label}
-                </button>
+                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>{f.label}</button>
               ))}
             </div>
             {cargandoRetiros ? (
@@ -860,18 +1066,9 @@ export default function Admin() {
                       <p className="text-3xl font-extrabold text-teal-600">${retiro.monto?.toFixed(2)} <span className="text-lg font-normal text-gray-400">MXN</span></p>
                     </div>
                     <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden mb-3">
-                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                        <span className="text-xs text-gray-500 font-semibold">Banco</span>
-                        <span className="font-bold text-gray-900 text-sm">{retiro.banco || '—'}</span>
-                      </div>
-                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                        <span className="text-xs text-gray-500 font-semibold">CLABE</span>
-                        <span className="font-bold text-gray-900 text-sm font-mono">{retiro.clabe?.replace(/(\d{4})/g, '$1 ').trim() || '—'}</span>
-                      </div>
-                      <div className="flex justify-between items-center px-4 py-2.5">
-                        <span className="text-xs text-gray-500 font-semibold">Titular</span>
-                        <span className="font-bold text-gray-900 text-sm">{retiro.titular || '—'}</span>
-                      </div>
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-xs text-gray-500 font-semibold">Banco</span><span className="font-bold text-gray-900 text-sm">{retiro.banco || '—'}</span></div>
+                      <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100"><span className="text-xs text-gray-500 font-semibold">CLABE</span><span className="font-bold text-gray-900 text-sm font-mono">{retiro.clabe?.replace(/(\d{4})/g, '$1 ').trim() || '—'}</span></div>
+                      <div className="flex justify-between items-center px-4 py-2.5"><span className="text-xs text-gray-500 font-semibold">Titular</span><span className="font-bold text-gray-900 text-sm">{retiro.titular || '—'}</span></div>
                     </div>
                     <p className="text-xs text-gray-400 mb-3">Solicitado: {new Date(retiro.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     {retiro.estado !== 'pendiente' && retiro.notas && (
@@ -882,29 +1079,19 @@ export default function Admin() {
                     )}
                     {retiro.estado === 'pendiente' && (
                       <div className="flex flex-col gap-2">
-                        <input type="text" placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)"
-                          value={notaRetiro[retiro.id] || ''}
-                          onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))}
-                          className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"/>
+                        <input type="text" placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)" value={notaRetiro[retiro.id] || ''} onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"/>
                         {rechazandoRetiro === retiro.id ? (
                           <div className="flex flex-col gap-2">
-                            <input type="text" placeholder="Motivo del rechazo (obligatorio)"
-                              value={notaRetiro[retiro.id + '_rechazo'] || ''}
-                              onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id + '_rechazo']: e.target.value }))}
-                              className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"/>
+                            <input type="text" placeholder="Motivo del rechazo (obligatorio)" value={notaRetiro[retiro.id + '_rechazo'] || ''} onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id + '_rechazo']: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"/>
                             <div className="flex gap-2">
                               <button onClick={() => setRechazandoRetiro('')} className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">Cancelar</button>
-                              <button onClick={() => rechazarRetiroFn(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id + '_rechazo'] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
-                                {procesandoRetiro === retiro.id ? 'Procesando...' : 'Confirmar rechazo'}
-                              </button>
+                              <button onClick={() => rechazarRetiroFn(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id + '_rechazo'] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">{procesandoRetiro === retiro.id ? 'Procesando...' : 'Confirmar rechazo'}</button>
                             </div>
                           </div>
                         ) : (
                           <div className="flex gap-2">
                             <button onClick={() => setRechazandoRetiro(retiro.id)} className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">❌ Rechazar</button>
-                            <button onClick={() => procesarRetiro(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:opacity-90 transition">
-                              {procesandoRetiro === retiro.id ? 'Procesando...' : '✅ Marcar enviado'}
-                            </button>
+                            <button onClick={() => procesarRetiro(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:opacity-90 transition">{procesandoRetiro === retiro.id ? 'Procesando...' : '✅ Marcar enviado'}</button>
                           </div>
                         )}
                       </div>
@@ -924,20 +1111,13 @@ export default function Admin() {
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-extrabold text-gray-900 text-lg">
-                {modalUsuarios.rol === 'empresa' ? '🏢 Empresas' : '⚡ Fleksers'} registrados
-              </h3>
+              <h3 className="font-extrabold text-gray-900 text-lg">{modalUsuarios.rol === 'empresa' ? '🏢 Empresas' : '⚡ Fleksers'} registrados</h3>
               <button onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
             </div>
             {cargandoModal ? (
-              <div className="flex items-center justify-center py-10">
-                <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
-              </div>
+              <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : modalUsuarios.lista.length === 0 ? (
-              <div className="text-center py-10">
-                <p className="text-3xl mb-2">📭</p>
-                <p className="text-gray-400">Sin usuarios registrados</p>
-              </div>
+              <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin usuarios registrados</p></div>
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-gray-400 mb-1">{modalUsuarios.lista.length} usuario{modalUsuarios.lista.length !== 1 ? 's' : ''}</p>

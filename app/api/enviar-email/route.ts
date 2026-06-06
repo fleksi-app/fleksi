@@ -71,7 +71,6 @@ async function enviarCorreoNotificacion(destinatario: string, titulo: string, me
   } catch (e) { console.error('Error enviando correo de notificación:', e); }
 }
 
-// Función centralizada — notificación + push + correo simultáneos
 async function notificarUsuario(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
   await crearNotificacion(usuario_id, tipo, titulo, mensaje, link);
   await enviarPush(usuario_id, titulo, mensaje, link);
@@ -331,6 +330,45 @@ export async function POST(request: NextRequest) {
           <a href="https://fleksi.vercel.app/admin" style="display: block; background: linear-gradient(135deg, #DC2626, #B91C1C); color: white; text-align: center; padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; margin-top: 20px;">
             Resolver disputa en Admin →
           </a>
+        </div>
+      `;
+    }
+
+    if (tipo === 'admin_mensaje') {
+      asunto = datos.titulo;
+      html = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">fleksi</h1>
+            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 13px;">Mensaje del equipo Fleksi</p>
+          </div>
+          <div style="background: #F8F9FC; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+            <h2 style="color: #0D0D1A; margin: 0 0 12px; font-size: 20px;">${datos.titulo}</h2>
+            <p style="color: #64748B; margin: 0; font-size: 15px; line-height: 1.6;">${datos.mensaje}</p>
+          </div>
+          <a href="https://fleksi.vercel.app" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 15px; margin-bottom: 20px;">
+            Abrir Fleksi →
+          </a>
+          <p style="color: #94A3B8; font-size: 11px; text-align: center;">Fleksi · Irapuato, Guanajuato · México</p>
+        </div>
+      `;
+    }
+
+    if (tipo === 'admin_mensaje_masivo') {
+      asunto = `[Admin] Mensaje masivo enviado: ${datos.titulo}`;
+      html = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">fleksi Admin</h1>
+            <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 13px;">Confirmación de mensaje masivo</p>
+          </div>
+          <div style="background: #F8F9FC; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <p style="margin: 0 0 8px; color: #64748B;"><strong style="color: #0D0D1A;">Título:</strong> ${datos.titulo}</p>
+            <p style="margin: 0 0 8px; color: #64748B;"><strong style="color: #0D0D1A;">Mensaje:</strong> ${datos.mensaje}</p>
+            <p style="margin: 0 0 8px; color: #64748B;"><strong style="color: #0D0D1A;">Segmento:</strong> ${datos.segmento}</p>
+            <p style="margin: 0; color: #64748B;"><strong style="color: #0D0D1A;">Total enviados:</strong> ${datos.total} usuarios</p>
+          </div>
+          <p style="color: #94A3B8; font-size: 11px; text-align: center;">Fleksi Admin · Confirmación automática</p>
         </div>
       `;
     }
