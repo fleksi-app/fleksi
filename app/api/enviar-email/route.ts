@@ -12,12 +12,8 @@ const supabaseAdmin = createClient(
 
 async function crearNotificacion(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
   try {
-    await supabaseAdmin.from('notificaciones').insert({
-      usuario_id, tipo, titulo, mensaje, link,
-    });
-  } catch (e) {
-    console.error('Error creando notificacion:', e);
-  }
+    await supabaseAdmin.from('notificaciones').insert({ usuario_id, tipo, titulo, mensaje, link });
+  } catch (e) { console.error('Error creando notificacion:', e); }
 }
 
 async function enviarPush(usuario_id: string, titulo: string, mensaje: string, link: string) {
@@ -27,23 +23,13 @@ async function enviarPush(usuario_id: string, titulo: string, mensaje: string, l
       process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
       process.env.VAPID_PRIVATE_KEY!
     );
-
-    const { data: suscripciones } = await supabaseAdmin
-      .from('push_suscripciones')
-      .select('*')
-      .eq('usuario_id', usuario_id);
-
+    const { data: suscripciones } = await supabaseAdmin.from('push_suscripciones').select('*').eq('usuario_id', usuario_id);
     if (!suscripciones || suscripciones.length === 0) return;
-
     const payload = JSON.stringify({ titulo, mensaje, link });
-
     await Promise.allSettled(
       suscripciones.map(async (sub) => {
         try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
-          );
+          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
         } catch (err: any) {
           if (err.statusCode === 410 || err.statusCode === 404) {
             await supabaseAdmin.from('push_suscripciones').delete().eq('id', sub.id);
@@ -51,9 +37,53 @@ async function enviarPush(usuario_id: string, titulo: string, mensaje: string, l
         }
       })
     );
-  } catch (e) {
-    console.log('Push no enviado:', e);
-  }
+  } catch (e) { console.log('Push no enviado:', e); }
+}
+
+async function enviarCorreoNotificacion(destinatario: string, titulo: string, mensaje: string, link: string) {
+  try {
+    const urlCompleta = link.startsWith('http') ? link : `https://fleksi.vercel.app${link}`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #2563EB, #7C3AED); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">fleksi</h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 13px;">Tu trabajo, tus reglas.</p>
+        </div>
+        <div style="background: #F8F9FC; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+          <h2 style="color: #0D0D1A; margin: 0 0 12px; font-size: 20px;">${titulo}</h2>
+          <p style="color: #64748B; margin: 0; font-size: 15px; line-height: 1.6;">${mensaje}</p>
+        </div>
+        <a href="${urlCompleta}" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 15px; margin-bottom: 20px;">
+          Ver en Fleksi →
+        </a>
+        <p style="color: #94A3B8; font-size: 11px; text-align: center;">
+          Fleksi · Irapuato, Guanajuato · México<br/>
+          Si no quieres recibir estos correos, ignora este mensaje.
+        </p>
+      </div>
+    `;
+    await resend.emails.send({
+      from: 'Fleksi <onboarding@resend.dev>',
+      to: destinatario,
+      subject: titulo,
+      html,
+    });
+  } catch (e) { console.error('Error enviando correo de notificación:', e); }
+}
+
+// Función centralizada — notificación + push + correo simultáneos
+async function notificarUsuario(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
+  // 1. Notificación en app (Supabase)
+  await crearNotificacion(usuario_id, tipo, titulo, mensaje, link);
+  // 2. Push web
+  await enviarPush(usuario_id, titulo, mensaje, link);
+  // 3. Correo — obtener email del usuario
+  try {
+    const { data: userData } = await supabaseAdmin.from('usuarios').select('email').eq('id', usuario_id).single();
+    if (userData?.email) {
+      await enviarCorreoNotificacion(userData.email, titulo, mensaje, link);
+    }
+  } catch (e) { console.error('Error obteniendo email para notificación:', e); }
 }
 
 export async function POST(request: NextRequest) {
@@ -68,7 +98,7 @@ export async function POST(request: NextRequest) {
       const emoji = datos.rol === 'prestador' ? '👷' : datos.rol === 'empresa' ? '🏢' : datos.rol === 'viajero' ? '✈️' : '🙋';
       const cta_url = esCliente ? 'https://fleksi.vercel.app/home-empresa' : 'https://fleksi.vercel.app/home';
       const cta_texto = esCliente ? 'Buscar prestadores →' : 'Ver trabajos disponibles →';
-      const mensaje = esCliente
+      const msgBienvenida = esCliente
         ? 'Ya puedes publicar servicios y encontrar al profesional perfecto para lo que necesitas.'
         : 'Ya puedes ver trabajos disponibles, aplicar y empezar a ganar dinero.';
 
@@ -86,7 +116,7 @@ export async function POST(request: NextRequest) {
           </div>
           <div style="background: #F8F9FC; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
             <p style="color: #0D0D1A; font-weight: bold; margin: 0 0 8px;">¿Qué sigue?</p>
-            <p style="color: #64748B; margin: 0; font-size: 15px;">${mensaje}</p>
+            <p style="color: #64748B; margin: 0; font-size: 15px;">${msgBienvenida}</p>
           </div>
           <a href="${cta_url}" style="display: block; background: linear-gradient(135deg, #2563EB, #7C3AED); color: white; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
             ${cta_texto}
@@ -98,8 +128,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(datos.usuario_id, 'nuevo_trabajo', `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`, 'Tu cuenta fue creada exitosamente. ¡Empieza a explorar!', '/home');
-        await enviarPush(datos.usuario_id, `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`, 'Tu cuenta fue creada exitosamente.', '/home');
+        await notificarUsuario(datos.usuario_id, 'nuevo_trabajo', `¡Bienvenido a Fleksi, ${datos.nombre}! 🎉`, 'Tu cuenta fue creada exitosamente. ¡Empieza a explorar!', '/home');
       }
     }
 
@@ -128,8 +157,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.cliente_id) {
-        await crearNotificacion(datos.cliente_id, 'nueva_aplicacion', `Nueva aplicación de ${datos.prestador}`, `Aplicó a tu solicitud: ${datos.trabajo} — $${datos.precio} MXN`, `/aplicaciones?servicio=${datos.servicio_id}`);
-        await enviarPush(datos.cliente_id, `✋ Nueva aplicación de ${datos.prestador}`, `${datos.trabajo} — $${datos.precio} MXN`, `/aplicaciones?servicio=${datos.servicio_id}`);
+        await notificarUsuario(datos.cliente_id, 'nueva_aplicacion', `✋ Nueva aplicación de ${datos.prestador}`, `Aplicó a tu solicitud: ${datos.trabajo} — $${datos.precio} MXN`, `/aplicaciones?servicio=${datos.servicio_id}`);
       }
     }
 
@@ -159,8 +187,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.prestador_id) {
-        await crearNotificacion(datos.prestador_id, 'aplicacion_aceptada', `¡Tu aplicación fue aceptada! 🎉`, `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`, '/checkin');
-        await enviarPush(datos.prestador_id, `✅ ¡Aplicación aceptada!`, `${datos.cliente} te contrató para: ${datos.trabajo}`, '/checkin');
+        await notificarUsuario(datos.prestador_id, 'aplicacion_aceptada', '✅ ¡Tu aplicación fue aceptada!', `${datos.cliente} te contrató para: ${datos.trabajo} — $${datos.precio} MXN`, '/checkin');
       }
     }
 
@@ -195,8 +222,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.cliente_id) {
-        await crearNotificacion(datos.cliente_id, 'trabajo_completado', `${datos.prestador} terminó el trabajo 🎉`, `Confirma que quedó bien para liberar el pago: ${datos.trabajo}`, `/aplicaciones?servicio=${datos.servicio_id}`);
-        await enviarPush(datos.cliente_id, `🎉 ${datos.prestador} terminó el trabajo`, `Confirma para liberar el pago: ${datos.trabajo}`, `/aplicaciones?servicio=${datos.servicio_id}`);
+        await notificarUsuario(datos.cliente_id, 'trabajo_completado', `🎉 ${datos.prestador} terminó el trabajo`, `Confirma para liberar el pago: ${datos.trabajo}`, `/aplicaciones?servicio=${datos.servicio_id}`);
       }
     }
 
@@ -217,7 +243,7 @@ export async function POST(request: NextRequest) {
               <span style="font-weight: bold;">$${datos.presupuesto} MXN</span>
             </div>
             <div style="border-top: 1px solid #E2E8F0; padding-top: 8px; display: flex; justify-content: space-between;">
-              <span style="font-weight: bold;">Total</span>
+              <span style="font-weight: bold;">Total recibido</span>
               <span style="font-weight: bold; color: #7C3AED;">$${datos.monto} MXN</span>
             </div>
           </div>
@@ -231,8 +257,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.prestador_id) {
-        await crearNotificacion(datos.prestador_id, 'pago_liberado', `¡Pago liberado! 💰`, `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`, '/mis-trabajos');
-        await enviarPush(datos.prestador_id, `💰 ¡Pago liberado!`, `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`, '/mis-trabajos');
+        await notificarUsuario(datos.prestador_id, 'pago_liberado', `💰 ¡Pago liberado!`, `Recibiste $${datos.monto} MXN por: ${datos.trabajo}`, '/mis-trabajos');
       }
     }
 
@@ -258,8 +283,7 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(datos.usuario_id, 'aplicacion_aceptada', '¡Identidad verificada! ✅', 'Tu perfil ahora muestra el badge de confianza', '/perfil');
-        await enviarPush(datos.usuario_id, '✅ ¡Identidad verificada!', 'Tu perfil ahora muestra el badge de confianza', '/perfil');
+        await notificarUsuario(datos.usuario_id, 'aplicacion_aceptada', '✅ ¡Identidad verificada!', 'Tu perfil ahora muestra el badge de confianza', '/perfil');
       }
     }
 
@@ -289,20 +313,44 @@ export async function POST(request: NextRequest) {
       `;
 
       if (datos.usuario_id) {
-        await crearNotificacion(datos.usuario_id, 'aplicacion_rechazada', 'Verificación rechazada', `Motivo: ${datos.motivo}`, '/verificacion');
-        await enviarPush(datos.usuario_id, '❌ Verificación rechazada', `Motivo: ${datos.motivo}`, '/verificacion');
+        await notificarUsuario(datos.usuario_id, 'aplicacion_rechazada', '❌ Verificación rechazada', `Motivo: ${datos.motivo}`, '/verificacion');
       }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: 'Fleksi <onboarding@resend.dev>',
-      to: destinatario,
-      subject: asunto,
-      html,
-    });
+    if (tipo === 'disputa') {
+      asunto = `⚠️ Nueva disputa — ${datos.trabajo}`;
+      html = `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #DC2626, #B91C1C); padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">⚠️ fleksi — Disputa</h1>
+          </div>
+          <h2 style="color: #0D0D1A;">Nueva disputa reportada</h2>
+          <div style="background: #FEF2F2; border: 2px solid #FECACA; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0 0 8px;"><strong>Cliente:</strong> ${datos.cliente}</p>
+            <p style="margin: 0 0 8px;"><strong>Trabajo:</strong> ${datos.trabajo}</p>
+            <p style="margin: 0 0 8px;"><strong>Monto en disputa:</strong> $${datos.monto} MXN</p>
+            <p style="margin: 0;"><strong>Descripción:</strong> ${datos.descripcion}</p>
+          </div>
+          <a href="https://fleksi.vercel.app/admin" style="display: block; background: linear-gradient(135deg, #DC2626, #B91C1C); color: white; text-align: center; padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; margin-top: 20px;">
+            Resolver disputa en Admin →
+          </a>
+        </div>
+      `;
+    }
 
-    if (error) throw error;
-    return NextResponse.json({ success: true, data });
+    // Enviar el correo principal si hay asunto y html
+    if (asunto && html) {
+      const { data, error } = await resend.emails.send({
+        from: 'Fleksi <onboarding@resend.dev>',
+        to: destinatario,
+        subject: asunto,
+        html,
+      });
+      if (error) throw error;
+      return NextResponse.json({ success: true, data });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
