@@ -34,7 +34,7 @@ export default function Catalogo() {
       const { data } = await supabase
         .from('usuarios')
         .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas')
-        .in('rol', ['flekser', 'viajero'])
+        .in('rol', ['flekser'])
         .neq('id', user.id)
         .order('calificacion', { ascending: false });
       setFleksers(data || []);
@@ -67,22 +67,20 @@ export default function Catalogo() {
   };
 
   const hayFiltros = ciudadFiltro || habilidadFiltro || soloVerificados;
-
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const filtroActivoColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const btnFiltroActivo = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const habilidadActivaBg = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const habilidadFiltroColor = esEmpresa ? 'focus:border-blue-700' : esViajero ? 'focus:border-teal-400' : 'focus:border-purple-400';
-  const solicitudGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const habilidadTagBg = esEmpresa ? 'bg-blue-50 text-blue-700 border-blue-100' : esViajero ? 'bg-teal-50 text-teal-700 border-teal-100' : 'bg-purple-50 text-purple-600 border-purple-100';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
-  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const filtroActivoColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const btnFiltroActivo = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const habilidadActivaBg = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const habilidadFiltroColor = esEmpresa ? 'focus:border-blue-700' : 'focus:border-purple-400';
+  const solicitudGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const habilidadTagBg = esEmpresa ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
+  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
 
   if (cargando) {
     return (
@@ -172,7 +170,6 @@ export default function Catalogo() {
                         <span className="text-xs text-yellow-500 font-bold">⭐ {f.calificacion || '5.0'}</span>
                         {f.ciudad && <span className="text-xs text-gray-400">📍 {f.ciudad}</span>}
                       </div>
-                      {/* Experiencia — trabajos completados */}
                       <div className="mt-1">
                         <span className="text-xs font-semibold text-gray-500">
                           💼 Experiencia: <span className="text-gray-800">{f.trabajos_completados || 0}</span> trabajo{(f.trabajos_completados || 0) !== 1 ? 's' : ''} completado{(f.trabajos_completados || 0) !== 1 ? 's' : ''}

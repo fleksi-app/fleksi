@@ -55,26 +55,15 @@ export default function MisTrabajos() {
 
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa
-    ? 'from-slate-700 to-blue-900'
-    : esViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
-
-  const filtroActivo = esEmpresa
-    ? 'from-slate-700 to-blue-900'
-    : esViajero
-    ? 'from-sky-500 to-teal-500'
-    : 'from-blue-600 to-purple-600';
-
-  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const calificarColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const filtroActivo = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const calificarColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
 
   if (cargando) {
     return (

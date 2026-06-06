@@ -11,7 +11,6 @@ const todosLosBadges = [
   { tipo: 'top_rated', nombre: 'Top Rated', emoji: '⭐' },
   { tipo: 'perfecto', nombre: 'Perfección', emoji: '✨' },
   { tipo: 'verificado', nombre: 'Verificado', emoji: '✅' },
-  { tipo: 'viajero', nombre: 'Viajero', emoji: '✈️' },
   { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆' },
 ];
 
@@ -84,7 +83,6 @@ export default function PerfilPublico() {
   const iniciarChat = async () => {
     if (!usuarioActual) { window.location.href = '/login'; return; }
     try {
-      // Buscar si ya existe un mensaje directo entre estos dos usuarios
       const { data: existente } = await supabase
         .from('mensajes')
         .select('id')
@@ -93,7 +91,6 @@ export default function PerfilPublico() {
         .limit(1);
 
       if (!existente || existente.length === 0) {
-        // Crear primer mensaje para iniciar el hilo
         await supabase.from('mensajes').insert({
           servicio_id: null,
           remitente_id: usuarioActual.id,
@@ -156,7 +153,7 @@ export default function PerfilPublico() {
             <h1 className="font-extrabold text-white text-2xl">{perfil.nombre}</h1>
             <div className="flex items-center gap-2 flex-wrap mt-1">
               <span className="text-xs bg-white/20 text-white font-semibold px-2 py-0.5 rounded-full border border-white/30">
-                {perfil.rol === 'empresa' ? '🏢 Empresa' : perfil.rol === 'viajero' ? '✈️ Viajero' : '⚡ Flekser'}
+                {perfil.rol === 'empresa' ? '🏢 Empresa' : '⚡ Flekser'}
               </span>
               {perfil.ciudad && (
                 <span className="text-xs text-white/70">📍 {perfil.ciudad}</span>

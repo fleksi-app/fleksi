@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     if (tipo === 'bienvenida') {
       const esCliente = datos.rol === 'cliente' || datos.rol === 'empresa';
-      const emoji = datos.rol === 'prestador' ? '👷' : datos.rol === 'empresa' ? '🏢' : datos.rol === 'viajero' ? '✈️' : '🙋';
+      const emoji = datos.rol === 'prestador' ? '👷' : datos.rol === 'empresa' ? '🏢' : '🙋';
       const cta_url = esCliente ? 'https://fleksi.vercel.app/home-empresa' : 'https://fleksi.vercel.app/home';
       const cta_texto = esCliente ? 'Buscar prestadores →' : 'Ver trabajos disponibles →';
       const msgBienvenida = esCliente

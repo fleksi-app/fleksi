@@ -82,7 +82,7 @@ function PublicarForm() {
 
   const efectivoHabilitado = walletSaldo >= 50;
   const esEmpresa = rolUsuario === 'empresa';
-  const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : rolUsuario === 'viajero' ? '/home-viajero' : '/home';
+  const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : '/home';
   const horasFiltradas = horas.filter(h => { if (!horaMinima) return true; return h >= horaMinima.slice(0, 5); });
 
   const geocodificarDireccion = async (dir: string): Promise<{ lat: number; lng: number } | null> => {

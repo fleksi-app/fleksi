@@ -1,3 +1,8 @@
+bash
+
+cat /tmp/fleksi-main/app/auth/callback/route.ts
+Salida
+
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -41,7 +46,6 @@ export async function GET(request: NextRequest) {
           rol: 'flekser',
           rol_activo: 'flekser',
           roles: ['flekser'],
-          modo_viajero: false,
         });
 
         // Asignar badge según número de usuario
@@ -61,7 +65,7 @@ export async function GET(request: NextRequest) {
 
       const rol = usuario.rol_activo || usuario.rol || 'flekser';
       if (rol === 'empresa') return NextResponse.redirect(`${requestUrl.origin}/home-empresa`);
-      if (rol === 'viajero') return NextResponse.redirect(`${requestUrl.origin}/home-viajero`);
+      // Todos los demás (flekser, viajero legacy) van al home unificado
       return NextResponse.redirect(`${requestUrl.origin}/home`);
     }
   }

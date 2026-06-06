@@ -61,7 +61,6 @@ function RegistroForm() {
       if (data.user) {
         const { count } = await supabase.from('usuarios').select('*', { count: 'exact', head: true });
 
-        // Validar código de referido
         let referidoPor = null;
         if (codigoReferido) {
           const { data: referidor } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigoReferido.toUpperCase()).maybeSingle();
@@ -73,7 +72,6 @@ function RegistroForm() {
           nombre,
           telefono: telefono ? `+52${telefono.replace(/\s/g, '')}` : null,
           rol, rol_activo: rol, roles: [rol], email,
-          modo_viajero: false,
           terminos_aceptados_at: new Date().toISOString(),
           referido_por: referidoPor,
           primer_trabajo_completado: false,
@@ -201,7 +199,6 @@ function RegistroForm() {
                 </div>
               </div>
 
-              {/* Campo código de referido */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Código de referido <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <div className="relative">
@@ -232,7 +229,6 @@ function RegistroForm() {
                 )}
               </div>
 
-              {/* Checkbox T&C */}
               <div onClick={() => setAceptaTerminos(!aceptaTerminos)}
                 className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                   aceptaTerminos ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-200'

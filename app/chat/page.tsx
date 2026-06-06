@@ -192,104 +192,6 @@ function FondoEmpresa() {
   );
 }
 
-function FondoViajero() {
-  return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
-      <defs>
-        <pattern id="patronViajero" x="0" y="0" width="320" height="260" patternUnits="userSpaceOnUse">
-          <g transform="translate(20,30) rotate(-15)">
-            <ellipse cx="20" cy="8" rx="20" ry="6" fill="#0369a1"/>
-            <polygon points="40,8 52,4 52,12" fill="#0e7490"/>
-            <rect x="8" y="2" width="16" height="6" rx="3" fill="#0e7490"/>
-            <rect x="12" y="12" width="8" height="4" rx="2" fill="#0369a1"/>
-          </g>
-          <g transform="translate(75,15)">
-            <rect x="7" y="20" width="5" height="30" rx="2.5" fill="#0e7490"/>
-            <path d="M9,20 Q0,10 -8,15 Q-2,8 9,14" fill="#0369a1"/>
-            <path d="M9,20 Q18,8 26,12 Q20,6 9,14" fill="#0369a1"/>
-            <path d="M9,20 Q4,5 8,0 Q10,6 10,14" fill="#0e7490"/>
-          </g>
-          <g transform="translate(140,20)">
-            <rect x="0" y="6" width="26" height="20" rx="4" fill="#0369a1"/>
-            <rect x="7" y="0" width="12" height="8" rx="2" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
-            <line x1="13" y1="6" x2="13" y2="26" stroke="#0e7490" strokeWidth="1.5"/>
-            <line x1="0" y1="14" x2="26" y2="14" stroke="#0e7490" strokeWidth="1"/>
-          </g>
-          <g transform="translate(200,15)">
-            <rect x="8" y="0" width="4" height="28" rx="2" fill="#0e7490"/>
-            <rect x="0" y="4" width="20" height="14" rx="2" fill="#0369a1"/>
-            <polygon points="20,4 28,11 20,18" fill="#0369a1"/>
-          </g>
-          <g transform="translate(255,25)">
-            <path d="M2,12 Q15,20 28,12 L24,18 Q15,22 6,18 Z" fill="#0369a1"/>
-            <rect x="10" y="4" width="4" height="10" rx="2" fill="#0e7490"/>
-            <polygon points="14,4 14,12 22,8" fill="#0369a1"/>
-          </g>
-          <g transform="translate(20,120)">
-            <circle cx="8" cy="8" r="8" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
-            <circle cx="26" cy="8" r="8" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
-            <line x1="16" y1="8" x2="18" y2="8" stroke="#0e7490" strokeWidth="2"/>
-            <ellipse cx="8" cy="8" rx="5" ry="5" fill="#0e7490" fillOpacity="0.3"/>
-            <ellipse cx="26" cy="8" rx="5" ry="5" fill="#0e7490" fillOpacity="0.3"/>
-          </g>
-          <g transform="translate(90,105)">
-            <rect x="8" y="30" width="5" height="12" rx="2" fill="#0e7490"/>
-            <polygon points="10,0 0,16 20,16" fill="#0369a1"/>
-            <polygon points="10,8 -2,26 22,26" fill="#0e7490"/>
-          </g>
-          <g transform="translate(155,110)">
-            <circle cx="14" cy="14" r="13" fill="none" stroke="#0369a1" strokeWidth="2.5"/>
-            <polygon points="14,4 11,14 14,12 17,14" fill="#0e7490"/>
-            <polygon points="14,24 11,14 14,16 17,14" fill="#0369a1"/>
-            <circle cx="14" cy="14" r="2" fill="#0369a1"/>
-          </g>
-          <g transform="translate(210,108)">
-            <rect x="0" y="0" width="36" height="22" rx="2" fill="#0369a1"/>
-            <line x1="18" y1="0" x2="18" y2="22" stroke="white" strokeWidth="2" strokeDasharray="4,3"/>
-            <line x1="0" y1="0" x2="36" y2="0" stroke="#0e7490" strokeWidth="1.5"/>
-            <line x1="0" y1="22" x2="36" y2="22" stroke="#0e7490" strokeWidth="1.5"/>
-          </g>
-          <g transform="translate(272,110)">
-            <rect x="0" y="4" width="28" height="20" rx="4" fill="#0369a1"/>
-            <rect x="8" y="0" width="12" height="6" rx="2" fill="#0e7490"/>
-            <circle cx="14" cy="14" r="6" fill="none" stroke="#0e7490" strokeWidth="2.5"/>
-            <circle cx="14" cy="14" r="3" fill="#0369a1"/>
-          </g>
-          <g transform="translate(20,210)">
-            <rect x="5" y="16" width="4" height="22" rx="2" fill="#0e7490"/>
-            <path d="M7,16 Q0,8 -6,12 Q-1,6 7,12" fill="#0369a1"/>
-            <path d="M7,16 Q14,6 20,10 Q15,4 7,12" fill="#0369a1"/>
-          </g>
-          <g transform="translate(80,205)">
-            <rect x="2" y="4" width="20" height="24" rx="4" fill="#0369a1"/>
-            <rect x="6" y="0" width="12" height="6" rx="3" fill="#0e7490"/>
-            <rect x="6" y="14" width="12" height="8" rx="2" fill="#0e7490"/>
-            <line x1="12" y1="14" x2="12" y2="22" stroke="#0369a1" strokeWidth="1.5"/>
-          </g>
-          <g transform="translate(150,210)">
-            <circle cx="14" cy="14" r="9" fill="#0369a1"/>
-            {[0,45,90,135,180,225,270,315].map((deg,i)=>(
-              <line key={i}
-                x1={14+11*Math.cos(deg*Math.PI/180)} y1={14+11*Math.sin(deg*Math.PI/180)}
-                x2={14+15*Math.cos(deg*Math.PI/180)} y2={14+15*Math.sin(deg*Math.PI/180)}
-                stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
-            ))}
-          </g>
-          <g transform="translate(210,205)">
-            <rect x="8" y="0" width="4" height="22" rx="2" fill="#0e7490"/>
-            <polygon points="12,6 20,10 20,20 12,24 4,20 4,10" fill="#0369a1"/>
-          </g>
-          <g transform="translate(255,210)">
-            <path d="M0,10 Q8,2 16,10 Q24,18 32,10" fill="none" stroke="#0369a1" strokeWidth="3" strokeLinecap="round"/>
-            <path d="M0,18 Q8,10 16,18 Q24,26 32,18" fill="none" stroke="#0e7490" strokeWidth="2.5" strokeLinecap="round"/>
-          </g>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#patronViajero)"/>
-    </svg>
-  );
-}
-
 function ChatContent() {
   const searchParams = useSearchParams();
   const usuarioDestinoId = searchParams.get('usuario');
@@ -436,16 +338,15 @@ function ChatContent() {
 
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const bubbleGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const focusBorder = esEmpresa ? 'focus:border-blue-700' : esViajero ? 'focus:border-teal-400' : 'focus:border-purple-400';
-  const dotColor = esEmpresa ? 'bg-blue-800' : esViajero ? 'bg-teal-500' : 'bg-purple-600';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const bgFondo = esEmpresa ? 'bg-slate-100' : esViajero ? 'bg-sky-100' : 'bg-purple-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
-  const Fondo = esEmpresa ? FondoEmpresa : esViajero ? FondoViajero : FondoFlekser;
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const bubbleGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const focusBorder = esEmpresa ? 'focus:border-blue-700' : 'focus:border-purple-400';
+  const dotColor = esEmpresa ? 'bg-blue-800' : 'bg-purple-600';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const bgFondo = esEmpresa ? 'bg-slate-100' : 'bg-purple-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
+  const Fondo = esEmpresa ? FondoEmpresa : FondoFlekser;
 
   if (cargando) {
     return (

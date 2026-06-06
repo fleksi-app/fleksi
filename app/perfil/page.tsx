@@ -23,7 +23,6 @@ const todosLosBadges = [
   { tipo: 'top_rated', nombre: 'Top Rated', emoji: '⭐', desc: 'Calificación 4.8 o más' },
   { tipo: 'perfecto', nombre: 'Perfección', emoji: '✨', desc: 'Calificación perfecta 5.0' },
   { tipo: 'verificado', nombre: 'Verificado', emoji: '✅', desc: 'Identidad verificada' },
-  { tipo: 'viajero', nombre: 'Viajero', emoji: '✈️', desc: 'Trabajó en 2+ ciudades' },
   { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆', desc: 'Perfil al 100%' },
 ];
 
@@ -77,7 +76,6 @@ export default function Perfil() {
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [progresoPerfil, setProgresoPerfil] = useState(0);
 
-  // Sección cuenta
   const [mostrarCuenta, setMostrarCuenta] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState(false);
   const [cuentaNombre, setCuentaNombre] = useState('');
@@ -87,7 +85,6 @@ export default function Perfil() {
   const [exitoCuenta, setExitoCuenta] = useState('');
   const [errorCuenta, setErrorCuenta] = useState('');
 
-  // Cambiar contraseña
   const [mostrarCambiarPass, setMostrarCambiarPass] = useState(false);
   const [passNueva, setPassNueva] = useState('');
   const [passConfirmar, setPassConfirmar] = useState('');
@@ -97,7 +94,6 @@ export default function Perfil() {
   const [exitoPass, setExitoPass] = useState('');
   const [errorPass, setErrorPass] = useState('');
 
-  // Eliminar cuenta
   const [mostrarEliminar, setMostrarEliminar] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState('');
 
@@ -401,7 +397,7 @@ export default function Perfil() {
               )}
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
-                  ⚡ {usuario?.rol === 'viajero' ? 'Viajero' : usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
+                  ⚡ {usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
                 </span>
                 {tieneBadge('fundador') && <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">🏅 Fundador</span>}
                 {tieneBadge('pionero') && <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">🚀 Pionero</span>}

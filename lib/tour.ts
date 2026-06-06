@@ -24,14 +24,12 @@ export function iniciarTour(rol: string) {
   });
 
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  // Paso 1 — Bienvenida
   tour.addStep({
     id: 'bienvenida',
     text: `
       <div style="text-align:center; padding: 8px 0">
-        <div style="font-size:40px; margin-bottom:8px">${esEmpresa ? '🏢' : esViajero ? '✈️' : '⚡'}</div>
+        <div style="font-size:40px; margin-bottom:8px">${esEmpresa ? '🏢' : '⚡'}</div>
         <p style="font-weight:800; font-size:18px; color:#111; margin:0 0 8px">¡Bienvenido a Fleksi!</p>
         <p style="color:#666; font-size:14px; margin:0">Te mostramos cómo funciona en 30 segundos</p>
       </div>
@@ -50,7 +48,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 2 — Home
   tour.addStep({
     id: 'home',
     text: `
@@ -68,7 +65,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 3 — Catálogo
   tour.addStep({
     id: 'catalogo',
     text: `
@@ -86,7 +82,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 4 — Botón +
   tour.addStep({
     id: 'nuevo',
     text: `
@@ -104,7 +99,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 5 — Chat
   tour.addStep({
     id: 'chat',
     text: `
@@ -118,7 +112,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 6 — Perfil
   tour.addStep({
     id: 'perfil',
     text: `
@@ -132,7 +125,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 7 — Notificaciones
   tour.addStep({
     id: 'notificaciones',
     text: `
@@ -146,7 +138,6 @@ export function iniciarTour(rol: string) {
     ],
   });
 
-  // Paso 8 — Fin
   tour.addStep({
     id: 'fin',
     text: `

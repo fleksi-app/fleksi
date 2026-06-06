@@ -85,15 +85,14 @@ function AplicacionesContent() {
 
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const chatBorder = esEmpresa ? 'border-blue-200 text-blue-700 hover:bg-blue-50' : esViajero ? 'border-teal-200 text-teal-600 hover:bg-teal-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50';
-  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const chatBorder = esEmpresa ? 'border-blue-200 text-blue-700 hover:bg-blue-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
 
   if (cargando) {
     return (
@@ -110,7 +109,6 @@ function AplicacionesContent() {
     const prestadorTermino = aplicaciones.some(a => a.checkout_at);
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
 
-    // Visitas de la última semana
     const hace7dias = new Date();
     hace7dias.setDate(hace7dias.getDate() - 7);
     const visitasSemana = (servicioActivo.visitas_semana || [])
@@ -130,7 +128,6 @@ function AplicacionesContent() {
                 <p className="text-white/70 text-xs truncate max-w-xs">{servicioActivo.titulo}</p>
               </div>
             </div>
-            {/* Estadísticas de visitas — solo para el dueño */}
             <div className="flex gap-3 mt-3">
               <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
                 <span className="text-white/70 text-xs">👁️ Total</span>
@@ -326,7 +323,6 @@ function AplicacionesContent() {
                     <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
                     <p className={`font-extrabold ${precioColor} text-sm`}>${svc.presupuesto} MXN</p>
                   </div>
-                  {/* Visitas — solo para el dueño */}
                   <div className="flex items-center gap-3 mt-1">
                     {svc.visitas > 0 && (
                       <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''} totales</span>

@@ -30,14 +30,12 @@ export default function Login() {
               rol: 'flekser',
               rol_activo: 'flekser',
               roles: ['flekser'],
-              modo_viajero: false,
             });
             window.location.href = '/onboarding?rol=flekser&social=true';
             return;
           }
           const rol = usuario.rol_activo || usuario.rol || 'flekser';
-          if (rol === 'empresa') window.location.href = '/home-empresa';
-          else window.location.href = '/home';
+          redirigirPorRol(rol);
         }
       });
     }
@@ -45,7 +43,6 @@ export default function Login() {
 
   const redirigirPorRol = (rol: string) => {
     if (rol === 'empresa') window.location.href = '/home-empresa';
-    else if (rol === 'viajero') window.location.href = '/home-viajero';
     else window.location.href = '/home';
   };
 

@@ -191,125 +191,6 @@ const slides: Record<string, any[]> = {
       descripcion: 'Conecta con profesionales independientes cuando los necesites. El pago está protegido hasta que el servicio quede bien.',
     },
   ],
-
-  viajero: [
-    {
-      bg: 'from-sky-500 to-blue-700',
-      ilustracion: (
-        <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
-          <ellipse cx="80" cy="60" rx="45" ry="25" fill="rgba(255,255,255,0.2)"/>
-          <ellipse cx="100" cy="50" rx="35" ry="20" fill="rgba(255,255,255,0.25)"/>
-          <ellipse cx="210" cy="80" rx="40" ry="22" fill="rgba(255,255,255,0.18)"/>
-          <ellipse cx="230" cy="70" rx="30" ry="18" fill="rgba(255,255,255,0.22)"/>
-          <g transform="translate(120, 90) rotate(-15)">
-            <ellipse cx="30" cy="0" rx="35" ry="10" fill="rgba(255,255,255,0.85)"/>
-            <polygon points="65,0 80,-8 80,8" fill="rgba(255,255,255,0.7)"/>
-            <rect x="10" y="-18" width="25" height="10" rx="3" fill="rgba(255,255,255,0.75)"/>
-            <rect x="15" y="8" width="15" height="8" rx="2" fill="rgba(255,255,255,0.6)"/>
-          </g>
-          <path d="M0 180 Q150 140 300 180" stroke="rgba(255,255,255,0.3)" strokeWidth="20" fill="none"/>
-          <path d="M0 180 Q150 140 300 180" stroke="rgba(255,255,255,0.1)" strokeWidth="18" fill="none" strokeDasharray="20,15"/>
-          <rect x="50" y="140" width="4" height="40" fill="rgba(255,255,255,0.5)"/>
-          <rect x="40" y="138" width="24" height="16" rx="2" fill="rgba(255,80,80,0.7)"/>
-          <text x="52" y="150" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">MX</text>
-          <rect x="249" y="145" width="4" height="35" fill="rgba(255,255,255,0.5)"/>
-          <polygon points="242,143 256,143 256,157 249,163 242,157" fill="rgba(255,220,50,0.7)"/>
-          <polygon points="0,200 60,130 120,200" fill="rgba(255,255,255,0.1)"/>
-          <polygon points="180,200 240,120 300,200" fill="rgba(255,255,255,0.1)"/>
-        </svg>
-      ),
-      titulo: '¡Bienvenido, Viajero! ✈️',
-      subtitulo: 'Tu trabajo viaja contigo',
-      descripcion: 'Encuentra trabajos en cualquier ciudad de México. Donde vayas, hay oportunidades esperándote.',
-    },
-    {
-      bg: 'from-teal-500 to-emerald-700',
-      ilustracion: (
-        <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
-          <path d="M0 160 Q75 140 150 160 Q225 180 300 160 L300 220 L0 220 Z" fill="rgba(255,255,255,0.15)"/>
-          <path d="M0 175 Q75 155 150 175 Q225 195 300 175 L300 220 L0 220 Z" fill="rgba(255,255,255,0.1)"/>
-          <path d="M100 140 L200 140 L190 165 L110 165 Z" fill="rgba(255,255,255,0.7)"/>
-          <rect x="140" y="110" width="5" height="32" fill="rgba(255,255,255,0.8)"/>
-          <polygon points="145,110 145,128 175,120" fill="rgba(255,255,255,0.6)"/>
-          <polygon points="145,112 145,128 118,122" fill="rgba(255,255,255,0.5)"/>
-          <rect x="45" y="140" width="6" height="60" rx="3" fill="rgba(255,255,255,0.4)"/>
-          <ellipse cx="48" cy="135" rx="25" ry="12" fill="rgba(100,200,100,0.5)"/>
-          <ellipse cx="35" cy="130" rx="18" ry="8" fill="rgba(100,200,100,0.4)"/>
-          <rect x="249" y="145" width="6" height="55" rx="3" fill="rgba(255,255,255,0.4)"/>
-          <ellipse cx="252" cy="140" rx="22" ry="10" fill="rgba(100,200,100,0.5)"/>
-          <ellipse cx="265" cy="136" rx="16" ry="7" fill="rgba(100,200,100,0.4)"/>
-          <circle cx="150" cy="50" r="30" fill="rgba(255,220,50,0.6)"/>
-          {[0,45,90,135,180,225,270,315].map((deg,i) => (
-            <line key={i}
-              x1={150 + 32*Math.cos(deg*Math.PI/180)}
-              y1={50 + 32*Math.sin(deg*Math.PI/180)}
-              x2={150 + 42*Math.cos(deg*Math.PI/180)}
-              y2={50 + 42*Math.sin(deg*Math.PI/180)}
-              stroke="rgba(255,220,50,0.5)" strokeWidth="3" strokeLinecap="round"/>
-          ))}
-        </svg>
-      ),
-      titulo: 'Playas, bosques, ciudades 🌴',
-      subtitulo: 'México en tus manos',
-      descripcion: 'Activa el modo viajero, actualiza tu ciudad y aparece en búsquedas locales donde estés.',
-    },
-    {
-      bg: 'from-orange-500 to-red-700',
-      ilustracion: (
-        <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
-          <polygon points="0,220 80,80 160,220" fill="rgba(255,255,255,0.1)"/>
-          <polygon points="60,220 150,60 240,220" fill="rgba(255,255,255,0.12)"/>
-          <polygon points="140,220 220,90 300,220" fill="rgba(255,255,255,0.1)"/>
-          {[30,80,200,250].map((x,i) => (
-            <g key={i}>
-              <rect x={x-3} y={160} width="6" height="30" fill="rgba(255,255,255,0.3)"/>
-              <polygon points={`${x},120 ${x-18},165 ${x+18},165`} fill="rgba(100,200,100,0.4)"/>
-              <polygon points={`${x},105 ${x-14},135 ${x+14},135`} fill="rgba(100,200,100,0.5)"/>
-            </g>
-          ))}
-          <rect x="125" y="80" width="50" height="60" rx="8" fill="rgba(255,255,255,0.7)"/>
-          <rect x="133" y="72" width="34" height="12" rx="4" fill="rgba(255,255,255,0.6)"/>
-          <rect x="118" y="85" width="8" height="40" rx="4" fill="rgba(255,255,255,0.5)"/>
-          <rect x="174" y="85" width="8" height="40" rx="4" fill="rgba(255,255,255,0.5)"/>
-          <rect x="133" y="100" width="34" height="25" rx="4" fill="rgba(255,255,255,0.3)"/>
-          <circle cx="150" cy="30" r="20" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
-          <polygon points="150,15 153,30 150,27 147,30" fill="rgba(255,80,80,0.8)"/>
-          <polygon points="150,45 153,30 150,33 147,30" fill="rgba(255,255,255,0.6)"/>
-        </svg>
-      ),
-      titulo: 'Aventura y trabajo 🎒',
-      subtitulo: 'Financia tus viajes',
-      descripcion: 'Trabaja mientras viajas. Conecta con clientes locales, gana dinero y sigue explorando.',
-    },
-    {
-      bg: 'from-indigo-600 to-violet-800',
-      ilustracion: (
-        <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
-          <path d="M60 80 Q80 60 120 65 Q160 55 190 70 Q220 75 240 95 Q250 120 235 145 Q215 165 190 155 Q170 170 150 160 Q120 175 100 165 Q70 155 55 130 Q45 105 60 80 Z"
-            fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="2"/>
-          {[[150,95],[100,85],[175,80],[120,130],[200,120]].map(([x,y],i) => (
-            <g key={i}>
-              <circle cx={x} cy={y-5} r="8" fill="rgba(255,80,80,0.8)"/>
-              <circle cx={x} cy={y-5} r="3" fill="rgba(255,255,255,0.9)"/>
-              <line x1={x} y1={y+3} x2={x} y2={y+10} stroke="rgba(255,80,80,0.8)" strokeWidth="2"/>
-            </g>
-          ))}
-          <line x1="150" y1="90" x2="100" y2="80" stroke="rgba(255,220,50,0.4)" strokeWidth="1.5" strokeDasharray="4,3"/>
-          <line x1="150" y1="90" x2="175" y2="75" stroke="rgba(255,220,50,0.4)" strokeWidth="1.5" strokeDasharray="4,3"/>
-          <line x1="150" y1="90" x2="120" y2="125" stroke="rgba(255,220,50,0.4)" strokeWidth="1.5" strokeDasharray="4,3"/>
-          <line x1="150" y1="90" x2="200" y2="115" stroke="rgba(255,220,50,0.4)" strokeWidth="1.5" strokeDasharray="4,3"/>
-          <g transform="translate(60,170) rotate(-30)">
-            <ellipse cx="15" cy="0" rx="18" ry="5" fill="rgba(255,255,255,0.7)"/>
-            <polygon points="33,0 42,-4 42,4" fill="rgba(255,255,255,0.6)"/>
-            <rect x="5" y="-9" width="12" height="5" rx="1" fill="rgba(255,255,255,0.55)"/>
-          </g>
-        </svg>
-      ),
-      titulo: '¡México te espera! 🗺️',
-      subtitulo: 'Sin límites geográficos',
-      descripcion: 'Como viajero ves trabajos de todo el país. Actualiza tu ciudad y empieza a ganar donde estés.',
-    },
-  ],
 };
 
 function OnboardingContent() {
@@ -339,7 +220,6 @@ function OnboardingContent() {
 
   const redirigir = (r: string) => {
     if (r === 'empresa') window.location.href = '/home-empresa';
-    else if (r === 'viajero') window.location.href = '/home-viajero';
     else window.location.href = '/home';
   };
 

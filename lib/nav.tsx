@@ -1,3 +1,8 @@
+bash
+
+cat /tmp/fleksi-main/lib/nav.tsx
+Salida
+
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -88,7 +93,6 @@ export default function Nav({ activo }: { activo: string }) {
       await supabase.from('usuarios').update({
         rol_activo: nuevoRol,
         roles: rolesActuales,
-        ...(nuevoRol === 'empresa' && { modo_viajero: false }),
       }).eq('id', usuarioId);
       setRol(nuevoRol);
       setRoles(rolesActuales);

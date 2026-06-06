@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
-// Calcula distancia en metros entre dos coordenadas (fórmula Haversine)
 function calcularDistancia(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -60,30 +59,23 @@ export default function CheckIn() {
     setCargando(false);
   };
 
-  // Verifica si hoy es el día del trabajo (o 1 día antes para prepararse)
   const esDiaDelTrabajo = (fecha: string): boolean => {
-    if (!fecha) return true; // si no tiene fecha, permitir
+    if (!fecha) return true;
     const hoy = new Date().toISOString().split('T')[0];
     return fecha === hoy;
   };
 
-  // Verifica geolocalización contra coordenadas del servicio
   const verificarUbicacion = async (app: any): Promise<boolean> => {
     const servicio = app.servicios;
-
-    // Si el servicio no tiene coordenadas, permitir check-in sin geo
     if (!servicio?.lat || !servicio?.lng) return true;
-
     setVerificandoGeo(prev => ({ ...prev, [app.id]: true }));
     setErrorGeo(prev => ({ ...prev, [app.id]: '' }));
-
     try {
       const pos = await obtenerUbicacion();
       const distancia = calcularDistancia(
         pos.coords.latitude, pos.coords.longitude,
         servicio.lat, servicio.lng
       );
-
       if (distancia > 500) {
         setErrorGeo(prev => ({
           ...prev,
@@ -93,7 +85,6 @@ export default function CheckIn() {
       }
       return true;
     } catch (err: any) {
-      // Si el usuario rechaza el permiso o hay error, preguntar si continuar
       setErrorGeo(prev => ({
         ...prev,
         [app.id]: '📍 No pudimos verificar tu ubicación. ¿Confirmas que estás en el lugar de trabajo?'
@@ -136,7 +127,6 @@ export default function CheckIn() {
     const aplicacionId = app.id;
     const servicioId = app.servicios?.id;
 
-    // Validar que sea el día del trabajo
     if (!esDiaDelTrabajo(app.servicios?.fecha)) {
       setErrorGeo(prev => ({
         ...prev,
@@ -145,10 +135,9 @@ export default function CheckIn() {
       return;
     }
 
-    // Verificar geolocalización (a menos que sea forzado por el usuario)
     if (!forzar) {
       const ubicacionOk = await verificarUbicacion(app);
-      if (!ubicacionOk) return; // el error ya se setea en verificarUbicacion
+      if (!ubicacionOk) return;
     }
 
     setProcesando(aplicacionId);
@@ -165,7 +154,6 @@ export default function CheckIn() {
       const { error: e2 } = await supabase.from('servicios').update({ estado: 'en_proceso' }).eq('id', servicioId);
       if (e2) { alert('Error servicio: ' + e2.message); return; }
 
-      // Notificar al cliente que el flekser llegó
       const clienteId = app.servicios?.usuarios?.id;
       if (clienteId) {
         try {
@@ -223,7 +211,6 @@ export default function CheckIn() {
           });
         } catch (e) {}
 
-        // Notificar al cliente que el flekser terminó
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: clienteId,
@@ -249,15 +236,14 @@ export default function CheckIn() {
 
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-  const esViajero = rol === 'viajero';
 
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
-  const precioColor = esEmpresa ? 'text-blue-800' : esViajero ? 'text-teal-600' : 'text-purple-600';
-  const precioBg = esEmpresa ? 'from-slate-50 to-blue-50' : esViajero ? 'from-sky-50 to-teal-50' : 'from-blue-50 to-purple-50';
-  const bgFondo = esEmpresa ? 'bg-slate-50' : esViajero ? 'bg-sky-50' : 'bg-gray-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : esViajero ? 'border-teal-500' : 'border-purple-600';
-  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : esViajero ? 'from-sky-500 to-teal-500' : 'from-blue-600 to-purple-600';
+  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
+  const precioBg = esEmpresa ? 'from-slate-50 to-blue-50' : 'from-blue-50 to-purple-50';
+  const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
+  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
+  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
 
   if (cargando) {
     return (
@@ -328,7 +314,6 @@ export default function CheckIn() {
 
                   {!app.checkin_at && app.estado === 'aceptado' && (
                     <div>
-                      {/* Aviso si no es el día del trabajo */}
                       {!esDia ? (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-center">
                           <p className="text-amber-700 font-bold text-sm">📅 Check-in disponible el {app.servicios?.fecha}</p>
@@ -341,7 +326,6 @@ export default function CheckIn() {
                         </div>
                       )}
 
-                      {/* Error de geolocalización */}
                       {errGeo && (
                         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
                           <p className="text-red-700 text-sm font-semibold">{errGeo}</p>

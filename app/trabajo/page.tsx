@@ -162,7 +162,7 @@ function DetalleTrabajoContent() {
   const ganancia = usuario ? calcularPagoFlekser(precioBase) : { total: precioBase };
   const esPropioServicio = trabajo.cliente_id === usuario?.id;
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
-  const homeUrl = rol === 'empresa' ? '/home-empresa' : rol === 'viajero' ? '/home-viajero' : '/home';
+  const homeUrl = rol === 'empresa' ? '/home-empresa' : '/home';
   const tieneFoto = !!usuario?.foto_url;
   const visitasSemana = (trabajo.visitas_semana || []).filter((v: string) => {
     const hace7dias = new Date(); hace7dias.setDate(hace7dias.getDate() - 7); return new Date(v) > hace7dias;
