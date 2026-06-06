@@ -73,6 +73,10 @@ export default function Admin() {
   const [notaRetiro, setNotaRetiro] = useState<Record<string, string>>({});
   const [rechazandoRetiro, setRechazandoRetiro] = useState('');
 
+  // Modal usuarios
+  const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
+  const [cargandoModal, setCargandoModal] = useState(false);
+
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
     nuevosHoy: 0, nuevosEsteMes: 0,
@@ -89,6 +93,19 @@ export default function Admin() {
   useEffect(() => { if (tab === 'dispersion') cargarDispersion(); }, [tab]);
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
 
+  const abrirModalUsuarios = async (rol: string) => {
+    setCargandoModal(true);
+    setModalUsuarios({ visible: true, rol, lista: [] });
+    try {
+      const { data } = await supabase
+        .from('usuarios')
+        .select('id, nombre, email, telefono, ciudad, foto_url, created_at, verificado, rol')
+        .eq('rol', rol)
+        .order('created_at', { ascending: false });
+      setModalUsuarios({ visible: true, rol, lista: data || [] });
+    } catch (e) { console.error(e); }
+    finally { setCargandoModal(false); }
+  };
 
   const cargarRetiros = async () => {
     setCargandoRetiros(true);
@@ -410,12 +427,10 @@ export default function Admin() {
                 <p className="text-xs text-gray-400 mt-1">{pagosDispersion.filter(p => p.dispersado).length} pagos realizados</p>
               </div>
             </div>
-
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
               <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p>
               <p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Aquí ves exactamente cuánto le debes transferir a cada Flekser (precio del trabajo − 10% comisión Fleksi). Haz la transferencia por SPEI o desde Stripe y marca como dispersado.</p>
             </div>
-
             <div className="flex gap-2 mb-4">
               <button onClick={() => setFiltroDispersion('pendiente')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
                 ⏳ Pendientes {pendienteCount > 0 && `(${pendienteCount})`}
@@ -424,7 +439,6 @@ export default function Admin() {
                 ✅ Dispersados
               </button>
             </div>
-
             {cargandoDispersion ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : pagosFiltrados.length === 0 ? (
@@ -445,14 +459,12 @@ export default function Admin() {
                         ? <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">✅ Dispersado</span>
                         : <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">⏳ Pendiente</span>}
                     </div>
-
                     <div className="bg-gray-50 rounded-xl p-3 mb-3">
                       <p className="text-xs text-gray-400 font-semibold mb-1">👤 Flekser a pagar</p>
                       <p className="font-extrabold text-gray-900">{pago.usuarios?.nombre || '—'}</p>
                       {pago.usuarios?.email && <p className="text-xs text-gray-500 mt-0.5">✉️ {pago.usuarios.email}</p>}
                       {pago.usuarios?.telefono && <p className="text-xs text-gray-500 mt-0.5">📱 {pago.usuarios.telefono}</p>}
                     </div>
-
                     <div className="border border-gray-100 rounded-xl overflow-hidden mb-3">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
                         <span className="text-sm text-gray-500">Precio del trabajo</span>
@@ -467,14 +479,12 @@ export default function Admin() {
                         <span className="text-xl font-extrabold text-green-700">${pago.pagoFlekser.toLocaleString('es-MX')} MXN</span>
                       </div>
                     </div>
-
                     {pago.dispersado && pago.nota_dispersion && (
                       <div className="bg-green-50 rounded-xl p-3 mb-3">
                         <p className="text-xs text-green-700 font-semibold">📝 Nota: {pago.nota_dispersion}</p>
                         {pago.dispersado_at && <p className="text-xs text-green-600 mt-0.5">Dispersado el {new Date(pago.dispersado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>}
                       </div>
                     )}
-
                     {!pago.dispersado && (
                       <div className="flex flex-col gap-2">
                         <input type="text" placeholder="Nota opcional (ej. SPEI confirmado, ref. 123...)"
@@ -508,9 +518,22 @@ export default function Admin() {
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-100"><p className="text-3xl font-extrabold text-green-600">{metrics.nuevosHoy}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Nuevos hoy</p></div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100"><p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p><p className="text-xs text-gray-400 mt-0.5">Fleksers</p></div>
-                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100"><p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p><p className="text-xs text-gray-400 mt-0.5">Empresas</p></div>
-                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100"><p className="text-xl font-extrabold text-emerald-600">{metrics.nuevosEsteMes}</p><p className="text-xs text-gray-400 mt-0.5">Este mes</p></div>
+                    {/* Fleksers — clickeable */}
+                    <button onClick={() => abrirModalUsuarios('flekser')}
+                      className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition active:scale-95">
+                      <p className="text-xl font-extrabold text-purple-600">{metrics.fleksers}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Fleksers →</p>
+                    </button>
+                    {/* Empresas — clickeable */}
+                    <button onClick={() => abrirModalUsuarios('empresa')}
+                      className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition active:scale-95">
+                      <p className="text-xl font-extrabold text-slate-700">{metrics.empresas}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Empresas →</p>
+                    </button>
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <p className="text-xl font-extrabold text-emerald-600">{metrics.nuevosEsteMes}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Este mes</p>
+                    </div>
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -792,25 +815,18 @@ export default function Admin() {
                 <p className="text-xs text-gray-400 mt-1">MXN por enviar</p>
               </div>
             </div>
-
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5">
               <p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p>
               <p className="text-blue-700 text-xs leading-relaxed">El flekser solicitó el retiro desde su wallet. Haz la transferencia SPEI desde tu banco o Stripe a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p>
             </div>
-
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-              {[
-                { key: 'pendiente', label: '⏳ Pendientes' },
-                { key: 'completado', label: '✅ Completados' },
-                { key: 'rechazado', label: '❌ Rechazados' },
-              ].map(f => (
+              {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
                 <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
                   {f.label}
                 </button>
               ))}
             </div>
-
             {cargandoRetiros ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : retiros.filter(r => r.estado === filtroRetiros).length === 0 ? (
@@ -822,14 +838,10 @@ export default function Admin() {
               <div className="flex flex-col gap-4">
                 {retiros.filter(r => r.estado === filtroRetiros).map((retiro) => (
                   <div key={retiro.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-
-                    {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                          {retiro.usuarios?.foto_url
-                            ? <img src={retiro.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/>
-                            : <span className="text-white font-bold text-sm">{retiro.usuarios?.nombre?.charAt(0) || '?'}</span>}
+                          {retiro.usuarios?.foto_url ? <img src={retiro.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/> : <span className="text-white font-bold text-sm">{retiro.usuarios?.nombre?.charAt(0) || '?'}</span>}
                         </div>
                         <div>
                           <p className="font-extrabold text-gray-900">{retiro.usuarios?.nombre || '—'}</p>
@@ -839,22 +851,14 @@ export default function Admin() {
                           </div>
                         </div>
                       </div>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
-                        retiro.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                        retiro.estado === 'completado' ? 'bg-green-100 text-green-700' :
-                        'bg-red-100 text-red-600'
-                      }`}>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${retiro.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : retiro.estado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                         {retiro.estado === 'pendiente' ? '⏳ Pendiente' : retiro.estado === 'completado' ? '✅ Completado' : '❌ Rechazado'}
                       </span>
                     </div>
-
-                    {/* Monto */}
                     <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-100 mb-3">
                       <p className="text-xs text-gray-500 mb-0.5">Monto a transferir</p>
                       <p className="text-3xl font-extrabold text-teal-600">${retiro.monto?.toFixed(2)} <span className="text-lg font-normal text-gray-400">MXN</span></p>
                     </div>
-
-                    {/* Datos bancarios */}
                     <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden mb-3">
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
                         <span className="text-xs text-gray-500 font-semibold">Banco</span>
@@ -869,74 +873,42 @@ export default function Admin() {
                         <span className="font-bold text-gray-900 text-sm">{retiro.titular || '—'}</span>
                       </div>
                     </div>
-
-                    <p className="text-xs text-gray-400 mb-3">
-                      Solicitado: {new Date(retiro.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-
-                    {/* Notas si ya fue procesado */}
+                    <p className="text-xs text-gray-400 mb-3">Solicitado: {new Date(retiro.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     {retiro.estado !== 'pendiente' && retiro.notas && (
                       <div className={`rounded-xl p-3 mb-3 ${retiro.estado === 'completado' ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <p className={`text-xs font-semibold ${retiro.estado === 'completado' ? 'text-green-700' : 'text-red-700'}`}>
-                          📝 {retiro.notas}
-                        </p>
-                        {retiro.procesado_at && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Por {retiro.procesado_por} · {new Date(retiro.procesado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        )}
+                        <p className={`text-xs font-semibold ${retiro.estado === 'completado' ? 'text-green-700' : 'text-red-700'}`}>📝 {retiro.notas}</p>
+                        {retiro.procesado_at && <p className="text-xs text-gray-400 mt-0.5">Por {retiro.procesado_por} · {new Date(retiro.procesado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
                       </div>
                     )}
-
-                    {/* Acciones solo para pendientes */}
                     {retiro.estado === 'pendiente' && (
                       <div className="flex flex-col gap-2">
-                        <input
-                          type="text"
-                          placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)"
+                        <input type="text" placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)"
                           value={notaRetiro[retiro.id] || ''}
                           onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))}
-                          className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"
-                        />
+                          className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"/>
                         {rechazandoRetiro === retiro.id ? (
                           <div className="flex flex-col gap-2">
-                            <input
-                              type="text"
-                              placeholder="Motivo del rechazo (obligatorio)"
+                            <input type="text" placeholder="Motivo del rechazo (obligatorio)"
                               value={notaRetiro[retiro.id + '_rechazo'] || ''}
                               onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id + '_rechazo']: e.target.value }))}
-                              className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"
-                            />
+                              className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"/>
                             <div className="flex gap-2">
-                              <button onClick={() => setRechazandoRetiro('')}
-                                className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
-                                Cancelar
-                              </button>
-                              <button
-                                onClick={() => rechazarRetiroFn(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id + '_rechazo'] || '')}
-                                disabled={procesandoRetiro === retiro.id}
-                                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                              <button onClick={() => setRechazandoRetiro('')} className="flex-1 py-3 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">Cancelar</button>
+                              <button onClick={() => rechazarRetiroFn(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id + '_rechazo'] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
                                 {procesandoRetiro === retiro.id ? 'Procesando...' : 'Confirmar rechazo'}
                               </button>
                             </div>
                           </div>
                         ) : (
                           <div className="flex gap-2">
-                            <button onClick={() => setRechazandoRetiro(retiro.id)}
-                              className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">
-                              ❌ Rechazar
-                            </button>
-                            <button
-                              onClick={() => procesarRetiro(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id] || '')}
-                              disabled={procesandoRetiro === retiro.id}
-                              className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:opacity-90 transition">
+                            <button onClick={() => setRechazandoRetiro(retiro.id)} className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">❌ Rechazar</button>
+                            <button onClick={() => procesarRetiro(retiro.id, retiro.usuario_id, retiro.monto, notaRetiro[retiro.id] || '')} disabled={procesandoRetiro === retiro.id} className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:opacity-90 transition">
                               {procesandoRetiro === retiro.id ? 'Procesando...' : '✅ Marcar enviado'}
                             </button>
                           </div>
                         )}
                       </div>
                     )}
-
                   </div>
                 ))}
               </div>
@@ -945,6 +917,57 @@ export default function Admin() {
         )}
 
       </div>
+
+      {/* ── MODAL LISTADO USUARIOS ── */}
+      {modalUsuarios.visible && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })}>
+          <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-extrabold text-gray-900 text-lg">
+                {modalUsuarios.rol === 'empresa' ? '🏢 Empresas' : '⚡ Fleksers'} registrados
+              </h3>
+              <button onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
+            </div>
+            {cargandoModal ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
+              </div>
+            ) : modalUsuarios.lista.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-3xl mb-2">📭</p>
+                <p className="text-gray-400">Sin usuarios registrados</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs text-gray-400 mb-1">{modalUsuarios.lista.length} usuario{modalUsuarios.lista.length !== 1 ? 's' : ''}</p>
+                {modalUsuarios.lista.map((u) => (
+                  <div key={u.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-extrabold text-gray-900 text-sm">{u.nombre}</p>
+                          {u.verificado && <span className="text-xs bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded-full">✅</span>}
+                        </div>
+                        {u.ciudad && <p className="text-xs text-gray-400">📍 {u.ciudad}</p>}
+                      </div>
+                      <p className="text-xs text-gray-400 text-right">{new Date(u.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      {u.email && <p className="text-xs text-gray-500">✉️ {u.email}</p>}
+                      {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
