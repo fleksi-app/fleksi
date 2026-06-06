@@ -72,7 +72,28 @@ export default function HomeWorker() {
     setNotificaciones(notifs || []);
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
-    if ('Notification' in window && Notification.permission === 'default') setMostrarBannerPush(true);
+
+    // ── FIX PUSH: registrar suscripción sin importar si el permiso ya estaba dado ──
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        setMostrarBannerPush(true);
+      } else if (Notification.permission === 'granted') {
+        try {
+          if ('serviceWorker' in navigator && 'PushManager' in window) {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+            });
+            await fetch('/api/push', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
+            });
+          }
+        } catch (e) {}
+      }
+    }
   };
 
   const toggleModoViajero = async () => {
