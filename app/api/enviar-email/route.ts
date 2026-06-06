@@ -64,7 +64,7 @@ async function enviarCorreoNotificacion(destinatario: string, titulo: string, me
     `;
     await resend.emails.send({
       from: 'Fleksi <onboarding@resend.dev>',
-      to: destinatario,
+      to: 'fernando.najera.nm@gmail.com',
       subject: titulo,
       html,
     });
@@ -73,11 +73,8 @@ async function enviarCorreoNotificacion(destinatario: string, titulo: string, me
 
 // Función centralizada — notificación + push + correo simultáneos
 async function notificarUsuario(usuario_id: string, tipo: string, titulo: string, mensaje: string, link: string) {
-  // 1. Notificación en app (Supabase)
   await crearNotificacion(usuario_id, tipo, titulo, mensaje, link);
-  // 2. Push web
   await enviarPush(usuario_id, titulo, mensaje, link);
-  // 3. Correo — obtener email del usuario
   try {
     const { data: userData } = await supabaseAdmin.from('usuarios').select('email').eq('id', usuario_id).single();
     if (userData?.email) {
@@ -338,11 +335,10 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    // Enviar el correo principal si hay asunto y html
     if (asunto && html) {
       const { data, error } = await resend.emails.send({
         from: 'Fleksi <onboarding@resend.dev>',
-        to: destinatario,
+        to: 'fernando.najera.nm@gmail.com',
         subject: asunto,
         html,
       });
