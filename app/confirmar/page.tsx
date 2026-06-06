@@ -46,7 +46,7 @@ function ConfirmarContent() {
       const precio = aplicacion.precio_ofrecido || servicio.presupuesto;
       const esEfectivo = servicio.metodo_pago === 'efectivo';
       const desgloseFlekser = calcularPagoFlekser(precio);
-      const desgloseCliente = calcularPagoCliente(precio, servicio.seguro);
+      const desgloseCliente = calcularPagoCliente(precio, false);
 
       await supabase.from('aplicaciones').update({
         pago_liberado: true,
@@ -134,23 +134,20 @@ function ConfirmarContent() {
     if (!descripcionProblema.trim() || !servicio) return;
     setEnviandoDisputa(true);
     try {
-      // Guardar disputa en la BD — pago queda congelado
       await supabase.from('servicios').update({
         disputa_descripcion: descripcionProblema.trim(),
         disputa_at: new Date().toISOString(),
         estado: 'en_disputa',
       }).eq('id', servicio.id);
 
-      // Notificar al admin (fernando)
       await supabase.from('notificaciones').insert({
         usuario_id: usuario?.id,
         tipo: 'disputa',
         titulo: '⚠️ Disputa registrada',
-        mensaje: `Tu reporte fue recibido. Nuestro equipo revisará el caso en menos de 24 horas.`,
+        mensaje: 'Tu reporte fue recibido. Nuestro equipo revisará el caso en menos de 24 horas.',
         link: '/mis-trabajos',
       });
 
-      // Email al admin
       try {
         await fetch('/api/enviar-email', {
           method: 'POST',
@@ -190,7 +187,7 @@ function ConfirmarContent() {
 
   const precio = aplicacion?.precio_ofrecido || servicio?.presupuesto || 0;
   const esEfectivo = servicio?.metodo_pago === 'efectivo';
-  const desgloseCliente = calcularPagoCliente(precio, servicio?.seguro);
+  const desgloseCliente = calcularPagoCliente(precio, false);
   const desgloseFlekser = calcularPagoFlekser(precio);
 
   if (confirmado) {
@@ -250,7 +247,6 @@ function ConfirmarContent() {
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
-
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto flex items-center gap-4">
           <a href="/mis-trabajos" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">←</a>
@@ -259,8 +255,6 @@ function ConfirmarContent() {
       </div>
 
       <div className="max-w-md mx-auto px-6 py-4">
-
-        {/* Banner 24h */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 flex items-center gap-3">
           <span className="text-2xl">⏰</span>
           <div>
@@ -303,12 +297,6 @@ function ConfirmarContent() {
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Comisión de plataforma</span>
                 <span className="font-semibold text-sm">${desgloseCliente.comision} MXN</span>
-              </div>
-            )}
-            {servicio.seguro && !esEfectivo && (
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">🛡️ Fleksi Protege</span>
-                <span className="font-semibold text-sm">$45 MXN</span>
               </div>
             )}
             {esEfectivo && (
