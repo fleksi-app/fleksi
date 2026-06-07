@@ -84,6 +84,22 @@ async function notificarUsuario(usuario_id: string, tipo: string, titulo: string
 
 export async function POST(request: NextRequest) {
   try {
+    // Validar sesión — solo usuarios autenticados o llamadas internas con CRON_SECRET
+    const authHeader = request.headers.get('Authorization');
+    const cronSecret = request.headers.get('x-cron-secret');
+    const esInterna = cronSecret === process.env.CRON_SECRET;
+
+    if (!esInterna) {
+      if (!authHeader) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     const { tipo, destinatario, datos } = await request.json();
 
     let asunto = '';

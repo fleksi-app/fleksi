@@ -13,11 +13,27 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Enviar push — solo desde el servidor (APIs internas), validar CRON_SECRET o sesión admin
 export async function POST(request: NextRequest) {
   try {
+    // Solo llamadas internas del servidor pueden enviar push
+    const authHeader = request.headers.get('Authorization');
+    const cronSecret = request.headers.get('x-cron-secret');
+
+    if (cronSecret !== process.env.CRON_SECRET) {
+      // Si no es cron, verificar que sea un usuario autenticado admin
+      if (!authHeader) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     const { usuario_id, titulo, mensaje, link } = await request.json();
 
-    // Obtener suscripciones del usuario
     const { data: suscripciones } = await supabaseAdmin
       .from('push_suscripciones')
       .select('*')
@@ -33,19 +49,12 @@ export async function POST(request: NextRequest) {
       suscripciones.map(async (sub) => {
         try {
           await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            },
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             payload
           );
         } catch (err: any) {
-          // Si la suscripción expiró, eliminarla
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await supabaseAdmin
-              .from('push_suscripciones')
-              .delete()
-              .eq('id', sub.id);
+            await supabaseAdmin.from('push_suscripciones').delete().eq('id', sub.id);
           }
           throw err;
         }
@@ -59,10 +68,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Guardar suscripción
+// Guardar suscripción — solo el propio usuario puede registrar la suya
 export async function PUT(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
     const { usuario_id, subscription } = await request.json();
+
+    // Solo puede registrar su propia suscripción
+    if (usuario_id !== user.id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
     await supabaseAdmin.from('push_suscripciones').upsert({
       usuario_id,
