@@ -1,8 +1,3 @@
-bash
-
-cat /tmp/fleksi-main/app/auth/callback/route.ts
-Salida
-
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -33,7 +28,6 @@ export async function GET(request: NextRequest) {
         .from('usuarios').select('id, rol, rol_activo').eq('id', user.id).single();
 
       if (!usuario) {
-        // Contar usuarios antes de insertar
         const { count } = await supabase
           .from('usuarios')
           .select('*', { count: 'exact', head: true });
@@ -48,7 +42,6 @@ export async function GET(request: NextRequest) {
           roles: ['flekser'],
         });
 
-        // Asignar badge según número de usuario
         const totalUsuarios = (count || 0) + 1;
         if (totalUsuarios <= 50) {
           await supabase.from('badges').insert({
@@ -65,7 +58,6 @@ export async function GET(request: NextRequest) {
 
       const rol = usuario.rol_activo || usuario.rol || 'flekser';
       if (rol === 'empresa') return NextResponse.redirect(`${requestUrl.origin}/home-empresa`);
-      // Todos los demás (flekser, viajero legacy) van al home unificado
       return NextResponse.redirect(`${requestUrl.origin}/home`);
     }
   }
