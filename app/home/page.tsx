@@ -1,8 +1,3 @@
-bash
-
-cat /tmp/fleksi-main/app/home/page.tsx
-Salida
-
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -45,8 +40,7 @@ export default function HomeWorker() {
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
 
-  // Ciudad: reemplaza el modo viajero
-  const [ciudadActiva, setCiudadActiva] = useState(''); // '' = todo el país
+  const [ciudadActiva, setCiudadActiva] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
   const [mostrarSelectorCiudad, setMostrarSelectorCiudad] = useState(false);
   const [inputCiudad, setInputCiudad] = useState('');
@@ -59,7 +53,6 @@ export default function HomeWorker() {
   const [filtroUrgente, setFiltroUrgente] = useState(false);
   const [filtroSeguro, setFiltroSeguro] = useState(false);
 
-  // Banner instalación PWA
   const [mostrarBannerInstalar, setMostrarBannerInstalar] = useState(false);
   const [esIOS, setEsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -71,22 +64,18 @@ export default function HomeWorker() {
     const yaInstalada = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
     if (yaInstalada) return;
-
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setEsIOS(ios);
-
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setMostrarBannerInstalar(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
-
     if (ios) {
       const yaVioBanner = localStorage.getItem('fleksi_install_dismissed');
       if (!yaVioBanner) setMostrarBannerInstalar(true);
     }
-
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
@@ -96,30 +85,23 @@ export default function HomeWorker() {
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
-
-    // Pre-cargar ciudad actual del usuario como filtro activo
     const ciudadUsuario = perfil?.ciudad || '';
     setCiudadActiva(ciudadUsuario);
     setInputCiudad(ciudadUsuario);
     setCiudadesVisitadas(perfil?.ciudades_visitadas || []);
-
     const { data: servicios } = await supabase.from('servicios')
       .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
       .eq('estado', 'activo').neq('cliente_id', user.id)
       .order('created_at', { ascending: false });
     setTrabajos(servicios || []);
-
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
     setTrabajosCompletados((apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id));
     setAplicacionesRechazadas((apps || []).filter(a => a.estado === 'rechazado').map(a => a.servicio_id));
-
     const { data: notifs } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
     setNotificaciones(notifs || []);
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
-
-    // Push: registrar suscripción silenciosamente si ya tiene permiso
     if ('Notification' in window) {
       if (Notification.permission === 'default') {
         setMostrarBannerPush(true);
@@ -142,7 +124,6 @@ export default function HomeWorker() {
     }
   };
 
-  // Cambiar ciudad activa y persistirla en el perfil
   const aplicarCiudad = async (nuevaCiudad: string) => {
     if (!usuario) return;
     setGuardandoCiudad(true);
@@ -208,10 +189,7 @@ export default function HomeWorker() {
     if (!usuario || cambiandoRol) return;
     setCambiandoRol(true);
     const rolesActuales = roles.includes(nuevoRol) ? roles : [...roles, nuevoRol];
-    await supabase.from('usuarios').update({
-      rol_activo: nuevoRol,
-      roles: rolesActuales,
-    }).eq('id', usuario.id);
+    await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
     setMostrarCambioRol(false);
     if (nuevoRol === 'empresa') window.location.href = '/home-empresa';
     setCambiandoRol(false);
@@ -223,7 +201,6 @@ export default function HomeWorker() {
     setCategoriaActiva('Todos');
   };
 
-  // filtrosActivos NO incluye ciudad (ciudad es selector principal, no "filtro")
   const filtrosActivos = [filtroPresupuestoMin, filtroPresupuestoMax, filtroFecha, filtroUrgente, filtroSeguro, categoriaActiva !== 'Todos'].filter(Boolean).length;
 
   const categoriaEmoji: any = {
@@ -243,7 +220,6 @@ export default function HomeWorker() {
       }
       const matchCat = categoriaActiva === 'Todos' || t.categoria?.toLowerCase().includes(categoriaActiva.toLowerCase());
       const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
-      // Sin ciudad activa = ver todo el país
       const matchCiudad = !ciudadActiva ||
         t.usuarios?.ciudad?.toLowerCase().includes(ciudadActiva.toLowerCase()) ||
         t.direccion?.toLowerCase().includes(ciudadActiva.toLowerCase());
@@ -269,7 +245,6 @@ export default function HomeWorker() {
     return <span className="text-xs font-bold text-green-500">🟢 {disponibles} cupos disponibles</span>;
   };
 
-  // Ciudades sugeridas: historial + ciudad base, sin duplicados
   const ciudadesSugeridas = Array.from(new Set([
     ...(ciudadesVisitadas || []),
     ...(usuario?.ciudad_base ? [usuario.ciudad_base] : []),
@@ -289,13 +264,11 @@ export default function HomeWorker() {
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
 
-      {/* HEADER */}
       <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 px-6 pt-12 pb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10"/>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-6"/>
         <div className="max-w-md mx-auto relative">
 
-          {/* Top bar: rol + notificaciones */}
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setMostrarCambioRol(true)}
               className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-3 py-1.5 hover:bg-white/25 transition">
@@ -316,7 +289,6 @@ export default function HomeWorker() {
             </button>
           </div>
 
-          {/* Saludo */}
           <div className="mb-4">
             <p className="text-white/70 text-sm">{getSaludo()}</p>
             <h1 className="text-2xl font-extrabold text-white">
@@ -324,7 +296,6 @@ export default function HomeWorker() {
             </h1>
           </div>
 
-          {/* Selector de ciudad — el nuevo "modo viajero" */}
           <button
             onClick={() => { setInputCiudad(ciudadActiva); setMostrarSelectorCiudad(true); }}
             className="w-full flex items-center justify-between bg-white/15 border border-white/25 rounded-2xl px-4 py-3 mb-4 hover:bg-white/25 transition group">
@@ -349,7 +320,6 @@ export default function HomeWorker() {
             </div>
           </button>
 
-          {/* Chips de ciudades visitadas (acceso rápido) */}
           {ciudadesSugeridas.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
               <button
@@ -367,7 +337,6 @@ export default function HomeWorker() {
             </div>
           )}
 
-          {/* Contador de trabajos */}
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
             <p className="text-white/70 text-xs font-semibold mb-1">
               {ciudadActiva ? `⚡ Trabajos en ${ciudadActiva}` : '🗺️ Trabajos en todo el país'}
@@ -382,7 +351,6 @@ export default function HomeWorker() {
             </div>
           </div>
 
-          {/* Barra de búsqueda + filtros */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
@@ -404,7 +372,6 @@ export default function HomeWorker() {
         </div>
       </div>
 
-      {/* Banner: completar perfil */}
       {!usuario?.foto_url && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <a href="/perfil" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:opacity-90 transition">
@@ -418,7 +385,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* Banner: activar notificaciones */}
       {mostrarBannerPush && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
@@ -437,7 +403,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* Banner: instalar PWA */}
       {mostrarBannerInstalar && (
         <div className="max-w-md mx-auto px-6 pt-4">
           <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-4 shadow-lg">
@@ -453,7 +418,6 @@ export default function HomeWorker() {
               </div>
               <button onClick={cerrarBannerInstalar} className="text-white/50 hover:text-white font-bold text-lg leading-none ml-2">✕</button>
             </div>
-
             {esIOS ? (
               <div className="bg-white/15 rounded-xl p-3 mb-3">
                 <p className="text-white text-xs font-semibold mb-2">Cómo instalar en iPhone/iPad:</p>
@@ -478,15 +442,12 @@ export default function HomeWorker() {
                 {instalando ? 'Instalando...' : '📲 Instalar Fleksi gratis'}
               </button>
             )}
-
             <p className="text-white/50 text-xs text-center">Sin App Store · Sin costo · 2 segundos</p>
           </div>
         </div>
       )}
 
-      {/* LISTA DE TRABAJOS */}
       <div className="max-w-md mx-auto px-6 py-4">
-        {/* Categorías */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
@@ -496,7 +457,6 @@ export default function HomeWorker() {
           ))}
         </div>
 
-        {/* Chips de filtros activos */}
         {filtrosActivos > 0 && (
           <div className="flex gap-2 flex-wrap mb-4">
             {(filtroPresupuestoMin || filtroPresupuestoMax) && (
@@ -541,9 +501,8 @@ export default function HomeWorker() {
             <p className="text-gray-400 text-sm mb-4">
               {ciudadActiva
                 ? `No hay trabajos en ${ciudadActiva} en este momento`
-                : filtrosActivos > 0
-                  ? 'Prueba cambiando los filtros'
-                  : 'Vuelve más tarde para ver nuevas solicitudes'}
+                : filtrosActivos > 0 ? 'Prueba cambiando los filtros'
+                : 'Vuelve más tarde para ver nuevas solicitudes'}
             </p>
             <div className="flex flex-col gap-2 items-center">
               {ciudadActiva && (
@@ -603,7 +562,6 @@ export default function HomeWorker() {
         )}
       </div>
 
-      {/* MODAL: Selector de ciudad */}
       {mostrarSelectorCiudad && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarSelectorCiudad(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -615,8 +573,6 @@ export default function HomeWorker() {
               <button onClick={() => setMostrarSelectorCiudad(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-5">
-
-              {/* Input libre */}
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">Escribe una ciudad</label>
                 <div className="flex gap-2">
@@ -638,7 +594,6 @@ export default function HomeWorker() {
                 </div>
               </div>
 
-              {/* Ver todo el país */}
               <button
                 onClick={() => { setCiudadActiva(''); setMostrarSelectorCiudad(false); }}
                 className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${!ciudadActiva ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
@@ -650,7 +605,6 @@ export default function HomeWorker() {
                 {!ciudadActiva && <span className="text-purple-600 text-xs font-bold bg-purple-100 px-2 py-1 rounded-full">Activo</span>}
               </button>
 
-              {/* Ciudades visitadas / historial */}
               {ciudadesSugeridas.length > 0 && (
                 <div>
                   <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades</p>
@@ -673,7 +627,6 @@ export default function HomeWorker() {
                 </div>
               )}
 
-              {/* Ciudades populares */}
               <div>
                 <p className="text-sm font-extrabold text-gray-900 mb-3">🔥 Ciudades populares</p>
                 <div className="flex flex-wrap gap-2">
@@ -686,13 +639,11 @@ export default function HomeWorker() {
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: Filtros avanzados */}
       {mostrarFiltros && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarFiltros(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -777,7 +728,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* MODAL: Notificaciones */}
       {mostrarNotifs && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarNotifs(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -814,7 +764,6 @@ export default function HomeWorker() {
         </div>
       )}
 
-      {/* MODAL: Cambio de rol */}
       {mostrarCambioRol && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarCambioRol(false)}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={(e) => e.stopPropagation()}>
