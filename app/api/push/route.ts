@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIP } from '@/lib/rate-limit';
 
 webpush.setVapidDetails(
   process.env.VAPID_EMAIL!,
@@ -13,15 +14,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Enviar push — solo desde el servidor (APIs internas), validar CRON_SECRET o sesión admin
 export async function POST(request: NextRequest) {
   try {
-    // Solo llamadas internas del servidor pueden enviar push
     const authHeader = request.headers.get('Authorization');
     const cronSecret = request.headers.get('x-cron-secret');
 
     if (cronSecret !== process.env.CRON_SECRET) {
-      // Si no es cron, verificar que sea un usuario autenticado admin
       if (!authHeader) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,6 +28,18 @@ export async function POST(request: NextRequest) {
       );
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+      // Rate limiting: max 50 push por usuario por hora
+      const rl = await checkRateLimit(`push:${user.id}`, {
+        maxRequests: 50,
+        windowMs: 60 * 60 * 1000,
+      });
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: 'Demasiadas solicitudes.' },
+          { status: 429, headers: { 'Retry-After': String(rl.resetIn) } }
+        );
+      }
     }
 
     const { usuario_id, titulo, mensaje, link } = await request.json();
@@ -68,7 +78,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Guardar suscripción — solo el propio usuario puede registrar la suya
 export async function PUT(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -82,9 +91,20 @@ export async function PUT(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-    const { usuario_id, subscription } = await request.json();
+    // Rate limiting: max 10 registros de suscripción por usuario por hora
+    const ip = getClientIP(request);
+    const rl = await checkRateLimit(`push-register:${user.id}:${ip}`, {
+      maxRequests: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes.' },
+        { status: 429, headers: { 'Retry-After': String(rl.resetIn) } }
+      );
+    }
 
-    // Solo puede registrar su propia suscripción
+    const { usuario_id, subscription } = await request.json();
     if (usuario_id !== user.id) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
     await supabaseAdmin.from('push_suscripciones').upsert({

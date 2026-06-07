@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIP } from '@/lib/rate-limit';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-04-22.dahlia',
@@ -13,7 +14,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // Validar sesión — solo usuarios autenticados pueden crear pagos
+    // Validar sesión
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
@@ -24,6 +25,31 @@ export async function POST(request: NextRequest) {
     );
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    // Rate limiting: max 10 pagos por usuario por hora
+    const rl = await checkRateLimit(`crear-pago:${user.id}`, {
+      maxRequests: 10,
+      windowMs: 60 * 60 * 1000, // 1 hora
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Intenta en unos minutos.' },
+        { status: 429, headers: { 'Retry-After': String(rl.resetIn) } }
+      );
+    }
+
+    // Rate limiting por IP: max 20 por hora
+    const ip = getClientIP(request);
+    const rlIP = await checkRateLimit(`crear-pago-ip:${ip}`, {
+      maxRequests: 20,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rlIP.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes desde esta red.' },
+        { status: 429 }
+      );
+    }
 
     const { monto, descripcion, servicioId, clienteEmail, prestadorId } = await request.json();
 

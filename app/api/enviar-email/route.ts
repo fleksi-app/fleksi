@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -98,6 +99,18 @@ export async function POST(request: NextRequest) {
       );
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+      // Rate limiting: max 30 emails por usuario por hora
+      const rl = await checkRateLimit(`email:${user.id}`, {
+        maxRequests: 30,
+        windowMs: 60 * 60 * 1000,
+      });
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: 'Demasiadas solicitudes.' },
+          { status: 429, headers: { 'Retry-After': String(rl.resetIn) } }
+        );
+      }
     }
 
     const { tipo, destinatario, datos } = await request.json();
