@@ -6,14 +6,14 @@ const supabaseAdmin = createClient(
 );
 
 interface RateLimitConfig {
-  maxRequests: number;  // máximo de requests
-  windowMs: number;     // ventana en milisegundos
+  maxRequests: number;
+  windowMs: number;
 }
 
 interface RateLimitResult {
   allowed: boolean;
   remaining: number;
-  resetIn: number; // segundos hasta reset
+  resetIn: number;
 }
 
 export async function checkRateLimit(
@@ -23,7 +23,6 @@ export async function checkRateLimit(
   try {
     const windowStart = new Date(Date.now() - config.windowMs);
 
-    // Contar requests en la ventana actual
     const { count } = await supabaseAdmin
       .from('rate_limits')
       .select('*', { count: 'exact', head: true })
@@ -40,20 +39,17 @@ export async function checkRateLimit(
       };
     }
 
-    // Registrar este request
     await supabaseAdmin.from('rate_limits').insert({
       key,
       count: 1,
       window_start: new Date().toISOString(),
     });
 
-    // Limpiar registros viejos en background (sin await)
-    supabaseAdmin
+    // Limpiar registros viejos en background sin encadenar .catch()
+    void supabaseAdmin
       .from('rate_limits')
       .delete()
-      .lt('window_start', new Date(Date.now() - 3600000).toISOString())
-      .then(() => {})
-      .catch(() => {});
+      .lt('window_start', new Date(Date.now() - 3600000).toISOString());
 
     return {
       allowed: true,
@@ -61,13 +57,11 @@ export async function checkRateLimit(
       resetIn: Math.ceil(config.windowMs / 1000),
     };
   } catch (e) {
-    // Si falla el rate limit (error de DB), dejar pasar para no bloquear la app
     console.error('Rate limit error:', e);
     return { allowed: true, remaining: 1, resetIn: 0 };
   }
 }
 
-// Obtener IP del request
 export function getClientIP(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
