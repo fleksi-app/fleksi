@@ -18,7 +18,6 @@ export default function Wallet() {
   const [retiros, setRetiros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  // Retiro
   const [mostrarRetiro, setMostrarRetiro] = useState(false);
   const [paso, setPaso] = useState<'datos' | 'monto' | 'confirmar'>('datos');
   const [clabe, setClabe] = useState('');
@@ -38,7 +37,6 @@ export default function Wallet() {
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario({ ...perfil, id: user.id });
 
-    // Prellenar datos bancarios si ya los tiene
     if (perfil?.clabe) setClabe(perfil.clabe);
     if (perfil?.banco) setBanco(perfil.banco);
     if (perfil?.titular_cuenta) setTitular(perfil.titular_cuenta);
@@ -65,30 +63,78 @@ export default function Wallet() {
   const saldoDisponible = usuario?.wallet_saldo || 0;
   const montoNum = parseFloat(monto) || 0;
   const MINIMO_RETIRO = 50;
+  const MAXIMO_RETIRO = 50000;
 
   const validarClabe = (c: string) => /^\d{18}$/.test(c.replace(/\s/g, ''));
+
+  // Verificar si tiene retiro pendiente activo
+  const tieneRetiroPendiente = retiros.some(r => r.estado === 'pendiente' || r.estado === 'procesando');
 
   const avanzarPaso = () => {
     setErrorRetiro('');
     if (paso === 'datos') {
       if (!clabe.trim()) { setErrorRetiro('Ingresa tu CLABE interbancaria'); return; }
-      if (!validarClabe(clabe)) { setErrorRetiro('La CLABE debe tener 18 dígitos'); return; }
+      if (!validarClabe(clabe)) { setErrorRetiro('La CLABE debe tener exactamente 18 dígitos'); return; }
       if (!banco) { setErrorRetiro('Selecciona tu banco'); return; }
       if (!titular.trim()) { setErrorRetiro('Ingresa el nombre del titular'); return; }
+      if (titular.trim().length < 5) { setErrorRetiro('El nombre del titular parece muy corto'); return; }
       setPaso('monto');
     } else if (paso === 'monto') {
       if (!monto || montoNum <= 0) { setErrorRetiro('Ingresa un monto válido'); return; }
+      if (isNaN(montoNum)) { setErrorRetiro('El monto no es válido'); return; }
       if (montoNum < MINIMO_RETIRO) { setErrorRetiro(`El monto mínimo de retiro es $${MINIMO_RETIRO} MXN`); return; }
+      if (montoNum > MAXIMO_RETIRO) { setErrorRetiro(`El monto máximo por retiro es $${MAXIMO_RETIRO.toLocaleString()} MXN`); return; }
       if (montoNum > saldoDisponible) { setErrorRetiro('No tienes suficiente saldo'); return; }
+      // Verificar que el monto no tenga más de 2 decimales
+      if (Math.round(montoNum * 100) !== montoNum * 100) {
+        setErrorRetiro('El monto no puede tener más de 2 decimales'); return;
+      }
       setPaso('confirmar');
     }
   };
 
   const solicitarRetiro = async () => {
+    if (procesando) return;
     setProcesando(true);
     setErrorRetiro('');
     try {
       const clabeClean = clabe.replace(/\s/g, '');
+
+      // Re-validar todo en el momento de confirmar
+      if (!validarClabe(clabeClean)) throw new Error('CLABE inválida');
+      if (!banco || !titular.trim()) throw new Error('Datos bancarios incompletos');
+      if (montoNum < MINIMO_RETIRO) throw new Error(`Monto mínimo: $${MINIMO_RETIRO} MXN`);
+      if (montoNum > MAXIMO_RETIRO) throw new Error(`Monto máximo: $${MAXIMO_RETIRO.toLocaleString()} MXN`);
+
+      // Verificar sesión activa
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = '/login'; return; }
+
+      // Re-leer saldo fresco del servidor para evitar manipulación
+      const { data: perfilFresco, error: perfilError } = await supabase
+        .from('usuarios')
+        .select('wallet_saldo')
+        .eq('id', user.id)
+        .single();
+
+      if (perfilError || !perfilFresco) throw new Error('No se pudo verificar tu saldo');
+
+      const saldoReal = perfilFresco.wallet_saldo || 0;
+
+      if (saldoReal < MINIMO_RETIRO) throw new Error('Saldo insuficiente para retirar');
+      if (montoNum > saldoReal) throw new Error(`Saldo insuficiente. Tu saldo real es $${saldoReal.toFixed(2)} MXN`);
+
+      // Verificar que no tenga otro retiro pendiente
+      const { data: retirosPendientes } = await supabase
+        .from('retiros')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .in('estado', ['pendiente', 'procesando'])
+        .limit(1);
+
+      if (retirosPendientes && retirosPendientes.length > 0) {
+        throw new Error('Ya tienes un retiro pendiente. Espera a que se complete antes de solicitar otro.');
+      }
 
       // Guardar datos bancarios si el usuario quiere
       if (guardarDatos) {
@@ -96,12 +142,12 @@ export default function Wallet() {
           clabe: clabeClean,
           banco,
           titular_cuenta: titular,
-        }).eq('id', usuario.id);
+        }).eq('id', user.id);
       }
 
       // Crear solicitud de retiro
       const { error: retiroError } = await supabase.from('retiros').insert({
-        usuario_id: usuario.id,
+        usuario_id: user.id,
         monto: montoNum,
         clabe: clabeClean,
         banco,
@@ -110,13 +156,28 @@ export default function Wallet() {
       });
       if (retiroError) throw retiroError;
 
-      // Descontar del saldo
-      const nuevoSaldo = saldoDisponible - montoNum;
-      await supabase.from('usuarios').update({ wallet_saldo: nuevoSaldo }).eq('id', usuario.id);
+      // Descontar saldo usando el valor del servidor, no del estado local
+      const nuevoSaldo = saldoReal - montoNum;
+      const { error: saldoError } = await supabase
+        .from('usuarios')
+        .update({ wallet_saldo: nuevoSaldo })
+        .eq('id', user.id)
+        .eq('wallet_saldo', saldoReal); // Optimistic lock: solo si el saldo no cambió
+
+      if (saldoError) {
+        // Si falló el update del saldo, cancelar el retiro recién creado
+        await supabase.from('retiros')
+          .delete()
+          .eq('usuario_id', user.id)
+          .eq('estado', 'pendiente')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        throw new Error('El saldo cambió durante la operación. Intenta de nuevo.');
+      }
 
       // Registrar movimiento
       await supabase.from('wallet_movimientos').insert({
-        usuario_id: usuario.id,
+        usuario_id: user.id,
         tipo: 'retiro',
         monto: -montoNum,
         descripcion: `Retiro solicitado a ${banco} ****${clabeClean.slice(-4)}`,
@@ -125,7 +186,7 @@ export default function Wallet() {
       // Notificación
       try {
         await supabase.from('notificaciones').insert({
-          usuario_id: usuario.id,
+          usuario_id: user.id,
           tipo: 'retiro_solicitado',
           titulo: '🏦 Solicitud de retiro recibida',
           mensaje: `Tu solicitud de retiro por $${montoNum.toFixed(2)} MXN está siendo procesada. Te notificaremos cuando se complete.`,
@@ -136,7 +197,7 @@ export default function Wallet() {
       setExitoRetiro(true);
       await cargarDatos();
     } catch (err: any) {
-      setErrorRetiro('Ocurrió un error. Intenta de nuevo.');
+      setErrorRetiro(err.message || 'Ocurrió un error. Intenta de nuevo.');
       console.error(err);
     } finally {
       setProcesando(false);
@@ -144,6 +205,7 @@ export default function Wallet() {
   };
 
   const cerrarRetiro = () => {
+    if (procesando) return;
     setMostrarRetiro(false);
     setExitoRetiro(false);
     setPaso('datos');
@@ -206,7 +268,6 @@ export default function Wallet() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
-        {/* Saldo y botones */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
           <div className="text-center mb-6">
             <p className="text-gray-400 text-sm mb-1">Saldo disponible</p>
@@ -221,7 +282,13 @@ export default function Wallet() {
               <p className="font-bold text-teal-700 text-sm">Recargar</p>
             </a>
             <button
-              onClick={() => setMostrarRetiro(true)}
+              onClick={() => {
+                if (tieneRetiroPendiente) {
+                  setErrorRetiro('Ya tienes un retiro pendiente. Espera a que se complete.');
+                  return;
+                }
+                setMostrarRetiro(true);
+              }}
               disabled={saldoDisponible < MINIMO_RETIRO}
               className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition ${
                 saldoDisponible >= MINIMO_RETIRO
@@ -238,6 +305,12 @@ export default function Wallet() {
             </button>
           </div>
 
+          {tieneRetiroPendiente && (
+            <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+              <p className="text-yellow-700 text-xs font-semibold">⏳ Tienes un retiro en proceso. Espera a que se complete para solicitar otro.</p>
+            </div>
+          )}
+
           {saldoDisponible > 0 && saldoDisponible < MINIMO_RETIRO && (
             <p className="text-xs text-gray-400 text-center mt-3">
               Necesitas al menos $50 MXN para solicitar un retiro. Te faltan ${(MINIMO_RETIRO - saldoDisponible).toFixed(2)} MXN.
@@ -245,15 +318,13 @@ export default function Wallet() {
           )}
         </div>
 
-        {/* Info wallet */}
         <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 mb-4">
           <p className="text-teal-700 text-sm font-semibold mb-1">💡 ¿Cómo funcionan los retiros?</p>
           <p className="text-teal-600 text-xs leading-relaxed">
-            Solicitas el retiro aquí, ingresas tu CLABE y en un plazo de 1-3 días hábiles recibirás el dinero en tu cuenta bancaria. El monto mínimo es $50 MXN.
+            Solicitas el retiro aquí, ingresas tu CLABE y en un plazo de 1-3 días hábiles recibirás el dinero en tu cuenta bancaria. El monto mínimo es $50 MXN y el máximo por retiro es $50,000 MXN.
           </p>
         </div>
 
-        {/* Retiros pendientes */}
         {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').length > 0 && (
           <div className="mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">⏳ Retiros en proceso</h3>
@@ -276,7 +347,6 @@ export default function Wallet() {
           </div>
         )}
 
-        {/* Movimientos */}
         <div className="mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📋 Movimientos</h3>
           {movimientos.length === 0 ? (
@@ -311,7 +381,6 @@ export default function Wallet() {
 
       </div>
 
-      {/* ── MODAL DE RETIRO ── */}
       {mostrarRetiro && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={cerrarRetiro}>
           <div className="w-full bg-white rounded-t-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -329,12 +398,11 @@ export default function Wallet() {
                   </div>
                 )}
               </div>
-              <button onClick={cerrarRetiro} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+              <button onClick={cerrarRetiro} disabled={procesando} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 disabled:opacity-50">✕</button>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-4">
 
-              {/* ÉXITO */}
               {exitoRetiro && (
                 <div className="text-center py-6">
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">🏦</div>
@@ -347,7 +415,6 @@ export default function Wallet() {
                 </div>
               )}
 
-              {/* PASO 1: DATOS BANCARIOS */}
               {!exitoRetiro && paso === 'datos' && (
                 <div className="flex flex-col gap-4">
                   <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
@@ -407,7 +474,6 @@ export default function Wallet() {
                 </div>
               )}
 
-              {/* PASO 2: MONTO */}
               {!exitoRetiro && paso === 'monto' && (
                 <div className="flex flex-col gap-4">
                   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 text-center">
@@ -426,17 +492,16 @@ export default function Wallet() {
                         onChange={e => setMonto(e.target.value)}
                         className="w-full p-4 pl-8 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-2xl font-bold"
                         min={MINIMO_RETIRO}
-                        max={saldoDisponible}
+                        max={Math.min(saldoDisponible, MAXIMO_RETIRO)}
                         step="0.01"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MXN</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Mínimo $50 MXN</p>
+                    <p className="text-xs text-gray-400 mt-1">Mínimo $50 MXN · Máximo $50,000 MXN por retiro</p>
                   </div>
 
-                  {/* Atajos rápidos */}
                   <div className="grid grid-cols-4 gap-2">
-                    {[50, 100, 200, saldoDisponible].map((val, i) => (
+                    {[50, 100, 200, Math.min(saldoDisponible, MAXIMO_RETIRO)].map((val, i) => (
                       <button key={i} onClick={() => setMonto(val.toFixed(2))}
                         className={`py-2 rounded-xl text-sm font-bold border-2 transition ${parseFloat(monto) === val ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                         {i === 3 ? 'Todo' : `$${val}`}
@@ -444,7 +509,7 @@ export default function Wallet() {
                     ))}
                   </div>
 
-                  {montoNum > 0 && montoNum <= saldoDisponible && (
+                  {montoNum > 0 && montoNum <= saldoDisponible && montoNum <= MAXIMO_RETIRO && (
                     <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-500">Retiras</span>
@@ -466,7 +531,6 @@ export default function Wallet() {
                 </div>
               )}
 
-              {/* PASO 3: CONFIRMAR */}
               {!exitoRetiro && paso === 'confirmar' && (
                 <div className="flex flex-col gap-4">
                   <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-5 border border-teal-100">
