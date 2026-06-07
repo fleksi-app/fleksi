@@ -1,8 +1,3 @@
-bash
-
-cat /tmp/fleksi-main/app/page.tsx
-Salida
-
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +21,6 @@ export default function Home() {
             .from('usuarios').select('rol, rol_activo').eq('id', session.user.id).single();
           const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
           if (rol === 'empresa') { window.location.href = '/home-empresa'; return; }
-          // Todos los demás (flekser, viajero legacy) van al home unificado
           window.location.href = '/home';
           return;
         }
