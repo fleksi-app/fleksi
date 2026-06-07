@@ -1,8 +1,3 @@
-bash
-
-cat /tmp/fleksi-main/lib/nav.tsx
-Salida
-
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -118,7 +113,6 @@ export default function Nav({ activo }: { activo: string }) {
   const esEmpresa = rol === 'empresa';
   const inicio = esEmpresa ? '/home-empresa' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
-
   const colorActivo = esEmpresa ? 'text-blue-900' : 'text-purple-600';
   const colorPlus = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
 
@@ -268,7 +262,6 @@ export default function Nav({ activo }: { activo: string }) {
         </div>
       )}
 
-      {/* Botón flotante WhatsApp */}
       <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
         className="fixed bottom-20 right-4 z-30 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition hover:scale-110 active:scale-95">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
@@ -276,7 +269,6 @@ export default function Nav({ activo }: { activo: string }) {
         </svg>
       </a>
 
-      {/* Nav bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around items-center">
           {items.map((item: any) => {
