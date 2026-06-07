@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import { calcularPagoFlekser } from '@/lib/comisiones';
 import TourInicial from '@/components/TourInicial';
+import { cacheGet, cacheSet, cacheInvalidate, TTL } from '@/lib/cache';
 
 const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Otro'];
 
@@ -82,26 +83,50 @@ export default function HomeWorker() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
-    const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+
+    // Perfil: caché 5 min
+    let perfil = cacheGet<any>(`perfil_${user.id}`);
+    if (!perfil) {
+      const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
+      perfil = data;
+      if (perfil) cacheSet(`perfil_${user.id}`, perfil, TTL.PERFIL);
+    }
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
     const ciudadUsuario = perfil?.ciudad || '';
     setCiudadActiva(ciudadUsuario);
     setInputCiudad(ciudadUsuario);
     setCiudadesVisitadas(perfil?.ciudades_visitadas || []);
-    const { data: servicios } = await supabase.from('servicios')
-      .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
-      .eq('estado', 'activo').neq('cliente_id', user.id)
-      .order('created_at', { ascending: false });
-    setTrabajos(servicios || []);
+
+    // Servicios: caché 1 min
+    let servicios = cacheGet<any[]>('servicios_activos');
+    if (!servicios) {
+      const { data } = await supabase.from('servicios')
+        .select('*, usuarios!cliente_id(nombre, calificacion, ciudad)')
+        .eq('estado', 'activo').neq('cliente_id', user.id)
+        .order('created_at', { ascending: false });
+      servicios = data || [];
+      cacheSet('servicios_activos', servicios, TTL.SERVICIOS);
+    }
+    setTrabajos(servicios);
+
+    // Aplicaciones: sin caché (crítico para UX)
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
     setTrabajosCompletados((apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id));
     setAplicacionesRechazadas((apps || []).filter(a => a.estado === 'rechazado').map(a => a.servicio_id));
-    const { data: notifs } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
-    setNotificaciones(notifs || []);
-    setNoLeidas((notifs || []).filter(n => !n.leida).length);
+
+    // Notificaciones: caché 30 seg
+    let notifs = cacheGet<any[]>(`notifs_${user.id}`);
+    if (!notifs) {
+      const { data } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
+      notifs = data || [];
+      cacheSet(`notifs_${user.id}`, notifs, TTL.NOTIFICACIONES);
+    }
+    setNotificaciones(notifs);
+    setNoLeidas(notifs.filter(n => !n.leida).length);
     setCargando(false);
+
     if ('Notification' in window) {
       if (Notification.permission === 'default') {
         setMostrarBannerPush(true);
@@ -136,6 +161,7 @@ export default function HomeWorker() {
         ciudad: nuevaCiudad.trim() || usuario.ciudad_base || usuario.ciudad || '',
         ciudades_visitadas: ciudadesActualizadas,
       }).eq('id', usuario.id);
+      cacheInvalidate(`perfil_${usuario.id}`);
       setCiudadActiva(nuevaCiudad.trim());
       setCiudadesVisitadas(ciudadesActualizadas);
       setMostrarSelectorCiudad(false);

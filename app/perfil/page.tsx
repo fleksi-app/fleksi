@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { cacheGet, cacheSet, cacheInvalidate, TTL } from '@/lib/cache';
 
 const habilidades = [
   '🧹 Limpieza del hogar', '🌿 Jardinería', '🎨 Pintura',
@@ -209,6 +210,7 @@ export default function Perfil() {
       nombre, telefono, descripcion, ciudad,
       habilidades: habilidadesSeleccionadas
     }).eq('id', usuario.id);
+    cacheInvalidate(`perfil_${usuario.id}`);
     setGuardando(false);
     setEditando(false);
     cargarPerfil();
@@ -224,6 +226,7 @@ export default function Perfil() {
         telefono: cuentaTelefono,
         ciudad: cuentaCiudad,
       }).eq('id', usuario.id);
+      cacheInvalidate(`perfil_${usuario.id}`);
       setExitoCuenta('✅ Datos actualizados correctamente');
       setEditandoCuenta(false);
       cargarPerfil();
@@ -664,7 +667,6 @@ export default function Perfil() {
           )}
         </div>
 
-        {/* ── SECCIÓN MI CUENTA ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
           <button onClick={() => setMostrarCuenta(!mostrarCuenta)}
             className="w-full flex items-center justify-between p-5">
@@ -827,9 +829,7 @@ export default function Perfil() {
           <div className="relative max-w-sm w-full">
             <img src={fotoAmpliada} className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]"/>
             <button onClick={() => setFotoAmpliada(null)}
-              className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">
-              ✕
-            </button>
+              className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">✕</button>
           </div>
         </div>
       )}

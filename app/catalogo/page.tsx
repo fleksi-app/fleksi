@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { cacheGet, cacheSet, TTL } from '@/lib/cache';
 
 const habilidadesOpciones = [
   '🧹 Limpieza del hogar', '🌿 Jardinería', '🎨 Pintura',
@@ -31,13 +32,19 @@ export default function Catalogo() {
       if (!user) { window.location.href = '/login'; return; }
       const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
       setUsuario(perfil);
-      const { data } = await supabase
-        .from('usuarios')
-        .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas')
-        .in('rol', ['flekser'])
-        .neq('id', user.id)
-        .order('calificacion', { ascending: false });
-      setFleksers(data || []);
+      // Catálogo: caché 3 min
+      let fleksersData = cacheGet<any[]>('catalogo_fleksers');
+      if (!fleksersData) {
+        const { data } = await supabase
+          .from('usuarios')
+          .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas')
+          .in('rol', ['flekser'])
+          .neq('id', user.id)
+          .order('calificacion', { ascending: false });
+        fleksersData = data || [];
+        cacheSet('catalogo_fleksers', fleksersData, TTL.CATALOGO);
+      }
+      setFleksers(fleksersData);
     } catch (err) {
       console.error(err);
     } finally {
