@@ -8,6 +8,12 @@ const roles = [
   { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
 ];
 
+function generarCodigo(nombre: string): string {
+  const base = nombre.trim().toUpperCase().replace(/\s+/g, '').slice(0, 4).padEnd(4, 'X');
+  const aleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${base}-${aleatorio}`;
+}
+
 function RegistroForm() {
   const searchParams = useSearchParams();
   const [paso, setPaso] = useState(1);
@@ -23,6 +29,11 @@ function RegistroForm() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
+  const [mostrarBienvenida, setMostrarBienvenida] = useState(false);
+  const [codigoGenerado, setCodigoGenerado] = useState('');
+  const [copiado, setCopiado] = useState(false);
+  const [rolRegistrado, setRolRegistrado] = useState('');
+
   useEffect(() => {
     const rolParam = searchParams.get('rol');
     if (rolParam && ['flekser', 'empresa'].includes(rolParam)) {
@@ -37,6 +48,21 @@ function RegistroForm() {
     if (!codigo || codigo.length < 4) { setCodigoValido(null); return; }
     const { data } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigo.toUpperCase()).maybeSingle();
     setCodigoValido(!!data);
+  };
+
+  const copiarCodigo = () => {
+    navigator.clipboard.writeText(codigoGenerado);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const compartirWhatsApp = () => {
+    const texto = `¡Descarga Fleksi, la app para encontrar trabajo flexible en México! 🚀\nUsa mi código *${codigoGenerado}* al registrarte y gana un beneficio especial.\nDescárgala gratis 👉 bit.ly/fleksiapp`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  };
+
+  const irAlOnboarding = () => {
+    window.location.href = `/onboarding?rol=${rolRegistrado}`;
   };
 
   const handleRegistro = async () => {
@@ -67,6 +93,16 @@ function RegistroForm() {
           if (referidor) referidoPor = codigoReferido.toUpperCase();
         }
 
+        // Generar código único para este usuario
+        let codigoUnico = generarCodigo(nombre);
+        let intentos = 0;
+        while (intentos < 5) {
+          const { data: existe } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigoUnico).maybeSingle();
+          if (!existe) break;
+          codigoUnico = generarCodigo(nombre);
+          intentos++;
+        }
+
         const { error: dbError } = await supabase.from('usuarios').insert({
           id: data.user.id,
           nombre,
@@ -74,6 +110,7 @@ function RegistroForm() {
           rol, rol_activo: rol, roles: [rol], email,
           terminos_aceptados_at: new Date().toISOString(),
           referido_por: referidoPor,
+          codigo_referido: codigoUnico,
           primer_trabajo_completado: false,
         });
         if (dbError) throw dbError;
@@ -90,7 +127,9 @@ function RegistroForm() {
             body: JSON.stringify({ tipo: 'bienvenida', destinatario: email, datos: { nombre, rol, usuario_id: data.user.id } }) });
         } catch (e) {}
 
-        window.location.href = `/onboarding?rol=${rol}`;
+        setCodigoGenerado(codigoUnico);
+        setRolRegistrado(rol);
+        setMostrarBienvenida(true);
       }
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Intenta de nuevo.');
@@ -202,7 +241,7 @@ function RegistroForm() {
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Código de referido <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <div className="relative">
-                  <input type="text" placeholder="Ej. FLEK-MARI1234"
+                  <input type="text" placeholder="Ej. MARI-X7K2"
                     value={codigoReferido}
                     onChange={(e) => { setCodigoReferido(e.target.value.toUpperCase()); validarCodigo(e.target.value); }}
                     className={`w-full p-4 rounded-2xl border-2 outline-none transition text-gray-900 uppercase pr-12 ${
@@ -266,6 +305,84 @@ function RegistroForm() {
           </div>
         )}
       </div>
+
+      {/* ── MODAL BIENVENIDA CON CÓDIGO ── */}
+      {mostrarBienvenida && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-10 text-center relative">
+              <div className="absolute top-4 right-4">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-lg">🎉</span>
+                </div>
+              </div>
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                  <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.3)"/>
+                  <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
+                  <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
+                  <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
+                </svg>
+              </div>
+              <h2 className="text-white font-extrabold text-2xl mb-1">¡Bienvenido a Fleksi!</h2>
+              <p className="text-white/80 text-sm">Tu cuenta fue creada exitosamente ✅</p>
+            </div>
+
+            <div className="-mt-6 bg-white rounded-t-3xl px-6 pt-6 pb-6">
+
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-2xl p-5 mb-5 text-center">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tu código de referido</p>
+                <p className="text-3xl font-extrabold text-purple-700 tracking-widest mb-1">{codigoGenerado}</p>
+                <p className="text-xs text-gray-400">Compártelo y gana dinero cuando tus referidos trabajen</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4 mb-5">
+                <p className="text-sm font-bold text-gray-900 mb-2">💰 ¿Cómo funciona?</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">1.</span>
+                    <p className="text-xs text-gray-600">Comparte tu código con amigos, familiares o en redes sociales.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">2.</span>
+                    <p className="text-xs text-gray-600">Ellos se registran en Fleksi usando tu código.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">3.</span>
+                    <p className="text-xs text-gray-600">Cuando tu referido completa su primer trabajo, <span className="font-bold text-green-600">tú recibes un bono en tu Wallet 💸</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mb-4">
+                <button onClick={copiarCodigo}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition ${
+                    copiado ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}>
+                  {copiado ? '✅ ¡Copiado!' : '📋 Copiar código'}
+                </button>
+                <button onClick={compartirWhatsApp}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-500 text-white rounded-2xl font-bold text-sm hover:bg-green-600 transition">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  WhatsApp
+                </button>
+              </div>
+
+              <button onClick={irAlOnboarding}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition">
+                Entrar a Fleksi →
+              </button>
+
+              <p className="text-xs text-gray-400 text-center mt-3">
+                Tu código siempre estará disponible en tu perfil
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

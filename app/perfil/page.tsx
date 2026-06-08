@@ -76,6 +76,7 @@ export default function Perfil() {
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [progresoPerfil, setProgresoPerfil] = useState(0);
+  const [copiado, setCopiado] = useState(false);
 
   const [mostrarCuenta, setMostrarCuenta] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState(false);
@@ -276,6 +277,19 @@ export default function Perfil() {
   const cerrarSesion = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
+  };
+
+  const copiarCodigo = () => {
+    if (!usuario?.codigo_referido) return;
+    navigator.clipboard.writeText(usuario.codigo_referido);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const compartirCodigoWA = () => {
+    if (!usuario?.codigo_referido) return;
+    const texto = `¡Descarga Fleksi, la app para encontrar trabajo flexible en México! 🚀\nUsa mi código *${usuario.codigo_referido}* al registrarte y gana un beneficio especial.\nDescárgala gratis 👉 bit.ly/fleksiapp`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
   const tieneBadge = (tipo: string) => badges.some(b => b.tipo === tipo);
@@ -509,6 +523,37 @@ export default function Perfil() {
             <p className="text-white text-xs font-bold mt-1">Ver wallet →</p>
           </div>
         </a>
+
+        {/* ── CÓDIGO DE REFERIDO ── */}
+        {usuario?.codigo_referido && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <div className="mb-3">
+              <h3 className="font-extrabold text-gray-900">🎁 Tu código de referido</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Compártelo y gana cuando tus referidos completen su primer trabajo</p>
+            </div>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-2xl p-4 mb-3 text-center">
+              <p className="text-2xl font-extrabold text-purple-700 tracking-widest">{usuario.codigo_referido}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 mb-3">
+              <p className="text-xs text-gray-600 leading-relaxed">
+                💰 Cuando alguien se registra con tu código y completa su primer trabajo,
+                <span className="font-bold text-green-600"> tú recibes un bono directo en tu Wallet.</span>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={copiarCodigo}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition ${
+                  copiado ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                {copiado ? '✅ ¡Copiado!' : '📋 Copiar código'}
+              </button>
+              <button onClick={compartirCodigoWA}
+                className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition">
+                💬 Compartir
+              </button>
+            </div>
+          </div>
+        )}
 
         <a href="/documentos" className={`block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ${verif.bg} ${verif.border}`}>
           <div className="flex items-center justify-between">
