@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import * as XLSX from 'xlsx';
 
 const ADMIN_EMAIL = 'fernando.najera.nm@gmail.com';
 
@@ -401,18 +402,66 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
-      const csvRows = [
-        ['REPORTE FLEKSI','',''], [`Período: ${periodo.label}`,`${datos.periodo.inicio} — ${datos.periodo.fin}`,''], [`Generado: ${fechaGen}`,'',''], ['','',''],
-        ['USUARIOS','',''], ['Métrica','Valor',''], ['Total registrados',datos.usuarios.total,''], ['Nuevos en el período',datos.usuarios.nuevosEnPeriodo,''], ['Fleksers',datos.usuarios.fleksers,''], ['Empresas',datos.usuarios.empresas,''], ['','',''],
-        ['SERVICIOS','',''], ['Métrica','Valor',''], ['Total histórico',datos.servicios.total,''], ['Publicados en período',datos.servicios.enPeriodo,''], ['Completados en período',datos.servicios.completados,''], ['Cancelados en período',datos.servicios.cancelados,''], ['','',''],
-        ['INGRESOS (MXN)','',''], ['Métrica','Valor',''], ['Transaccionado en período',`$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:2})}`,''], ['Comisión Fleksi en período (25%)',`$${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:2})}`,''], ['Comisión acumulada histórica',`$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:2})}`,''], ['Ticket promedio',`$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:2})}`,''], ['','',''],
-        ['GEOGRAFÍA','',''], ['Ciudad con más actividad',datos.ciudad.nombre,''], ['Usuarios en esa ciudad',datos.ciudad.usuarios,''],
-      ];
-      const csvContent = csvRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.csv`; a.click();
-      URL.revokeObjectURL(url);
+
+      const wb = XLSX.utils.book_new();
+
+      const wsResumen = XLSX.utils.aoa_to_sheet([
+        ['REPORTE FLEKSI', '', ''],
+        [`Período: ${periodo.label}`, `${datos.periodo.inicio} — ${datos.periodo.fin}`, ''],
+        [`Generado: ${fechaGen}`, '', ''],
+        ['', '', ''],
+        ['👥 USUARIOS', '', ''],
+        ['Métrica', 'Valor', ''],
+        ['Total registrados', datos.usuarios.total, ''],
+        ['Nuevos en el período', datos.usuarios.nuevosEnPeriodo, ''],
+        ['Fleksers', datos.usuarios.fleksers, ''],
+        ['Empresas', datos.usuarios.empresas, ''],
+        ['', '', ''],
+        ['⚡ SERVICIOS', '', ''],
+        ['Métrica', 'Valor', ''],
+        ['Total histórico', datos.servicios.total, ''],
+        ['Publicados en período', datos.servicios.enPeriodo, ''],
+        ['Completados en período', datos.servicios.completados, ''],
+        ['Cancelados en período', datos.servicios.cancelados, ''],
+        ['', '', ''],
+        ['💰 INGRESOS (MXN)', '', ''],
+        ['Métrica', 'Valor', ''],
+        ['Transaccionado en período', datos.ingresos.transaccionadoPeriodo, ''],
+        ['Comisión Fleksi en período (25%)', datos.ingresos.comisionPeriodo, ''],
+        ['Comisión acumulada histórica', datos.ingresos.comisionAcumulada, ''],
+        ['Ticket promedio', datos.ingresos.ticketPromedio, ''],
+        ['', '', ''],
+        ['📍 GEOGRAFÍA', '', ''],
+        ['Ciudad con más actividad', datos.ciudad.nombre, ''],
+        ['Usuarios en esa ciudad', datos.ciudad.usuarios, ''],
+      ]);
+
+      wsResumen['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      const wsDetalle = XLSX.utils.aoa_to_sheet([
+        ['Categoría', 'Métrica', 'Valor'],
+        ['Usuarios', 'Total registrados', datos.usuarios.total],
+        ['Usuarios', 'Nuevos en período', datos.usuarios.nuevosEnPeriodo],
+        ['Usuarios', 'Fleksers', datos.usuarios.fleksers],
+        ['Usuarios', 'Empresas', datos.usuarios.empresas],
+        ['Servicios', 'Total histórico', datos.servicios.total],
+        ['Servicios', 'En período', datos.servicios.enPeriodo],
+        ['Servicios', 'Activos', datos.servicios.activos],
+        ['Servicios', 'Completados', datos.servicios.completados],
+        ['Servicios', 'Cancelados', datos.servicios.cancelados],
+        ['Ingresos MXN', 'Transaccionado en período', datos.ingresos.transaccionadoPeriodo],
+        ['Ingresos MXN', 'Comisión período (25%)', datos.ingresos.comisionPeriodo],
+        ['Ingresos MXN', 'Comisión acumulada', datos.ingresos.comisionAcumulada],
+        ['Ingresos MXN', 'Ticket promedio', datos.ingresos.ticketPromedio],
+        ['Geografía', 'Ciudad top', datos.ciudad.nombre],
+        ['Geografía', 'Usuarios ciudad top', datos.ciudad.usuarios],
+      ]);
+      wsDetalle['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsDetalle, 'Datos');
+
+      const nombreArchivo = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.xlsx`;
+      XLSX.writeFile(wb, nombreArchivo);
     } finally { setGenerandoReporte(''); }
   };
 
@@ -422,15 +471,137 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Fleksi</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#111827}.header{background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;padding:30px;border-radius:12px;margin-bottom:30px}.header h1{margin:0;font-size:28px}.header p{margin:4px 0 0;opacity:.8;font-size:14px}.seccion{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:20px;margin-bottom:20px}.seccion h2{margin:0 0 16px;font-size:16px;color:#374151;border-bottom:2px solid #E5E7EB;padding-bottom:8px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.card{background:white;border:1px solid #E5E7EB;border-radius:8px;padding:16px;text-align:center}.card .valor{font-size:28px;font-weight:800;color:#2563EB}.card .label{font-size:11px;color:#6B7280;margin-top:4px}.card.verde .valor{color:#059669}.card.gris .valor{color:#374151}.card.rojo .valor{color:#DC2626}.comision{background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:12px;padding:20px;text-align:center;margin-top:12px}.comision .valor{font-size:36px;font-weight:800}.comision .label{opacity:.8;font-size:12px;margin-top:4px}.footer{text-align:center;color:#9CA3AF;font-size:11px;margin-top:30px;padding-top:20px;border-top:1px solid #E5E7EB}</style></head><body>
-      <div class="header"><h1>⚡ Fleksi — Reporte ${periodo.label}</h1><p>Período: ${datos.periodo.inicio} — ${datos.periodo.fin} | Generado: ${fechaGen}</p></div>
-      <div class="seccion"><h2>👥 Usuarios</h2><div class="grid"><div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div><div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en el período</div></div></div><div class="grid3" style="margin-top:12px"><div class="card"><div class="valor" style="color:#7C3AED">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div><div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div><div class="card"><div class="valor" style="color:#0891B2">${datos.usuarios.total-datos.usuarios.fleksers-datos.usuarios.empresas}</div><div class="label">Otros</div></div></div></div>
-      <div class="seccion"><h2>⚡ Servicios</h2><div class="grid3"><div class="card"><div class="valor" style="color:#2563EB">${datos.servicios.activos}</div><div class="label">Activos</div></div><div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div><div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div></div></div>
-      <div class="seccion"><h2>💰 Ingresos (MXN)</h2><div class="grid"><div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div><div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div></div><div class="comision"><div class="label">Comisión Fleksi acumulada (25%)</div><div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div><div class="label">En el período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div></div></div>
-      <div class="footer">Fleksi · Irapuato, Guanajuato · Reporte generado automáticamente el ${fechaGen}</div>
-      <script>window.onload=()=>{window.print()}</script></body></html>`;
-      const ventana = window.open('', '_blank');
-      if (ventana) { ventana.document.write(html); ventana.document.close(); }
+
+      const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Reporte Fleksi</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #F8FAFC; color: #0F172A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { max-width: 800px; margin: 0 auto; padding: 32px; background: white; }
+    .header { background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%); border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { color: white; font-size: 26px; font-weight: 900; }
+    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 4px; }
+    .header-logo { background: rgba(255,255,255,0.2); border-radius: 12px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+    .seccion { margin-bottom: 24px; }
+    .seccion-titulo { font-size: 13px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .divider { height: 1px; background: #F1F5F9; margin-bottom: 16px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    .card { background: white; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; text-align: center; }
+    .card .valor { font-size: 30px; font-weight: 900; color: #2563EB; line-height: 1; }
+    .card .label { font-size: 11px; color: #94A3B8; font-weight: 600; margin-top: 6px; }
+    .card.verde .valor { color: #059669; }
+    .card.purpura .valor { color: #7C3AED; }
+    .card.rojo .valor { color: #DC2626; }
+    .card.gris .valor { color: #374151; }
+    .card.cyan .valor { color: #0891B2; }
+    .card-comision { background: linear-gradient(135deg, #2563EB, #7C3AED); border-radius: 16px; padding: 24px; text-align: center; margin-top: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card-comision .label-top { color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .card-comision .valor { color: white; font-size: 40px; font-weight: 900; margin: 8px 0 4px; }
+    .card-comision .label-bot { color: rgba(255,255,255,0.7); font-size: 12px; }
+    .card-ciudad { background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .card-ciudad .nombre { font-size: 18px; font-weight: 800; }
+    .card-ciudad .sub { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+    .card-ciudad .badge { background: #EEF2FF; color: #4F46E5; font-weight: 800; font-size: 16px; padding: 8px 16px; border-radius: 10px; }
+    .footer { margin-top: 32px; padding-top: 20px; border-top: 1.5px solid #F1F5F9; display: flex; justify-content: space-between; align-items: center; }
+    .footer-logo { font-size: 18px; font-weight: 900; color: #2563EB; }
+    .footer-info { font-size: 11px; color: #CBD5E1; text-align: right; }
+    @media print {
+      body { background: white; }
+      .page { padding: 20px; max-width: 100%; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .card-comision { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>⚡ fleksi</h1>
+      <p>Reporte ${periodo.label} · ${datos.periodo.inicio} — ${datos.periodo.fin}</p>
+      <p>Generado el ${fechaGen}</p>
+    </div>
+    <div class="header-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
+        <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
+        <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
+        <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
+      </svg>
+    </div>
+  </div>
+  <div class="seccion">
+    <div class="seccion-titulo">👥 Usuarios</div>
+    <div class="divider"></div>
+    <div class="grid4">
+      <div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div>
+      <div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en período</div></div>
+      <div class="card purpura"><div class="valor">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div>
+      <div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div>
+    </div>
+  </div>
+  <div class="seccion">
+    <div class="seccion-titulo">⚡ Servicios</div>
+    <div class="divider"></div>
+    <div class="grid4">
+      <div class="card"><div class="valor">${datos.servicios.total}</div><div class="label">Total histórico</div></div>
+      <div class="card cyan"><div class="valor">${datos.servicios.activos}</div><div class="label">Activos</div></div>
+      <div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div>
+      <div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div>
+    </div>
+  </div>
+  <div class="seccion">
+    <div class="seccion-titulo">💰 Ingresos (MXN)</div>
+    <div class="divider"></div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div>
+      <div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div>
+    </div>
+    <div class="card-comision">
+      <div class="label-top">Comisión Fleksi acumulada (25%)</div>
+      <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
+      <div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
+    </div>
+  </div>
+  <div class="seccion">
+    <div class="seccion-titulo">📍 Ciudad más activa</div>
+    <div class="divider"></div>
+    <div class="card-ciudad">
+      <div>
+        <div class="nombre">📍 ${datos.ciudad.nombre}</div>
+        <div class="sub">Ciudad con más usuarios registrados</div>
+      </div>
+      <div class="badge">${datos.ciudad.usuarios} usuarios</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="footer-logo">⚡ fleksi</div>
+    <div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div>
+  </div>
+</div>
+<script>
+  window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+</script>
+</body>
+</html>`;
+
+      const ventana = window.open('', '_blank', 'width=900,height=700');
+      if (ventana) {
+        ventana.document.write(html);
+        ventana.document.close();
+      } else {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } finally { setGenerandoReporte(''); }
   };
 
@@ -559,7 +730,6 @@ export default function Admin() {
           </button>
         </div>
 
-        {/* ── ACCIONES PENDIENTES ── */}
         {tab === 'acciones' && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -569,7 +739,6 @@ export default function Admin() {
               </div>
               <button onClick={cargarAcciones} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl hover:bg-purple-100 transition">🔄 Actualizar</button>
             </div>
-
             {cargandoAcciones ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : acciones.length === 0 ? (
@@ -597,30 +766,23 @@ export default function Admin() {
                             {usr?.telefono && <p className="text-xs text-gray-500">📱 {usr.telefono}</p>}
                           </div>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>
-                          {tipo.emoji} {tipo.label}
-                        </span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>{tipo.emoji} {tipo.label}</span>
                       </div>
-
                       <div className="bg-gray-50 rounded-xl p-3 mb-3">
                         <p className="text-xs text-gray-400 font-semibold mb-1">📩 Notificación en app:</p>
                         <p className="text-xs font-bold text-gray-800">{accion.titulo}</p>
                         {accion.mensaje && <p className="text-xs text-gray-500 mt-0.5">{accion.mensaje}</p>}
                         <p className="text-xs text-gray-400 mt-1">{new Date(accion.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
-
                       <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-3">
                         <p className="text-xs text-green-700 font-semibold mb-1">💬 Mensaje para WhatsApp:</p>
                         <p className="text-xs text-gray-700 leading-relaxed">{msgWA}</p>
                       </div>
-
                       <div className="flex gap-2">
-                        <button onClick={() => copiarMensaje(msgWA, accion.id)}
-                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+                        <button onClick={() => copiarMensaje(msgWA, accion.id)} className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
                           {yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}
                         </button>
-                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id}
-                          className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">
+                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id} className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">
                           {marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}
                         </button>
                       </div>
@@ -632,7 +794,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── COMUNICACIONES ── */}
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
@@ -716,7 +877,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── DISPERSIÓN ── */}
         {tab === 'dispersion' && (
           <div>
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -760,7 +920,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
           <div>
             {cargandoMetrics ? (
@@ -878,7 +1037,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -962,7 +1120,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
@@ -1026,7 +1183,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── RETIROS ── */}
         {tab === 'retiros' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -1106,7 +1262,6 @@ export default function Admin() {
 
       </div>
 
-      {/* ── MODAL LISTADO USUARIOS ── */}
       {modalUsuarios.visible && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
