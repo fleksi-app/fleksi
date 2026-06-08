@@ -8,6 +8,33 @@ const roles = [
   { id: 'empresa', emoji: '🏢', titulo: 'Soy empresa', desc: 'Cubre vacantes temporales con talento verificado' },
 ];
 
+const intenciones = [
+  {
+    id: 'trabajar',
+    emoji: '💼',
+    titulo: 'Quiero trabajar / ofrecer servicios',
+    desc: 'Busco ganar dinero ofreciendo mis habilidades',
+    color: 'border-blue-400 bg-blue-50',
+    badge: 'bg-blue-100 text-blue-700',
+  },
+  {
+    id: 'contratar',
+    emoji: '🔍',
+    titulo: 'Quiero contratar / buscar ayuda',
+    desc: 'Necesito a alguien que me ayude con algo',
+    color: 'border-purple-400 bg-purple-50',
+    badge: 'bg-purple-100 text-purple-700',
+  },
+  {
+    id: 'ambos',
+    emoji: '⚡',
+    titulo: 'Ambos',
+    desc: 'Quiero trabajar y también contratar servicios',
+    color: 'border-green-400 bg-green-50',
+    badge: 'bg-green-100 text-green-700',
+  },
+];
+
 function generarCodigo(nombre: string): string {
   const base = nombre.trim().toUpperCase().replace(/\s+/g, '').slice(0, 4).padEnd(4, 'X');
   const aleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -17,6 +44,7 @@ function generarCodigo(nombre: string): string {
 function RegistroForm() {
   const searchParams = useSearchParams();
   const [paso, setPaso] = useState(1);
+  const [intencion, setIntencion] = useState('');
   const [rol, setRol] = useState('');
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -38,6 +66,7 @@ function RegistroForm() {
     const rolParam = searchParams.get('rol');
     if (rolParam && ['flekser', 'empresa'].includes(rolParam)) {
       setRol(rolParam);
+      // Si viene con rol preseleccionado, saltamos al paso 2 (intención)
       setPaso(2);
     }
     const refParam = searchParams.get('ref');
@@ -93,7 +122,6 @@ function RegistroForm() {
           if (referidor) referidoPor = codigoReferido.toUpperCase();
         }
 
-        // Generar código único para este usuario
         let codigoUnico = generarCodigo(nombre);
         let intentos = 0;
         while (intentos < 5) {
@@ -111,6 +139,7 @@ function RegistroForm() {
           terminos_aceptados_at: new Date().toISOString(),
           referido_por: referidoPor,
           codigo_referido: codigoUnico,
+          intencion: intencion || null,
           primer_trabajo_completado: false,
         });
         if (dbError) throw dbError;
@@ -156,13 +185,59 @@ function RegistroForm() {
           <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">fleksi</span>
         </div>
 
+        {/* ── PASO 1: Intención ── */}
         {paso === 1 && (
           <div>
+            <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-2">¿Con qué intención te unes?</h1>
+            <p className="text-gray-400 text-center mb-8 font-light">Esto nos ayuda a personalizar tu experiencia</p>
+            <div className="flex flex-col gap-3 mb-6">
+              {intenciones.map((i) => (
+                <button key={i.id} onClick={() => setIntencion(i.id)}
+                  className={`w-full p-4 rounded-2xl border-2 flex items-center gap-4 transition text-left ${
+                    intencion === i.id ? i.color : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <span className="text-3xl">{i.emoji}</span>
+                  <div>
+                    <div className="font-bold text-gray-900">{i.titulo}</div>
+                    <div className="text-sm text-gray-400 font-light">{i.desc}</div>
+                  </div>
+                  {intencion === i.id && (
+                    <div className="ml-auto w-5 h-5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { if (intencion) setPaso(2); }}
+              disabled={!intencion}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg disabled:opacity-40 transition">
+              Continuar →
+            </button>
+            <p className="mt-4 text-center text-gray-400 text-xs">
+              Esto no limita lo que puedes hacer en Fleksi, es solo informativo.
+            </p>
+            <p className="mt-4 text-center text-gray-400 text-sm">
+              ¿Ya tienes cuenta?{" "}
+              <a href="/login" className="text-purple-600 font-semibold hover:underline">Inicia sesión</a>
+            </p>
+          </div>
+        )}
+
+        {/* ── PASO 2: Tipo de cuenta ── */}
+        {paso === 2 && (
+          <div>
+            <button onClick={() => { setPaso(1); setRol(''); }} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
+              ← Regresar
+            </button>
             <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-2">¿Cómo vas a usar Fleksi?</h1>
             <p className="text-gray-400 text-center mb-8 font-light">Elige tu perfil para continuar</p>
             <div className="flex flex-col gap-3">
               {roles.map((r) => (
-                <button key={r.id} onClick={() => { setRol(r.id); setPaso(2); }}
+                <button key={r.id} onClick={() => { setRol(r.id); setPaso(3); }}
                   className="w-full p-4 rounded-2xl border-2 border-gray-200 hover:border-purple-400 flex items-center gap-4 transition text-left">
                   <span className="text-3xl">{r.emoji}</span>
                   <div>
@@ -172,16 +247,13 @@ function RegistroForm() {
                 </button>
               ))}
             </div>
-            <p className="mt-6 text-center text-gray-400 text-sm">
-              ¿Ya tienes cuenta?{" "}
-              <a href="/login" className="text-purple-600 font-semibold hover:underline">Inicia sesión</a>
-            </p>
           </div>
         )}
 
-        {paso === 2 && (
+        {/* ── PASO 3: Datos de cuenta ── */}
+        {paso === 3 && (
           <div>
-            <button onClick={() => { setPaso(1); setRol(''); }} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
+            <button onClick={() => { setPaso(2); setRol(''); }} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-gray-600 transition">
               ← Regresar
             </button>
             <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Crea tu cuenta</h1>
@@ -256,9 +328,7 @@ function RegistroForm() {
                   )}
                 </div>
                 {codigoValido === true && (
-                  <p className="text-green-600 text-xs font-semibold mt-1.5 flex items-center gap-1">
-                    🎉 ¡Código válido! Pagarás menos comisión en tu primer trabajo
-                  </p>
+                  <p className="text-green-600 text-xs font-semibold mt-1.5">🎉 ¡Código válido! Pagarás menos comisión en tu primer trabajo</p>
                 )}
                 {codigoValido === false && (
                   <p className="text-red-500 text-xs mt-1.5">Código no encontrado, verifica e intenta de nuevo</p>
@@ -306,11 +376,10 @@ function RegistroForm() {
         )}
       </div>
 
-      {/* ── MODAL BIENVENIDA CON CÓDIGO ── */}
+      {/* ── MODAL BIENVENIDA ── */}
       {mostrarBienvenida && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-10 text-center relative">
               <div className="absolute top-4 right-4">
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -330,7 +399,6 @@ function RegistroForm() {
             </div>
 
             <div className="-mt-6 bg-white rounded-t-3xl px-6 pt-6 pb-6">
-
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-2xl p-5 mb-5 text-center">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tu código de referido</p>
                 <p className="text-3xl font-extrabold text-purple-700 tracking-widest mb-1">{codigoGenerado}</p>

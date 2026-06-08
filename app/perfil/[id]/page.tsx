@@ -39,7 +39,7 @@ export default function PerfilPublico() {
 
       const { data } = await supabase
         .from('usuarios')
-        .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, ciudades_visitadas, verificado')
+        .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, ciudades_visitadas, verificado, intencion')
         .eq('id', id)
         .single();
 
@@ -149,7 +149,6 @@ export default function PerfilPublico() {
             ← Regresar
           </button>
           <div className="flex items-center gap-2">
-            {/* Botón compartir perfil */}
             <button
               onClick={compartirPerfil}
               className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30"
@@ -195,6 +194,15 @@ export default function PerfilPublico() {
               )}
               {tieneBadge('perfil_completo') && (
                 <span className="text-xs bg-yellow-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-yellow-300/40">🏆 Perfil completo</span>
+              )}
+              {perfil.intencion === 'trabajar' && (
+                <span className="text-xs bg-blue-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-blue-300/40">💼 Busca trabajo</span>
+              )}
+              {perfil.intencion === 'contratar' && (
+                <span className="text-xs bg-purple-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-purple-300/40">🔍 Busca contratar</span>
+              )}
+              {perfil.intencion === 'ambos' && (
+                <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">⚡ Trabaja y contrata</span>
               )}
             </div>
           </div>
