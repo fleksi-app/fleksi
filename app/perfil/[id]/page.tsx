@@ -24,6 +24,7 @@ export default function PerfilPublico() {
   const [cargando, setCargando] = useState(true);
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const [usuarioActual, setUsuarioActual] = useState<any>(null);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => { if (id) cargar(); }, [id]);
 
@@ -80,6 +81,20 @@ export default function PerfilPublico() {
 
   const tieneBadge = (tipo: string) => badges.some(b => b.tipo === tipo);
 
+  const compartirPerfil = async () => {
+    const url = `${window.location.origin}/perfil/${id}`;
+    const texto = `👤 ${perfil?.nombre} en Fleksi\n⭐ ${perfil?.calificacion || '5.0'} · ${perfil?.trabajos_completados || 0} trabajos\n📍 ${perfil?.ciudad || 'Irapuato'}\n\nVer perfil completo 👇`;
+    if (navigator.share) {
+      try { await navigator.share({ title: perfil?.nombre, text: texto, url }); } catch (e) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${texto}\n${url}`);
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 2000);
+      } catch (e) {}
+    }
+  };
+
   const iniciarChat = async () => {
     if (!usuarioActual) { window.location.href = '/login'; return; }
     try {
@@ -133,12 +148,27 @@ export default function PerfilPublico() {
             className="text-white/70 text-sm hover:text-white transition flex items-center gap-1">
             ← Regresar
           </button>
-          {usuarioActual && usuarioActual.id !== id && (
-            <button onClick={iniciarChat}
-              className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition border border-white/30">
-              💬 Enviar mensaje
+          <div className="flex items-center gap-2">
+            {/* Botón compartir perfil */}
+            <button
+              onClick={compartirPerfil}
+              className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30"
+              title="Compartir perfil">
+              {copiado ? '✅' : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              )}
             </button>
-          )}
+            {usuarioActual && usuarioActual.id !== id && (
+              <button onClick={iniciarChat}
+                className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition border border-white/30">
+                💬 Enviar mensaje
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="max-w-md mx-auto flex items-center gap-4">
