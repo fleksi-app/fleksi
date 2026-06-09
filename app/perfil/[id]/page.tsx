@@ -11,6 +11,7 @@ const todosLosBadges = [
   { tipo: 'top_rated', nombre: 'Top Rated', emoji: '⭐' },
   { tipo: 'perfecto', nombre: 'Perfección', emoji: '✨' },
   { tipo: 'verificado', nombre: 'Verificado', emoji: '✅' },
+  { tipo: 'confianza_maxima', nombre: 'Confianza máxima', emoji: '🛡️' },
   { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆' },
 ];
 
@@ -82,13 +83,13 @@ export default function PerfilPublico() {
   const tieneBadge = (tipo: string) => badges.some(b => b.tipo === tipo);
 
   const compartirPerfil = async () => {
-    const url = `${window.location.origin}/perfil/${id}`;
-    const texto = `👤 ${perfil?.nombre} en Fleksi\n⭐ ${perfil?.calificacion || '5.0'} · ${perfil?.trabajos_completados || 0} trabajos\n📍 ${perfil?.ciudad || 'Irapuato'}\n\nVer perfil completo 👇`;
+    const url = window.location.origin + '/perfil/' + id;
+    const texto = '👤 ' + perfil?.nombre + ' en Fleksi\n⭐ ' + (perfil?.calificacion || '5.0') + ' · ' + (perfil?.trabajos_completados || 0) + ' trabajos\n📍 ' + (perfil?.ciudad || 'Irapuato') + '\n\nVer perfil completo 👇';
     if (navigator.share) {
       try { await navigator.share({ title: perfil?.nombre, text: texto, url }); } catch (e) {}
     } else {
       try {
-        await navigator.clipboard.writeText(`${texto}\n${url}`);
+        await navigator.clipboard.writeText(texto + '\n' + url);
         setCopiado(true);
         setTimeout(() => setCopiado(false), 2000);
       } catch (e) {}
@@ -123,11 +124,8 @@ export default function PerfilPublico() {
             className="text-white/70 text-sm hover:text-white transition flex items-center gap-1">
             ← Regresar
           </button>
-          {/* Solo botón compartir — mensaje directo eliminado */}
-          <button
-            onClick={compartirPerfil}
-            className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30"
-            title="Compartir perfil">
+          <button onClick={compartirPerfil}
+            className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30">
             {copiado ? '✅' : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -152,26 +150,15 @@ export default function PerfilPublico() {
               <span className="text-xs bg-white/20 text-white font-semibold px-2 py-0.5 rounded-full border border-white/30">
                 {perfil.rol === 'empresa' ? '🏢 Empresa' : '⚡ Flekser'}
               </span>
-              {perfil.ciudad && (
-                <span className="text-xs text-white/70">📍 {perfil.ciudad}</span>
-              )}
+              {perfil.ciudad && <span className="text-xs text-white/70">📍 {perfil.ciudad}</span>}
             </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {tieneBadge('verificado') && (
-                <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">✅ Verificado</span>
-              )}
-              {tieneBadge('perfil_completo') && (
-                <span className="text-xs bg-yellow-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-yellow-300/40">🏆 Perfil completo</span>
-              )}
-              {perfil.intencion === 'trabajar' && (
-                <span className="text-xs bg-blue-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-blue-300/40">💼 Busca trabajo</span>
-              )}
-              {perfil.intencion === 'contratar' && (
-                <span className="text-xs bg-purple-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-purple-300/40">🔍 Busca contratar</span>
-              )}
-              {perfil.intencion === 'ambos' && (
-                <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">⚡ Trabaja y contrata</span>
-              )}
+              {tieneBadge('verificado') && <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">✅ Verificado</span>}
+              {tieneBadge('confianza_maxima') && <span className="text-xs bg-indigo-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-indigo-300/40">🛡️ Confianza máxima</span>}
+              {tieneBadge('perfil_completo') && <span className="text-xs bg-yellow-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-yellow-300/40">🏆 Perfil completo</span>}
+              {perfil.intencion === 'trabajar' && <span className="text-xs bg-blue-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-blue-300/40">💼 Busca trabajo</span>}
+              {perfil.intencion === 'contratar' && <span className="text-xs bg-purple-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-purple-300/40">🔍 Busca contratar</span>}
+              {perfil.intencion === 'ambos' && <span className="text-xs bg-green-400/30 text-white font-semibold px-2 py-0.5 rounded-full border border-green-300/40">⚡ Trabaja y contrata</span>}
             </div>
           </div>
         </div>
@@ -194,9 +181,7 @@ export default function PerfilPublico() {
               <p className="text-xs text-gray-400">Reseñas</p>
             </div>
           </div>
-          {perfil.descripcion && (
-            <p className="text-gray-600 text-sm leading-relaxed">{perfil.descripcion}</p>
-          )}
+          {perfil.descripcion && <p className="text-gray-600 text-sm leading-relaxed">{perfil.descripcion}</p>}
         </div>
 
         {perfil.habilidades?.length > 0 && (
@@ -204,9 +189,7 @@ export default function PerfilPublico() {
             <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Habilidades</h3>
             <div className="flex flex-wrap gap-2">
               {perfil.habilidades.map((h: string) => (
-                <span key={h} className="px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                  {h}
-                </span>
+                <span key={h} className="px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white">{h}</span>
               ))}
             </div>
           </div>
@@ -249,27 +232,19 @@ export default function PerfilPublico() {
                 <div key={r.id} className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      {r.usuarios?.foto_url ? (
-                        <img src={r.usuarios.foto_url} className="w-full h-full object-cover"/>
-                      ) : (
-                        <span className="text-white text-xs font-bold">{r.usuarios?.nombre?.charAt(0) || '?'}</span>
-                      )}
+                      {r.usuarios?.foto_url ? <img src={r.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{r.usuarios?.nombre?.charAt(0) || '?'}</span>}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-bold text-gray-900">{r.usuarios?.nombre || 'Cliente'}</p>
                       <div className="flex items-center gap-1">
                         {[1,2,3,4,5].map(s => (
-                          <span key={s} className={`text-sm ${s <= r.estrellas ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                          <span key={s} className={'text-sm ' + (s <= r.estrellas ? 'text-yellow-400' : 'text-gray-200')}>★</span>
                         ))}
-                        <span className="text-xs text-gray-400 ml-1">
-                          {new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
+                        <span className="text-xs text-gray-400 ml-1">{new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
                     </div>
                   </div>
-                  {r.comentario && (
-                    <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>
-                  )}
+                  {r.comentario && <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>}
                 </div>
               ))}
             </div>
@@ -307,14 +282,13 @@ export default function PerfilPublico() {
           </div>
         )}
 
-        {/* ── CTA CONTRATAR — solo solicitud, sin mensaje directo ── */}
         {usuarioActual && usuarioActual.id !== id && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <p className="font-extrabold text-gray-900 text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
             <p className="text-gray-400 text-sm mb-4">
               Publica tu solicitud y {nombreCorto} la recibirá al instante. Acuerdan los detalles dentro de la app.
             </p>
-            <a href={`/publicar?para=${id}`}
+            <a href={'/publicar?para=' + id}
               className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center text-lg hover:opacity-90 transition">
               🎯 Contratar a {nombreCorto}
             </a>
@@ -324,18 +298,15 @@ export default function PerfilPublico() {
           </div>
         )}
 
-        {/* ── CTA PARA NO LOGUEADOS ── */}
         {!usuarioActual && (
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 mb-4">
             <p className="text-white font-extrabold text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
             <p className="text-white/70 text-sm mb-4">Únete a Fleksi gratis y publica tu primer trabajo en minutos.</p>
             <div className="flex flex-col gap-2">
-              <a href="/registro"
-                className="block w-full py-3.5 bg-white text-purple-600 rounded-2xl font-extrabold text-center hover:opacity-90 transition">
+              <a href="/registro" className="block w-full py-3.5 bg-white text-purple-600 rounded-2xl font-extrabold text-center hover:opacity-90 transition">
                 Crear cuenta gratis →
               </a>
-              <a href="/login"
-                className="block w-full py-3.5 bg-white/20 text-white rounded-2xl font-bold text-center hover:bg-white/30 transition border border-white/30">
+              <a href="/login" className="block w-full py-3.5 bg-white/20 text-white rounded-2xl font-bold text-center hover:bg-white/30 transition border border-white/30">
                 Ya tengo cuenta → Iniciar sesión
               </a>
             </div>

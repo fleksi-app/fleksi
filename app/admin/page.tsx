@@ -46,20 +46,20 @@ function generarMensajeWhatsApp(notif: any, usuario: any): string {
   const nombre = usuario?.nombre?.split(' ')[0] || 'usuario';
   const link = 'bit.ly/fleksiapp';
   switch (notif.tipo) {
-    case 'nueva_aplicacion': return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
-    case 'aplicacion_aceptada': return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
-    case 'aplicacion_rechazada': return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
-    case 'pago_liberado': return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
-    case 'trabajo_completado': return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
-    case 'verificacion_aprobada': return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
-    case 'documento_aprobado': return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
-    case 'documento_rechazado': return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
-    case 'retiro_completado': return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
-    case 'retiro_rechazado': return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
-    case 'mensaje_nuevo': return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
-    case 'disputa': return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
-    case 'admin_mensaje': return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
-    default: return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
+    case 'nueva_aplicacion': return 'Hola ' + nombre + '! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ' + link;
+    case 'aplicacion_aceptada': return 'Hola ' + nombre + '! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ' + link;
+    case 'aplicacion_rechazada': return 'Hola ' + nombre + ', tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ' + link;
+    case 'pago_liberado': return 'Hola ' + nombre + '! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ' + link;
+    case 'trabajo_completado': return 'Hola ' + nombre + '! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ' + link;
+    case 'verificacion_aprobada': return 'Hola ' + nombre + '! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ' + link;
+    case 'documento_aprobado': return 'Hola ' + nombre + '! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ' + link;
+    case 'documento_rechazado': return 'Hola ' + nombre + ', uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ' + link;
+    case 'retiro_completado': return 'Hola ' + nombre + '! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳';
+    case 'retiro_rechazado': return 'Hola ' + nombre + ', tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ' + link;
+    case 'mensaje_nuevo': return 'Hola ' + nombre + '! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ' + link;
+    case 'disputa': return 'Hola ' + nombre + ', hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.';
+    case 'admin_mensaje': return 'Hola ' + nombre + '! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ' + link;
+    default: return 'Hola ' + nombre + '! Tienes una notificación nueva en Fleksi 👉 ' + link;
   }
 }
 
@@ -138,7 +138,6 @@ export default function Admin() {
   const [cargandoWA, setCargandoWA] = useState(false);
   const [mensajesCopiados, setMensajesCopiados] = useState<Record<string, boolean>>({});
 
-  // Tab Trabajos
   const [trabajosData, setTrabajosData] = useState<any[]>([]);
   const [cargandoTrabajos, setCargandoTrabajos] = useState(false);
   const [filtroTrabajos, setFiltroTrabajos] = useState<'todos' | 'activo' | 'completado' | 'cancelado'>('todos');
@@ -319,7 +318,7 @@ export default function Admin() {
       const { data } = await supabase
         .from('usuarios')
         .select('id, nombre, email, foto_url, rol')
-        .or(`nombre.ilike.%${query}%,email.ilike.%${query}%`)
+        .or('nombre.ilike.%' + query + '%,email.ilike.%' + query + '%')
         .limit(5);
       setResultadosBusqueda(data || []);
     } catch (e) { console.error(e); }
@@ -330,7 +329,6 @@ export default function Admin() {
     setEnviandoMensaje(true); setMensajeEnviado('');
     try {
       await supabase.from('notificaciones').insert({ usuario_id: usuarioSeleccionado.id, tipo: 'admin_mensaje', titulo: tituloMensaje, mensaje: cuerpoMensaje, link: '/notificaciones' });
-      await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'admin_mensaje', destinatario: usuarioSeleccionado.email, datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id } }) });
       setMensajeEnviado('✅ Mensaje enviado a ' + usuarioSeleccionado.nombre);
       setTituloMensaje(''); setCuerpoMensaje(''); setUsuarioSeleccionado(null); setBusquedaUsuario(''); setResultadosBusqueda([]);
     } catch (e) { setMensajeEnviado('❌ Error al enviar el mensaje'); }
@@ -377,7 +375,7 @@ export default function Admin() {
     setProcesandoRetiro(retiroId);
     try {
       await supabase.from('retiros').update({ estado: 'completado', notas: nota || null, procesado_por: usuario.email, procesado_at: new Date().toISOString() }).eq('id', retiroId);
-      try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'retiro_completado', titulo: '✅ Retiro completado', mensaje: 'Tu retiro de $' + monto.toFixed(2) + ' MXN ha sido procesado y enviado a tu cuenta bancaria.', link: '/wallet' }); } catch (e) {}
+      try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'retiro_completado', titulo: '✅ Retiro completado', mensaje: 'Tu retiro de $' + monto.toFixed(2) + ' MXN ha sido procesado.', link: '/wallet' }); } catch (e) {}
       await cargarRetiros();
     } catch (e) { console.error(e); }
     finally { setProcesandoRetiro(''); }
@@ -521,7 +519,7 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
-      const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Reporte Fleksi</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;background:#F8FAFC;color:#0F172A;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.page{max-width:800px;margin:0 auto;padding:32px;background:white;}.header{background:linear-gradient(135deg,#2563EB 0%,#7C3AED 100%);border-radius:16px;padding:28px 32px;margin-bottom:28px;}.header h1{color:white;font-size:26px;font-weight:900;}.header p{color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;}.seccion{margin-bottom:24px;}.seccion-titulo{font-size:13px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}.divider{height:1px;background:#F1F5F9;margin-bottom:16px;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}.card{background:white;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px;text-align:center;}.card .valor{font-size:30px;font-weight:900;color:#2563EB;line-height:1;}.card .label{font-size:11px;color:#94A3B8;font-weight:600;margin-top:6px;}.card.verde .valor{color:#059669;}.card.purpura .valor{color:#7C3AED;}.card.rojo .valor{color:#DC2626;}.card.gris .valor{color:#374151;}.card.cyan .valor{color:#0891B2;}.card-comision{background:linear-gradient(135deg,#2563EB,#7C3AED);border-radius:16px;padding:24px;text-align:center;margin-top:12px;-webkit-print-color-adjust:exact;}.card-comision .label-top{color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-transform:uppercase;}.card-comision .valor{color:white;font-size:40px;font-weight:900;margin:8px 0 4px;}.card-comision .label-bot{color:rgba(255,255,255,0.7);font-size:12px;}.card-ciudad{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}.card-ciudad .nombre{font-size:18px;font-weight:800;}.card-ciudad .badge{background:#EEF2FF;color:#4F46E5;font-weight:800;font-size:16px;padding:8px 16px;border-radius:10px;}.footer{margin-top:32px;padding-top:20px;border-top:1.5px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;}.footer-logo{font-size:18px;font-weight:900;color:#2563EB;}.footer-info{font-size:11px;color:#CBD5E1;text-align:right;}@media print{body{background:white;}.page{padding:20px;max-width:100%;}}</style></head><body><div class="page"><div class="header"><h1>⚡ fleksi</h1><p>Reporte ${periodo.label} · ${datos.periodo.inicio} — ${datos.periodo.fin}</p><p>Generado el ${fechaGen}</p></div><div class="seccion"><div class="seccion-titulo">👥 Usuarios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div><div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en período</div></div><div class="card purpura"><div class="valor">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div><div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div></div></div><div class="seccion"><div class="seccion-titulo">⚡ Servicios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.servicios.total}</div><div class="label">Total histórico</div></div><div class="card cyan"><div class="valor">${datos.servicios.activos}</div><div class="label">Activos</div></div><div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div><div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div></div></div><div class="seccion"><div class="seccion-titulo">💰 Ingresos (MXN)</div><div class="divider"></div><div class="grid2" style="margin-bottom:12px"><div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div><div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div></div><div class="card-comision"><div class="label-top">Comisión Fleksi acumulada (25%)</div><div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div><div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div></div></div><div class="seccion"><div class="seccion-titulo">📍 Ciudad más activa</div><div class="divider"></div><div class="card-ciudad"><div><div class="nombre">📍 ${datos.ciudad.nombre}</div><div class="sub" style="font-size:12px;color:#94A3B8;margin-top:2px;">Ciudad con más usuarios registrados</div></div><div class="badge">${datos.ciudad.usuarios} usuarios</div></div></div><div class="footer"><div class="footer-logo">⚡ fleksi</div><div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div></div></div><script>window.onload=function(){setTimeout(function(){window.print();},500);};</script></body></html>`;
+      const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Reporte Fleksi</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;background:#F8FAFC;color:#0F172A;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.page{max-width:800px;margin:0 auto;padding:32px;background:white;}.header{background:linear-gradient(135deg,#2563EB 0%,#7C3AED 100%);border-radius:16px;padding:28px 32px;margin-bottom:28px;}.header h1{color:white;font-size:26px;font-weight:900;}.header p{color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;}.seccion{margin-bottom:24px;}.seccion-titulo{font-size:13px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}.divider{height:1px;background:#F1F5F9;margin-bottom:16px;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}.card{background:white;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px;text-align:center;}.card .valor{font-size:30px;font-weight:900;color:#2563EB;line-height:1;}.card .label{font-size:11px;color:#94A3B8;font-weight:600;margin-top:6px;}.card.verde .valor{color:#059669;}.card.purpura .valor{color:#7C3AED;}.card.rojo .valor{color:#DC2626;}.card.gris .valor{color:#374151;}.card.cyan .valor{color:#0891B2;}.card-comision{background:linear-gradient(135deg,#2563EB,#7C3AED);border-radius:16px;padding:24px;text-align:center;margin-top:12px;-webkit-print-color-adjust:exact;}.card-comision .label-top{color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-transform:uppercase;}.card-comision .valor{color:white;font-size:40px;font-weight:900;margin:8px 0 4px;}.card-comision .label-bot{color:rgba(255,255,255,0.7);font-size:12px;}.card-ciudad{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}.card-ciudad .nombre{font-size:18px;font-weight:800;}.card-ciudad .badge{background:#EEF2FF;color:#4F46E5;font-weight:800;font-size:16px;padding:8px 16px;border-radius:10px;}.footer{margin-top:32px;padding-top:20px;border-top:1.5px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;}.footer-logo{font-size:18px;font-weight:900;color:#2563EB;}.footer-info{font-size:11px;color:#CBD5E1;text-align:right;}@media print{body{background:white;}.page{padding:20px;max-width:100%;}}</style></head><body><div class="page"><div class="header"><h1>⚡ fleksi</h1><p>Reporte ' + periodo.label + ' · ' + datos.periodo.inicio + ' — ' + datos.periodo.fin + '</p><p>Generado el ' + fechaGen + '</p></div><div class="seccion"><div class="seccion-titulo">👥 Usuarios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">' + datos.usuarios.total + '</div><div class="label">Total registrados</div></div><div class="card verde"><div class="valor">' + datos.usuarios.nuevosEnPeriodo + '</div><div class="label">Nuevos en período</div></div><div class="card purpura"><div class="valor">' + datos.usuarios.fleksers + '</div><div class="label">Fleksers</div></div><div class="card gris"><div class="valor">' + datos.usuarios.empresas + '</div><div class="label">Empresas</div></div></div></div><div class="seccion"><div class="seccion-titulo">⚡ Servicios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">' + datos.servicios.total + '</div><div class="label">Total histórico</div></div><div class="card cyan"><div class="valor">' + datos.servicios.activos + '</div><div class="label">Activos</div></div><div class="card verde"><div class="valor">' + datos.servicios.completados + '</div><div class="label">Completados</div></div><div class="card rojo"><div class="valor">' + datos.servicios.cancelados + '</div><div class="label">Cancelados</div></div></div></div><div class="seccion"><div class="seccion-titulo">💰 Ingresos (MXN)</div><div class="divider"></div><div class="grid2" style="margin-bottom:12px"><div class="card verde"><div class="valor">$' + datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0}) + '</div><div class="label">Transaccionado en período</div></div><div class="card"><div class="valor">$' + datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0}) + '</div><div class="label">Ticket promedio</div></div></div><div class="card-comision"><div class="label-top">Comisión Fleksi acumulada (25%)</div><div class="valor">$' + datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0}) + ' MXN</div><div class="label-bot">En este período: $' + datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0}) + ' MXN</div></div></div><div class="seccion"><div class="seccion-titulo">📍 Ciudad más activa</div><div class="divider"></div><div class="card-ciudad"><div><div class="nombre">📍 ' + datos.ciudad.nombre + '</div><div style="font-size:12px;color:#94A3B8;margin-top:2px;">Ciudad con más usuarios registrados</div></div><div class="badge">' + datos.ciudad.usuarios + ' usuarios</div></div></div><div class="footer"><div class="footer-logo">⚡ fleksi</div><div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ' + fechaGen + '</div></div></div><script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>';
       const ventana = window.open('', '_blank', 'width=900,height=700');
       if (ventana) { ventana.document.write(html); ventana.document.close(); }
     } finally { setGenerandoReporte(''); }
@@ -531,7 +529,7 @@ export default function Admin() {
     if (url.includes('token=')) { window.open(url, '_blank'); return; }
     try {
       const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
-      const { data } = await supabase.storage.from('documentos-verificacion').createSignedUrl(`${usuarioId}/${tipo}.${ext}`, 3600);
+      const { data } = await supabase.storage.from('documentos-verificacion').createSignedUrl(usuarioId + '/' + tipo + '.' + ext, 3600);
       if (data?.signedUrl) window.open(data.signedUrl, '_blank');
     } catch (e) { window.open(url, '_blank'); }
   };
@@ -543,10 +541,15 @@ export default function Admin() {
       const { data: todosLosDocs } = await supabase.from('documentos').select('*').eq('usuario_id', usuarioId);
       const { data: usuarioData } = await supabase.from('usuarios').select('rol').eq('id', usuarioId).single();
       const rol = usuarioData?.rol || 'flekser';
-      const requeridos = rol === 'empresa' ? ['ine_frente','ine_reverso','constancia_fiscal','antecedentes'] : ['ine_frente','ine_reverso','curp','comprobante_domicilio','antecedentes'];
+      const requeridos = rol === 'empresa'
+        ? ['ine_frente','ine_reverso','constancia_fiscal']
+        : ['ine_frente','ine_reverso','curp','comprobante_domicilio'];
       const docsActualizados = (todosLosDocs || []).map(d => d.id === docId ? { ...d, estado: 'aprobado' } : d);
       const todosAprobados = requeridos.every(tipo => docsActualizados.some(d => d.tipo === tipo && d.estado === 'aprobado'));
-      if (todosAprobados) {
+      if (tipoDoc === 'antecedentes') {
+        await supabase.from('badges').upsert({ usuario_id: usuarioId, tipo: 'confianza_maxima', nombre: 'Confianza máxima', emoji: '🛡️' }, { onConflict: 'usuario_id,tipo' });
+        try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'documento_aprobado', titulo: '🛡️ ¡Confianza máxima desbloqueada!', mensaje: 'Tus antecedentes no penales fueron verificados. Ahora tienes el badge 🛡️ Confianza máxima en tu perfil.', link: '/perfil' }); } catch (e) {}
+      } else if (todosAprobados) {
         await supabase.from('usuarios').update({ verificado: true }).eq('id', usuarioId);
         await supabase.from('badges').upsert({ usuario_id: usuarioId, tipo: 'verificado', nombre: 'Verificado', emoji: '✅' }, { onConflict: 'usuario_id,tipo' });
         try { await supabase.from('notificaciones').insert({ usuario_id: usuarioId, tipo: 'verificacion_aprobada', titulo: '🏆 ¡Verificación completada!', mensaje: 'Todos tus documentos fueron aprobados.', link: '/perfil' }); } catch (e) {}
@@ -633,22 +636,22 @@ export default function Admin() {
 
       <div className="max-w-2xl mx-auto px-6 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          <button onClick={() => setTab('dashboard')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📊 Dashboard</button>
-          <button onClick={() => setTab('acciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('dashboard')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Dashboard</button>
+          <button onClick={() => setTab('acciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
-          <button onClick={() => setTab('comunicaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📢 Comunicaciones</button>
-          <button onClick={() => setTab('trabajos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>⚡ Trabajos</button>
-          <button onClick={() => setTab('dispersion')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('comunicaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📢 Comunicaciones</button>
+          <button onClick={() => setTab('trabajos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>⚡ Trabajos</button>
+          <button onClick={() => setTab('dispersion')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
-          <button onClick={() => setTab('documentos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('documentos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📄 Documentos {totalDocsSubidos > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalDocsSubidos}</span>}
           </button>
-          <button onClick={() => setTab('verificaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('verificaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             🪪 Verificaciones {conteoVerifs.en_revision > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{conteoVerifs.en_revision}</span>}
           </button>
-          <button onClick={() => setTab('retiros')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'retiros' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+          <button onClick={() => setTab('retiros')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'retiros' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
@@ -683,7 +686,7 @@ export default function Admin() {
             <div>
               <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
                 {[{ key: '7d', label: '7 días' }, { key: '30d', label: '30 días' }, { key: '90d', label: '90 días' }, { key: 'todo', label: 'Todo' }].map(p => (
-                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>{p.label}</button>
+                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{p.label}</button>
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
@@ -731,7 +734,7 @@ export default function Admin() {
                   <h3 className="font-extrabold text-gray-900 mb-3">📋 Listado</h3>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {[{ key: 'todos', label: 'Todos' }, { key: 'activo', label: '⚡ Activos' }, { key: 'completado', label: '✅ Completados' }, { key: 'cancelado', label: '❌ Cancelados' }].map(f => (
-                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{f.label}</button>
+                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500')}>{f.label}</button>
                     ))}
                   </div>
                 </div>
@@ -746,7 +749,7 @@ export default function Admin() {
                             <div className="min-w-0"><p className="font-bold text-gray-900 text-sm truncate">{t.titulo}</p><p className="text-xs text-gray-400 mt-0.5">{t.usuarios?.nombre || '—'} · {new Date(t.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p></div>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${t.estado === 'completado' || t.estado === 'pagado' ? 'bg-green-100 text-green-700' : t.estado === 'cancelado' ? 'bg-red-100 text-red-600' : t.estado === 'en_proceso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                            <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (t.estado === 'completado' || t.estado === 'pagado' ? 'bg-green-100 text-green-700' : t.estado === 'cancelado' ? 'bg-red-100 text-red-600' : t.estado === 'en_proceso' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500')}>
                               {t.estado === 'completado' || t.estado === 'pagado' ? '✅ Completado' : t.estado === 'cancelado' ? '❌ Cancelado' : t.estado === 'en_proceso' ? '⚡ En proceso' : '📢 Activo'}
                             </span>
                             {t.presupuesto > 0 && <span className="text-xs font-bold text-gray-700">${t.presupuesto.toLocaleString('es-MX')} MXN</span>}
@@ -787,7 +790,7 @@ export default function Admin() {
                           </div>
                           <div><p className="font-extrabold text-gray-900 text-sm">{usr?.nombre || 'Usuario'}</p>{usr?.telefono && <p className="text-xs text-gray-500">📱 {usr.telefono}</p>}</div>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>{tipo.emoji} {tipo.label}</span>
+                        <span className={'text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ' + tipo.color}>{tipo.emoji} {tipo.label}</span>
                       </div>
                       <div className="bg-gray-50 rounded-xl p-3 mb-3">
                         <p className="text-xs text-gray-400 font-semibold mb-1">📩 Notificación en app:</p>
@@ -800,7 +803,7 @@ export default function Admin() {
                         <p className="text-xs text-gray-700 leading-relaxed">{msgWA}</p>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => copiarMensaje(msgWA, accion.id)} className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>{yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}</button>
+                        <button onClick={() => copiarMensaje(msgWA, accion.id)} className={'flex-1 py-2.5 rounded-xl font-bold text-xs transition ' + (yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200')}>{yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}</button>
                         <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id} className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">{marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}</button>
                       </div>
                     </div>
@@ -814,16 +817,16 @@ export default function Admin() {
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
-              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>👤 Individual</button>
-              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📣 Masivo</button>
-              <button onClick={() => { setModoComunicacion('whatsapp'); cargarUsuariosWA(); }} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'whatsapp' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📱 WhatsApp</button>
+              <button onClick={() => setModoComunicacion('individual')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>👤 Individual</button>
+              <button onClick={() => setModoComunicacion('masivo')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📣 Masivo</button>
+              <button onClick={() => { setModoComunicacion('whatsapp'); cargarUsuariosWA(); }} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'whatsapp' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📱 WhatsApp</button>
             </div>
 
             {modoComunicacion === 'whatsapp' && (
               <div>
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
                   <p className="text-green-800 text-sm font-bold mb-1">📱 Mensajes personalizados para WhatsApp</p>
-                  <p className="text-green-700 text-xs leading-relaxed">Cada mensaje incluye el nombre del usuario, qué le falta completar, su porcentaje actual y el tip de cómo instalar la app. Copia y manda por WhatsApp a cada uno.</p>
+                  <p className="text-green-700 text-xs leading-relaxed">Cada mensaje incluye el nombre, qué le falta completar, su porcentaje y el tip de cómo instalar la app. Copia y manda por WhatsApp a cada uno.</p>
                 </div>
                 {cargandoWA ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"/></div>
                 : usuariosWA.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin usuarios</p></div>
@@ -847,7 +850,7 @@ export default function Admin() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`text-lg font-extrabold ${u.progreso >= 80 ? 'text-green-600' : u.progreso >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{u.progreso}%</p>
+                              <p className={'text-lg font-extrabold ' + (u.progreso >= 80 ? 'text-green-600' : u.progreso >= 50 ? 'text-amber-500' : 'text-red-500')}>{u.progreso}%</p>
                               <p className="text-xs text-gray-400">perfil</p>
                             </div>
                           </div>
@@ -860,7 +863,7 @@ export default function Admin() {
                             <p className="text-xs text-gray-500 whitespace-pre-line leading-relaxed">{mensaje}</p>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => copiarMensajeWA(u.id, mensaje)} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition ${yaCopiado2 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{yaCopiado2 ? '✅ Copiado' : '📋 Copiar mensaje'}</button>
+                            <button onClick={() => copiarMensajeWA(u.id, mensaje)} className={'flex-1 py-2.5 rounded-xl font-bold text-sm transition ' + (yaCopiado2 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}>{yaCopiado2 ? '✅ Copiado' : '📋 Copiar mensaje'}</button>
                             {telefono && (
                               <a href={'https://wa.me/' + telefono + '?text=' + encodeURIComponent(mensaje)} target="_blank" className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm text-center hover:bg-green-600 transition">💬 Abrir en WA</a>
                             )}
@@ -905,7 +908,7 @@ export default function Admin() {
                 )}
                 <div className="mb-3"><label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label><input type="text" placeholder="Ej. Información importante sobre tu cuenta" value={tituloMensaje} onChange={(e) => setTituloMensaje(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/></div>
                 <div className="mb-4"><label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label><textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMensaje} onChange={(e) => setCuerpoMensaje(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/></div>
-                {mensajeEnviado && <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{mensajeEnviado}</div>}
+                {mensajeEnviado && <div className={'rounded-xl p-3 mb-4 text-sm font-semibold ' + (mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700')}>{mensajeEnviado}</div>}
                 <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}</button>
               </div>
             )}
@@ -917,14 +920,14 @@ export default function Admin() {
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">Segmento</label>
                   <div className="grid grid-cols-2 gap-2">
                     {[{ key: 'todos', label: '👥 Todos' }, { key: 'fleksers', label: '⚡ Fleksers' }, { key: 'empresas', label: '🏢 Empresas' }, { key: 'verificados', label: '✅ Verificados' }].map(s => (
-                      <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)} className={`py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ${segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>{s.label}</button>
+                      <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)} className={'py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ' + (segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300')}>{s.label}</button>
                     ))}
                   </div>
                 </div>
                 <div className="mb-3"><label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label><input type="text" placeholder="Ej. ¡Novedad en Fleksi!" value={tituloMasivo} onChange={(e) => setTituloMasivo(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/></div>
                 <div className="mb-4"><label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label><textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMasivo} onChange={(e) => setCuerpoMasivo(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/></div>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4"><p className="text-amber-800 text-xs font-semibold">⚠️ Este mensaje llegará a todos los usuarios del segmento como notificación en la app.</p></div>
-                {mensajeMasivoEnviado && <div className={`rounded-xl p-3 mb-4 text-sm font-semibold ${mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{mensajeMasivoEnviado}</div>}
+                {mensajeMasivoEnviado && <div className={'rounded-xl p-3 mb-4 text-sm font-semibold ' + (mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700')}>{mensajeMasivoEnviado}</div>}
                 <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}</button>
               </div>
             )}
@@ -937,10 +940,10 @@ export default function Admin() {
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><p className="text-xs text-gray-400 font-semibold mb-1">💸 Por dispersar</p><p className="text-3xl font-extrabold text-red-500">${totalPendiente.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">{pendienteCount} pagos pendientes</p></div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><p className="text-xs text-gray-400 font-semibold mb-1">✅ Ya dispersado</p><p className="text-3xl font-extrabold text-green-600">${totalDispersado.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">{pagosDispersion.filter(p => p.dispersado).length} pagos realizados</p></div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p><p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Aquí ves exactamente cuánto le debes transferir a cada Flekser (precio − 10% comisión). Haz la transferencia por SPEI y marca como dispersado.</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p><p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Haz la transferencia por SPEI y marca como dispersado.</p></div>
             <div className="flex gap-2 mb-4">
-              <button onClick={() => setFiltroDispersion('pendiente')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>⏳ Pendientes {pendienteCount > 0 && '(' + pendienteCount + ')'}</button>
-              <button onClick={() => setFiltroDispersion('dispersado')} className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition ${filtroDispersion === 'dispersado' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>✅ Dispersados</button>
+              <button onClick={() => setFiltroDispersion('pendiente')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>⏳ Pendientes {pendienteCount > 0 && '(' + pendienteCount + ')'}</button>
+              <button onClick={() => setFiltroDispersion('dispersado')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'dispersado' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>✅ Dispersados</button>
             </div>
             {cargandoDispersion ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             : pagosFiltrados.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">{filtroDispersion === 'pendiente' ? '🎉' : '📭'}</p><p className="font-bold text-gray-900">{filtroDispersion === 'pendiente' ? '¡Sin pagos pendientes!' : 'Sin pagos dispersados aún'}</p></div>
@@ -958,10 +961,10 @@ export default function Admin() {
                       <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100 bg-red-50"><span className="text-sm text-red-500">− Comisión Fleksi (10%)</span><span className="font-bold text-red-500">−${pago.comision.toLocaleString('es-MX')} MXN</span></div>
                       <div className="flex justify-between items-center px-4 py-3 bg-green-50"><span className="text-sm font-extrabold text-green-700">💰 A transferir</span><span className="text-xl font-extrabold text-green-700">${pago.pagoFlekser.toLocaleString('es-MX')} MXN</span></div>
                     </div>
-                    {pago.dispersado && pago.nota_dispersion && <div className="bg-green-50 rounded-xl p-3 mb-3"><p className="text-xs text-green-700 font-semibold">📝 {pago.nota_dispersion}</p>{pago.dispersado_at && <p className="text-xs text-green-600 mt-0.5">Dispersado el {new Date(pago.dispersado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}</div>}
+                    {pago.dispersado && pago.nota_dispersion && <div className="bg-green-50 rounded-xl p-3 mb-3"><p className="text-xs text-green-700 font-semibold">📝 {pago.nota_dispersion}</p></div>}
                     {!pago.dispersado && (
                       <div className="flex flex-col gap-2">
-                        <input type="text" placeholder="Nota opcional (ej. SPEI confirmado, ref. 123...)" value={notaDispersion[pago.id] || ''} onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
+                        <input type="text" placeholder="Nota opcional..." value={notaDispersion[pago.id] || ''} onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
                         <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}</button>
                       </div>
                     )}
@@ -1012,13 +1015,13 @@ export default function Admin() {
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>🎯</span> Intención de registro</h2>
                   <div className="flex flex-col gap-3">
                     {[
-                      { intencion: 'trabajar', emoji: '💼', label: 'Busca trabajo', sub: 'Quieren ofrecer servicios', count: metrics.intencionTrabajar, color: 'bg-blue-50 border-blue-100', textColor: 'text-blue-600' },
-                      { intencion: 'contratar', emoji: '🔍', label: 'Busca contratar', sub: 'Quieren encontrar ayuda', count: metrics.intencionContratar, color: 'bg-purple-50 border-purple-100', textColor: 'text-purple-600' },
-                      { intencion: 'ambos', emoji: '⚡', label: 'Trabaja y contrata', sub: 'Intención dual', count: metrics.intencionAmbos, color: 'bg-green-50 border-green-100', textColor: 'text-green-600' },
-                    ].map(({ emoji, label, sub, count, color, textColor }) => (
-                      <div key={label} className={`flex items-center justify-between rounded-xl p-3 border ${color}`}>
+                      { label: 'Busca trabajo', sub: 'Quieren ofrecer servicios', count: metrics.intencionTrabajar, emoji: '💼', color: 'bg-blue-50 border-blue-100', textColor: 'text-blue-600' },
+                      { label: 'Busca contratar', sub: 'Quieren encontrar ayuda', count: metrics.intencionContratar, emoji: '🔍', color: 'bg-purple-50 border-purple-100', textColor: 'text-purple-600' },
+                      { label: 'Trabaja y contrata', sub: 'Intención dual', count: metrics.intencionAmbos, emoji: '⚡', color: 'bg-green-50 border-green-100', textColor: 'text-green-600' },
+                    ].map(({ label, sub, count, emoji, color, textColor }) => (
+                      <div key={label} className={'flex items-center justify-between rounded-xl p-3 border ' + color}>
                         <div className="flex items-center gap-2"><span className="text-lg">{emoji}</span><div><p className="font-bold text-gray-900 text-sm">{label}</p><p className="text-xs text-gray-400">{sub}</p></div></div>
-                        <div className="text-right"><p className={`text-2xl font-extrabold ${textColor}`}>{count}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((count / metrics.totalUsuarios) * 100) : 0}%</p></div>
+                        <div className="text-right"><p className={'text-2xl font-extrabold ' + textColor}>{count}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((count / metrics.totalUsuarios) * 100) : 0}%</p></div>
                       </div>
                     ))}
                     {metrics.intencionSinDato > 0 && (
@@ -1089,7 +1092,7 @@ export default function Admin() {
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📥</span> Descargar reporte</h2>
                   <div className="flex gap-2 flex-wrap mb-4">
-                    {PERIODOS.map(p => (<button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{p.label}</button>))}
+                    {PERIODOS.map(p => (<button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={'px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>{p.label}</button>))}
                   </div>
                   <div className="flex gap-3">
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">{generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel</button>
@@ -1138,13 +1141,14 @@ export default function Admin() {
                         <div className="border-t border-gray-100 p-5">
                           <div className="flex flex-col gap-3">
                             {grupo.documentos.map((doc: any) => (
-                              <div key={doc.id} className={`rounded-xl p-4 border ${doc.estado === 'aprobado' ? 'bg-green-50 border-green-100' : doc.estado === 'rechazado' ? 'bg-red-50 border-red-100' : 'bg-yellow-50 border-yellow-100'}`}>
+                              <div key={doc.id} className={'rounded-xl p-4 border ' + (doc.estado === 'aprobado' ? 'bg-green-50 border-green-100' : doc.estado === 'rechazado' ? 'bg-red-50 border-red-100' : 'bg-yellow-50 border-yellow-100')}>
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-gray-900">{LABEL_DOCS[doc.tipo] || doc.tipo}</span>
                                     {doc.tipo === 'licencia' && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Opcional</span>}
+                                    {doc.tipo === 'antecedentes' && <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">🛡️ Badge especial</span>}
                                   </div>
-                                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoColor(doc.estado)}`}>{doc.estado === 'subido' ? '🔍 Por revisar' : doc.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>
+                                  <span className={'text-xs font-bold px-2 py-1 rounded-full ' + estadoColor(doc.estado)}>{doc.estado === 'subido' ? '🔍 Por revisar' : doc.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>
                                 </div>
                                 {doc.motivo_rechazo && <div className="bg-red-100 rounded-lg p-2 mb-2"><p className="text-xs text-red-700 font-semibold">Motivo: {doc.motivo_rechazo}</p></div>}
                                 <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -1185,12 +1189,12 @@ export default function Admin() {
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
               {[{ key: 'en_revision', label: 'En revisión', color: 'text-yellow-600' }, { key: 'aprobado', label: 'Aprobados', color: 'text-green-600' }, { key: 'rechazado', label: 'Rechazados', color: 'text-red-600' }, { key: 'todas', label: 'Total', color: 'text-purple-600' }].map(s => (
-                <div key={s.key} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className={`text-2xl font-extrabold ${s.color}`}>{conteoVerifs[s.key as keyof typeof conteoVerifs]}</p><p className="text-xs text-gray-400 mt-1">{s.label}</p></div>
+                <div key={s.key} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className={'text-2xl font-extrabold ' + s.color}>{conteoVerifs[s.key as keyof typeof conteoVerifs]}</p><p className="text-xs text-gray-400 mt-1">{s.label}</p></div>
               ))}
             </div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'en_revision', label: '🔍 En revisión' }, { key: 'aprobado', label: '✅ Aprobados' }, { key: 'rechazado', label: '❌ Rechazados' }, { key: 'todas', label: '📋 Todas' }].map(f => (
-                <button key={f.key} onClick={() => setFiltro(f.key)} className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtro === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>{f.label}</button>
+                <button key={f.key} onClick={() => setFiltro(f.key)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtro === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
               ))}
             </div>
             {filtradas.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin verificaciones en esta categoría</p></div> : (
@@ -1207,7 +1211,7 @@ export default function Admin() {
                           <div className="flex items-center gap-2"><span className="text-xs text-gray-400">{v.usuarios?.rol}</span>{v.usuarios?.ciudad && <span className="text-xs text-gray-400">· 📍 {v.usuarios.ciudad}</span>}</div>
                         </div>
                       </div>
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${estadoColor(v.estado)}`}>{v.estado}</span>
+                      <span className={'text-xs font-bold px-3 py-1 rounded-full ' + estadoColor(v.estado)}>{v.estado}</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-4">Enviado: {new Date(v.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     {v.motivo_rechazo && <div className="bg-red-50 rounded-xl p-3 mb-4"><p className="text-xs font-bold text-red-700">Motivo:</p><p className="text-xs text-red-600 mt-1">{v.motivo_rechazo}</p></div>}
@@ -1242,10 +1246,10 @@ export default function Admin() {
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p><p className="text-xs text-gray-400 mt-1">Completados</p></div>
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">MXN por enviar</p></div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">El flekser solicitó el retiro desde su wallet. Haz la transferencia SPEI a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">Haz la transferencia SPEI a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p></div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
-                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ${filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>{f.label}</button>
+                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
               ))}
             </div>
             {cargandoRetiros ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
@@ -1265,7 +1269,7 @@ export default function Admin() {
                           {retiro.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {retiro.usuarios.telefono}</p>}
                         </div>
                       </div>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${retiro.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : retiro.estado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                      <span className={'text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ' + (retiro.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : retiro.estado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
                         {retiro.estado === 'pendiente' ? '⏳ Pendiente' : retiro.estado === 'completado' ? '✅ Completado' : '❌ Rechazado'}
                       </span>
                     </div>
@@ -1277,14 +1281,14 @@ export default function Admin() {
                     </div>
                     <p className="text-xs text-gray-400 mb-3">Solicitado: {new Date(retiro.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     {retiro.estado !== 'pendiente' && retiro.notas && (
-                      <div className={`rounded-xl p-3 mb-3 ${retiro.estado === 'completado' ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <p className={`text-xs font-semibold ${retiro.estado === 'completado' ? 'text-green-700' : 'text-red-700'}`}>📝 {retiro.notas}</p>
+                      <div className={'rounded-xl p-3 mb-3 ' + (retiro.estado === 'completado' ? 'bg-green-50' : 'bg-red-50')}>
+                        <p className={'text-xs font-semibold ' + (retiro.estado === 'completado' ? 'text-green-700' : 'text-red-700')}>📝 {retiro.notas}</p>
                         {retiro.procesado_at && <p className="text-xs text-gray-400 mt-0.5">Por {retiro.procesado_por} · {new Date(retiro.procesado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
                       </div>
                     )}
                     {retiro.estado === 'pendiente' && (
                       <div className="flex flex-col gap-2">
-                        <input type="text" placeholder="Nota opcional (ej. SPEI enviado, ref. 123...)" value={notaRetiro[retiro.id] || ''} onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"/>
+                        <input type="text" placeholder="Nota opcional..." value={notaRetiro[retiro.id] || ''} onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-sm transition"/>
                         {rechazandoRetiro === retiro.id ? (
                           <div className="flex flex-col gap-2">
                             <input type="text" placeholder="Motivo del rechazo (obligatorio)" value={notaRetiro[retiro.id + '_rechazo'] || ''} onChange={e => setNotaRetiro(prev => ({ ...prev, [retiro.id + '_rechazo']: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-red-300 focus:border-red-400 outline-none text-gray-900 text-sm transition"/>
