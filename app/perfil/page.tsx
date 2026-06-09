@@ -27,6 +27,18 @@ const todosLosBadges = [
   { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆', desc: 'Perfil al 100%' },
 ];
 
+const intenciones = [
+  { id: 'trabajar', emoji: '💼', titulo: 'Quiero trabajar', desc: 'Ofrecer mis servicios y ganar dinero', color: 'border-blue-400 bg-blue-50', texto: 'text-blue-700' },
+  { id: 'contratar', emoji: '🔍', titulo: 'Quiero contratar', desc: 'Buscar ayuda para lo que necesito', color: 'border-purple-400 bg-purple-50', texto: 'text-purple-700' },
+  { id: 'ambos', emoji: '⚡', titulo: 'Ambos', desc: 'Trabajo y también contrato', color: 'border-green-400 bg-green-50', texto: 'text-green-700' },
+];
+
+function generarCodigo(nombre: string): string {
+  const base = nombre.trim().toUpperCase().replace(/\s+/g, '').slice(0, 4).padEnd(4, 'X');
+  const aleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${base}-${aleatorio}`;
+}
+
 function calcularProgresoPerfil(usuario: any, documentos: any[], rol: string) {
   let puntos = 0;
   if (usuario?.foto_url) puntos += 10;
@@ -78,6 +90,16 @@ export default function Perfil() {
   const [progresoPerfil, setProgresoPerfil] = useState(0);
   const [copiado, setCopiado] = useState(false);
 
+  // Intención
+  const [mostrarBannerIntencion, setMostrarBannerIntencion] = useState(false);
+  const [intencionSeleccionada, setIntencionSeleccionada] = useState('');
+  const [guardandoIntencion, setGuardandoIntencion] = useState(false);
+
+  // Código referido nuevo
+  const [codigoRecienGenerado, setCodigoRecienGenerado] = useState('');
+  const [mostrarModalCodigo, setMostrarModalCodigo] = useState(false);
+  const [copiadoModal, setCopiadoModal] = useState(false);
+
   const [mostrarCuenta, setMostrarCuenta] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState(false);
   const [cuentaNombre, setCuentaNombre] = useState('');
@@ -110,7 +132,24 @@ export default function Perfil() {
 
       const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
       if (data) {
-        setUsuario({ ...data, id: user.id, email: user.email });
+        // ── Auto-generar código de referido si no tiene ──
+        let codigoFinal = data.codigo_referido;
+        if (!codigoFinal) {
+          let codigoNuevo = generarCodigo(data.nombre || 'USER');
+          let intentos = 0;
+          while (intentos < 5) {
+            const { data: existe } = await supabase.from('usuarios').select('id').eq('codigo_referido', codigoNuevo).maybeSingle();
+            if (!existe) break;
+            codigoNuevo = generarCodigo(data.nombre || 'USER');
+            intentos++;
+          }
+          await supabase.from('usuarios').update({ codigo_referido: codigoNuevo }).eq('id', user.id);
+          codigoFinal = codigoNuevo;
+          setCodigoRecienGenerado(codigoNuevo);
+          setMostrarModalCodigo(true);
+        }
+
+        setUsuario({ ...data, id: user.id, email: user.email, codigo_referido: codigoFinal });
         setNombre(data.nombre || '');
         setTelefono(data.telefono || '');
         setDescripcion(data.descripcion || '');
@@ -122,6 +161,9 @@ export default function Perfil() {
         setCuentaNombre(data.nombre || '');
         setCuentaTelefono(data.telefono || '');
         setCuentaCiudad(data.ciudad || '');
+
+        // ── Mostrar banner de intención si no tiene ──
+        if (!data.intencion) setMostrarBannerIntencion(true);
 
         const { data: docs } = await supabase.from('documentos').select('*').eq('usuario_id', user.id);
         setDocumentos(docs || []);
@@ -183,6 +225,17 @@ export default function Perfil() {
     } finally {
       setCargando(false);
     }
+  };
+
+  const guardarIntencion = async () => {
+    if (!intencionSeleccionada || !usuario) return;
+    setGuardandoIntencion(true);
+    try {
+      await supabase.from('usuarios').update({ intencion: intencionSeleccionada }).eq('id', usuario.id);
+      setUsuario((prev: any) => ({ ...prev, intencion: intencionSeleccionada }));
+      setMostrarBannerIntencion(false);
+    } catch (e) { console.error(e); }
+    finally { setGuardandoIntencion(false); }
   };
 
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,9 +339,14 @@ export default function Perfil() {
     setTimeout(() => setCopiado(false), 2000);
   };
 
-  const compartirCodigoWA = () => {
-    if (!usuario?.codigo_referido) return;
-    const texto = `¡Descarga Fleksi, la app para encontrar trabajo flexible en México! 🚀\nUsa mi código *${usuario.codigo_referido}* al registrarte y gana un beneficio especial.\nDescárgala gratis 👉 bit.ly/fleksiapp`;
+  const copiarCodigoModal = () => {
+    navigator.clipboard.writeText(codigoRecienGenerado);
+    setCopiadoModal(true);
+    setTimeout(() => setCopiadoModal(false), 2000);
+  };
+
+  const compartirCodigoWA = (codigo: string) => {
+    const texto = `¡Descarga Fleksi, la app para encontrar trabajo flexible en México! 🚀\nUsa mi código *${codigo}* al registrarte y gana un beneficio especial.\nDescárgala gratis 👉 bit.ly/fleksiapp`;
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
@@ -386,6 +444,44 @@ export default function Perfil() {
 
       <div className="max-w-md mx-auto px-6 -mt-12">
 
+        {/* ── BANNER INTENCIÓN (usuarios sin dato) ── */}
+        {mostrarBannerIntencion && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-purple-200 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🎯</span>
+              <h3 className="font-extrabold text-gray-900">Una pregunta rápida</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">¿Con qué intención usas Fleksi? Esto nos ayuda a personalizar tu experiencia. No limita lo que puedes hacer.</p>
+            <div className="flex flex-col gap-2 mb-4">
+              {intenciones.map((i) => (
+                <button key={i.id} onClick={() => setIntencionSeleccionada(i.id)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 transition text-left ${
+                    intencionSeleccionada === i.id ? i.color : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <span className="text-2xl">{i.emoji}</span>
+                  <div>
+                    <p className={`font-bold text-sm ${intencionSeleccionada === i.id ? i.texto : 'text-gray-900'}`}>{i.titulo}</p>
+                    <p className="text-xs text-gray-400">{i.desc}</p>
+                  </div>
+                  {intencionSeleccionada === i.id && (
+                    <div className="ml-auto w-5 h-5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={guardarIntencion}
+              disabled={!intencionSeleccionada || guardandoIntencion}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 transition">
+              {guardandoIntencion ? 'Guardando...' : 'Guardar mi intención →'}
+            </button>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
@@ -421,6 +517,9 @@ export default function Perfil() {
                 {tieneBadge('verificado') && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>}
                 {tieneBadge('top_rated') && <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">⭐ Top Rated</span>}
                 {perfilCompleto && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>}
+                {usuario?.intencion === 'trabajar' && <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">💼 Busca trabajo</span>}
+                {usuario?.intencion === 'contratar' && <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">🔍 Busca contratar</span>}
+                {usuario?.intencion === 'ambos' && <span className="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">⚡ Trabaja y contrata</span>}
               </div>
             </div>
           </div>
@@ -547,7 +646,7 @@ export default function Perfil() {
                 }`}>
                 {copiado ? '✅ ¡Copiado!' : '📋 Copiar código'}
               </button>
-              <button onClick={compartirCodigoWA}
+              <button onClick={() => compartirCodigoWA(usuario.codigo_referido)}
                 className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition">
                 💬 Compartir
               </button>
@@ -875,6 +974,64 @@ export default function Perfil() {
             <img src={fotoAmpliada} className="w-full rounded-2xl shadow-2xl object-contain max-h-[80vh]"/>
             <button onClick={() => setFotoAmpliada(null)}
               className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold shadow-lg text-lg">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CÓDIGO RECIÉN GENERADO ── */}
+      {mostrarModalCodigo && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-10 text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <span className="text-4xl">🎁</span>
+              </div>
+              <h2 className="text-white font-extrabold text-2xl mb-1">¡Tienes código de referido!</h2>
+              <p className="text-white/80 text-sm">Te generamos uno automáticamente</p>
+            </div>
+            <div className="-mt-6 bg-white rounded-t-3xl px-6 pt-6 pb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-2xl p-5 mb-5 text-center">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tu código de referido</p>
+                <p className="text-3xl font-extrabold text-purple-700 tracking-widest mb-1">{codigoRecienGenerado}</p>
+                <p className="text-xs text-gray-400">Ya aparece en tu perfil siempre</p>
+              </div>
+              <div className="bg-gray-50 rounded-2xl p-4 mb-5">
+                <p className="text-sm font-bold text-gray-900 mb-2">💰 ¿Cómo funciona?</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">1.</span>
+                    <p className="text-xs text-gray-600">Comparte tu código con amigos, familiares o en redes sociales.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">2.</span>
+                    <p className="text-xs text-gray-600">Ellos se registran en Fleksi usando tu código.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-purple-600 font-bold text-sm flex-shrink-0">3.</span>
+                    <p className="text-xs text-gray-600">Cuando tu referido completa su primer trabajo, <span className="font-bold text-green-600">tú recibes un bono en tu Wallet 💸</span></p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 mb-4">
+                <button onClick={copiarCodigoModal}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition ${
+                    copiadoModal ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}>
+                  {copiadoModal ? '✅ ¡Copiado!' : '📋 Copiar código'}
+                </button>
+                <button onClick={() => compartirCodigoWA(codigoRecienGenerado)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-500 text-white rounded-2xl font-bold text-sm hover:bg-green-600 transition">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  WhatsApp
+                </button>
+              </div>
+              <button onClick={() => setMostrarModalCodigo(false)}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition">
+                ¡Entendido! →
+              </button>
+            </div>
           </div>
         </div>
       )}
