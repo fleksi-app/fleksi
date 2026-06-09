@@ -113,14 +113,12 @@ export default function Admin() {
   const [periodoReporte, setPeriodoReporte] = useState('1m');
   const [generandoReporte, setGenerandoReporte] = useState('');
 
-  // Dispersión
   const [pagosDispersion, setPagosDispersion] = useState<any[]>([]);
   const [cargandoDispersion, setCargandoDispersion] = useState(false);
   const [filtroDispersion, setFiltroDispersion] = useState<'pendiente' | 'dispersado'>('pendiente');
   const [marcandoDispersado, setMarcandoDispersado] = useState('');
   const [notaDispersion, setNotaDispersion] = useState<Record<string, string>>({});
 
-  // Retiros wallet
   const [retiros, setRetiros] = useState<any[]>([]);
   const [cargandoRetiros, setCargandoRetiros] = useState(false);
   const [filtroRetiros, setFiltroRetiros] = useState<'pendiente' | 'completado' | 'rechazado'>('pendiente');
@@ -128,11 +126,9 @@ export default function Admin() {
   const [notaRetiro, setNotaRetiro] = useState<Record<string, string>>({});
   const [rechazandoRetiro, setRechazandoRetiro] = useState('');
 
-  // Modal usuarios
   const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
   const [cargandoModal, setCargandoModal] = useState(false);
 
-  // Comunicaciones
   const [busquedaUsuario, setBusquedaUsuario] = useState('');
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null);
@@ -147,7 +143,6 @@ export default function Admin() {
   const [mensajeMasivoEnviado, setMensajeMasivoEnviado] = useState('');
   const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo'>('individual');
 
-  // Acciones pendientes
   const [acciones, setAcciones] = useState<any[]>([]);
   const [cargandoAcciones, setCargandoAcciones] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -159,6 +154,7 @@ export default function Admin() {
     serviciosPublicados: 0, serviciosCompletados: 0, serviciosCancelados: 0,
     ingresosDia: 0, ingresosMes: 0, comisionAcumulada: 0,
     ciudadTopNombre: '—', ciudadTopCount: 0,
+    intencionTrabajar: 0, intencionContratar: 0, intencionAmbos: 0, intencionSinDato: 0,
   });
   const [cargandoMetrics, setCargandoMetrics] = useState(true);
   const [datosUsuarios, setDatosUsuarios] = useState<any[]>([]);
@@ -214,25 +210,10 @@ export default function Admin() {
 
   const enviarMensajeIndividual = async () => {
     if (!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim()) return;
-    setEnviandoMensaje(true);
-    setMensajeEnviado('');
+    setEnviandoMensaje(true); setMensajeEnviado('');
     try {
-      await supabase.from('notificaciones').insert({
-        usuario_id: usuarioSeleccionado.id,
-        tipo: 'admin_mensaje',
-        titulo: tituloMensaje,
-        mensaje: cuerpoMensaje,
-        link: '/notificaciones',
-      });
-      await fetch('/api/enviar-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'admin_mensaje',
-          destinatario: usuarioSeleccionado.email,
-          datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id },
-        }),
-      });
+      await supabase.from('notificaciones').insert({ usuario_id: usuarioSeleccionado.id, tipo: 'admin_mensaje', titulo: tituloMensaje, mensaje: cuerpoMensaje, link: '/notificaciones' });
+      await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'admin_mensaje', destinatario: usuarioSeleccionado.email, datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id } }) });
       setMensajeEnviado(`✅ Mensaje enviado a ${usuarioSeleccionado.nombre}`);
       setTituloMensaje(''); setCuerpoMensaje(''); setUsuarioSeleccionado(null); setBusquedaUsuario(''); setResultadosBusqueda([]);
     } catch (e) { setMensajeEnviado('❌ Error al enviar el mensaje'); }
@@ -241,8 +222,7 @@ export default function Admin() {
 
   const enviarMensajeMasivo = async () => {
     if (!tituloMasivo.trim() || !cuerpoMasivo.trim()) return;
-    setEnviandoMasivo(true);
-    setMensajeMasivoEnviado('');
+    setEnviandoMasivo(true); setMensajeMasivoEnviado('');
     try {
       let query = supabase.from('usuarios').select('id, nombre, email, rol, verificado');
       if (segmentoMasivo === 'fleksers') query = query.in('rol', ['flekser', 'viajero']);
@@ -331,7 +311,7 @@ export default function Admin() {
     try {
       const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
       const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad');
+      const { data: usuarios } = await supabase.from('usuarios').select('rol, created_at, ciudad, intencion');
       const { data: servicios } = await supabase.from('servicios').select('estado, created_at, presupuesto');
       const totalUsuarios = usuarios?.length || 0;
       const fleksers = usuarios?.filter(u => u.rol === 'flekser' || u.rol === 'viajero').length || 0;
@@ -349,7 +329,11 @@ export default function Admin() {
       const ingresosDia = pagadosHoy.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
       const ingresosMes = pagadosMes.reduce((acc, s) => acc + (s.presupuesto || 0), 0);
       const comisionAcumulada = (servicios || []).filter(s => s.estado === 'completado' || s.estado === 'pagado').reduce((acc, s) => acc + (s.presupuesto || 0) * 0.25, 0);
-      setMetrics({ totalUsuarios, fleksers, empresas, nuevosHoy, nuevosEsteMes, serviciosPublicados, serviciosCompletados, serviciosCancelados, ingresosDia, ingresosMes, comisionAcumulada, ciudadTopNombre: ciudadTop?.[0] || '—', ciudadTopCount: ciudadTop?.[1] || 0 });
+      const intencionTrabajar = (usuarios || []).filter(u => u.intencion === 'trabajar').length;
+      const intencionContratar = (usuarios || []).filter(u => u.intencion === 'contratar').length;
+      const intencionAmbos = (usuarios || []).filter(u => u.intencion === 'ambos').length;
+      const intencionSinDato = (usuarios || []).filter(u => !u.intencion).length;
+      setMetrics({ totalUsuarios, fleksers, empresas, nuevosHoy, nuevosEsteMes, serviciosPublicados, serviciosCompletados, serviciosCancelados, ingresosDia, ingresosMes, comisionAcumulada, ciudadTopNombre: ciudadTop?.[0] || '—', ciudadTopCount: ciudadTop?.[1] || 0, intencionTrabajar, intencionContratar, intencionAmbos, intencionSinDato });
       const semanas = generarSemanas(8);
       setDatosUsuarios(semanas.map(s => ({ semana: s.label, usuarios: (usuarios || []).filter(u => { const f = new Date(u.created_at); return f >= s.inicio && f <= s.fin; }).length, acumulado: (usuarios || []).filter(u => new Date(u.created_at) <= s.fin).length })));
       setDatosServicios(semanas.map(s => ({ semana: s.label, completados: (servicios || []).filter(sv => { const f = new Date(sv.created_at); return (sv.estado === 'completado' || sv.estado === 'pagado') && f >= s.inicio && f <= s.fin; }).length, cancelados: (servicios || []).filter(sv => { const f = new Date(sv.created_at); return sv.estado === 'cancelado' && f >= s.inicio && f <= s.fin; }).length, publicados: (servicios || []).filter(sv => { const f = new Date(sv.created_at); return f >= s.inicio && f <= s.fin; }).length })));
@@ -402,9 +386,7 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
-
       const wb = XLSX.utils.book_new();
-
       const wsResumen = XLSX.utils.aoa_to_sheet([
         ['REPORTE FLEKSI', '', ''],
         [`Período: ${periodo.label}`, `${datos.periodo.inicio} — ${datos.periodo.fin}`, ''],
@@ -435,10 +417,8 @@ export default function Admin() {
         ['Ciudad con más actividad', datos.ciudad.nombre, ''],
         ['Usuarios en esa ciudad', datos.ciudad.usuarios, ''],
       ]);
-
       wsResumen['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 10 }];
       XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
       const wsDetalle = XLSX.utils.aoa_to_sheet([
         ['Categoría', 'Métrica', 'Valor'],
         ['Usuarios', 'Total registrados', datos.usuarios.total],
@@ -459,7 +439,6 @@ export default function Admin() {
       ]);
       wsDetalle['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsDetalle, 'Datos');
-
       const nombreArchivo = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, nombreArchivo);
     } finally { setGenerandoReporte(''); }
@@ -471,7 +450,6 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
-
       const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -583,23 +561,16 @@ export default function Admin() {
     <div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div>
   </div>
 </div>
-<script>
-  window.onload = function() { setTimeout(function() { window.print(); }, 500); };
-</script>
+<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
 </body>
 </html>`;
-
       const ventana = window.open('', '_blank', 'width=900,height=700');
-      if (ventana) {
-        ventana.document.write(html);
-        ventana.document.close();
-      } else {
+      if (ventana) { ventana.document.write(html); ventana.document.close(); }
+      else {
         const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.html`;
-        a.click();
+        a.href = url; a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.html`; a.click();
         URL.revokeObjectURL(url);
       }
     } finally { setGenerandoReporte(''); }
@@ -957,6 +928,54 @@ export default function Admin() {
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📍</span> Ciudad con más actividad</h2>
                   <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100"><span className="text-4xl">🏙️</span><div><p className="font-extrabold text-gray-900 text-xl">{metrics.ciudadTopNombre}</p><p className="text-sm text-gray-500">{metrics.ciudadTopCount} usuario{metrics.ciudadTopCount !== 1 ? 's' : ''} registrado{metrics.ciudadTopCount !== 1 ? 's' : ''}</p></div></div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>🎯</span> Intención de registro</h2>
+                  <p className="text-xs text-gray-400 mb-4">¿Con qué propósito se registraron tus usuarios?</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between bg-blue-50 rounded-xl p-3 border border-blue-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💼</span>
+                        <div><p className="font-bold text-gray-900 text-sm">Busca trabajo</p><p className="text-xs text-gray-400">Quieren ofrecer servicios</p></div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-blue-600">{metrics.intencionTrabajar}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionTrabajar / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between bg-purple-50 rounded-xl p-3 border border-purple-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🔍</span>
+                        <div><p className="font-bold text-gray-900 text-sm">Busca contratar</p><p className="text-xs text-gray-400">Quieren encontrar ayuda</p></div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-purple-600">{metrics.intencionContratar}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionContratar / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between bg-green-50 rounded-xl p-3 border border-green-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚡</span>
+                        <div><p className="font-bold text-gray-900 text-sm">Trabaja y contrata</p><p className="text-xs text-gray-400">Intención dual</p></div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-green-600">{metrics.intencionAmbos}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionAmbos / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
+                    </div>
+                    {metrics.intencionSinDato > 0 && (
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">❓</span>
+                          <div><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores a esta función</p></div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p>
+                          <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-1 flex items-center gap-2"><span>📈</span> Tendencias — últimas 8 semanas</h2>
