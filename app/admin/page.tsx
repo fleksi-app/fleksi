@@ -46,20 +46,34 @@ function generarMensajeWhatsApp(notif: any, usuario: any): string {
   const nombre = usuario?.nombre?.split(' ')[0] || 'usuario';
   const link = 'bit.ly/fleksiapp';
   switch (notif.tipo) {
-    case 'nueva_aplicacion': return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
-    case 'aplicacion_aceptada': return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
-    case 'aplicacion_rechazada': return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
-    case 'pago_liberado': return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
-    case 'trabajo_completado': return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
-    case 'verificacion_aprobada': return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
-    case 'documento_aprobado': return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
-    case 'documento_rechazado': return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
-    case 'retiro_completado': return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
-    case 'retiro_rechazado': return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
-    case 'mensaje_nuevo': return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
-    case 'disputa': return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
-    case 'admin_mensaje': return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
-    default: return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
+    case 'nueva_aplicacion':
+      return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
+    case 'aplicacion_aceptada':
+      return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
+    case 'aplicacion_rechazada':
+      return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
+    case 'pago_liberado':
+      return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
+    case 'trabajo_completado':
+      return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
+    case 'verificacion_aprobada':
+      return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
+    case 'documento_aprobado':
+      return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
+    case 'documento_rechazado':
+      return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
+    case 'retiro_completado':
+      return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
+    case 'retiro_rechazado':
+      return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
+    case 'mensaje_nuevo':
+      return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
+    case 'disputa':
+      return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
+    case 'admin_mensaje':
+      return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
+    default:
+      return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
   }
 }
 
@@ -99,12 +113,14 @@ export default function Admin() {
   const [periodoReporte, setPeriodoReporte] = useState('1m');
   const [generandoReporte, setGenerandoReporte] = useState('');
 
+  // Dispersión
   const [pagosDispersion, setPagosDispersion] = useState<any[]>([]);
   const [cargandoDispersion, setCargandoDispersion] = useState(false);
   const [filtroDispersion, setFiltroDispersion] = useState<'pendiente' | 'dispersado'>('pendiente');
   const [marcandoDispersado, setMarcandoDispersado] = useState('');
   const [notaDispersion, setNotaDispersion] = useState<Record<string, string>>({});
 
+  // Retiros wallet
   const [retiros, setRetiros] = useState<any[]>([]);
   const [cargandoRetiros, setCargandoRetiros] = useState(false);
   const [filtroRetiros, setFiltroRetiros] = useState<'pendiente' | 'completado' | 'rechazado'>('pendiente');
@@ -112,9 +128,11 @@ export default function Admin() {
   const [notaRetiro, setNotaRetiro] = useState<Record<string, string>>({});
   const [rechazandoRetiro, setRechazandoRetiro] = useState('');
 
+  // Modal usuarios
   const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
   const [cargandoModal, setCargandoModal] = useState(false);
 
+  // Comunicaciones
   const [busquedaUsuario, setBusquedaUsuario] = useState('');
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null);
@@ -127,18 +145,22 @@ export default function Admin() {
   const [cuerpoMasivo, setCuerpoMasivo] = useState('');
   const [enviandoMasivo, setEnviandoMasivo] = useState(false);
   const [mensajeMasivoEnviado, setMensajeMasivoEnviado] = useState('');
-  const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo'>('individual');
+  const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo' | 'whatsapp'>('individual');
+  const [usuariosWA, setUsuariosWA] = useState<any[]>([]);
+  const [cargandoWA, setCargandoWA] = useState(false);
+  const [mensajesCopiados, setMensajesCopiados] = useState<Record<string, boolean>>({});
 
+  // Acciones pendientes
   const [acciones, setAcciones] = useState<any[]>([]);
-  const [cargandoAcciones, setCargandoAcciones] = useState(false);
-  const [copiado, setCopiado] = useState<string | null>(null);
-  const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
 
   // Tab Trabajos
   const [trabajosData, setTrabajosData] = useState<any[]>([]);
   const [cargandoTrabajos, setCargandoTrabajos] = useState(false);
   const [filtroTrabajos, setFiltroTrabajos] = useState<'todos' | 'activo' | 'completado' | 'cancelado'>('todos');
   const [periodoTrabajos, setPeriodoTrabajos] = useState<'7d' | '30d' | '90d' | 'todo'>('30d');
+  const [cargandoAcciones, setCargandoAcciones] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
 
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
@@ -159,6 +181,20 @@ export default function Admin() {
   useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
   useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
 
+  const cargarAcciones = async () => {
+    setCargandoAcciones(true);
+    try {
+      const { data } = await supabase
+        .from('notificaciones')
+        .select('*, usuarios!usuario_id(id, nombre, telefono, foto_url)')
+        .eq('leida', false)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setAcciones(data || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoAcciones(false); }
+  };
+
   const cargarTrabajos = async () => {
     setCargandoTrabajos(true);
     try {
@@ -176,6 +212,7 @@ export default function Admin() {
 
       const { data } = await query;
 
+      // Obtener aplicaciones con contraoferta
       const { data: apps } = await supabase
         .from('aplicaciones')
         .select('servicio_id, precio_ofrecido, estado, servicios(presupuesto)')
@@ -195,20 +232,6 @@ export default function Admin() {
       setTrabajosData(trabajosConFlag);
     } catch (e) { console.error(e); }
     finally { setCargandoTrabajos(false); }
-  };
-
-  const cargarAcciones = async () => {
-    setCargandoAcciones(true);
-    try {
-      const { data } = await supabase
-        .from('notificaciones')
-        .select('*, usuarios!usuario_id(id, nombre, telefono, foto_url)')
-        .eq('leida', false)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      setAcciones(data || []);
-    } catch (e) { console.error(e); }
-    finally { setCargandoAcciones(false); }
   };
 
   const marcarLeida = async (notifId: string) => {
@@ -241,10 +264,25 @@ export default function Admin() {
 
   const enviarMensajeIndividual = async () => {
     if (!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim()) return;
-    setEnviandoMensaje(true); setMensajeEnviado('');
+    setEnviandoMensaje(true);
+    setMensajeEnviado('');
     try {
-      await supabase.from('notificaciones').insert({ usuario_id: usuarioSeleccionado.id, tipo: 'admin_mensaje', titulo: tituloMensaje, mensaje: cuerpoMensaje, link: '/notificaciones' });
-      await fetch('/api/enviar-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'admin_mensaje', destinatario: usuarioSeleccionado.email, datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id } }) });
+      await supabase.from('notificaciones').insert({
+        usuario_id: usuarioSeleccionado.id,
+        tipo: 'admin_mensaje',
+        titulo: tituloMensaje,
+        mensaje: cuerpoMensaje,
+        link: '/notificaciones',
+      });
+      await fetch('/api/enviar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'admin_mensaje',
+          destinatario: usuarioSeleccionado.email,
+          datos: { nombre: usuarioSeleccionado.nombre, titulo: tituloMensaje, mensaje: cuerpoMensaje, usuario_id: usuarioSeleccionado.id },
+        }),
+      });
       setMensajeEnviado(`✅ Mensaje enviado a ${usuarioSeleccionado.nombre}`);
       setTituloMensaje(''); setCuerpoMensaje(''); setUsuarioSeleccionado(null); setBusquedaUsuario(''); setResultadosBusqueda([]);
     } catch (e) { setMensajeEnviado('❌ Error al enviar el mensaje'); }
@@ -253,7 +291,8 @@ export default function Admin() {
 
   const enviarMensajeMasivo = async () => {
     if (!tituloMasivo.trim() || !cuerpoMasivo.trim()) return;
-    setEnviandoMasivo(true); setMensajeMasivoEnviado('');
+    setEnviandoMasivo(true);
+    setMensajeMasivoEnviado('');
     try {
       let query = supabase.from('usuarios').select('id, nombre, email, rol, verificado');
       if (segmentoMasivo === 'fleksers') query = query.in('rol', ['flekser', 'viajero']);
@@ -267,6 +306,109 @@ export default function Admin() {
       setTituloMasivo(''); setCuerpoMasivo('');
     } catch (e) { setMensajeMasivoEnviado('❌ Error al enviar el mensaje masivo'); }
     finally { setEnviandoMasivo(false); }
+  };
+
+  const cargarUsuariosWA = async () => {
+    setCargandoWA(true);
+    try {
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('id, nombre, telefono, foto_url, foto_url, ciudad, descripcion, habilidades, rol')
+        .order('created_at', { ascending: false });
+
+      const { data: docs } = await supabase
+        .from('documentos')
+        .select('usuario_id, tipo, estado');
+
+      const docsMap: Record<string, any[]> = {};
+      (docs || []).forEach((d: any) => {
+        if (!docsMap[d.usuario_id]) docsMap[d.usuario_id] = [];
+        docsMap[d.usuario_id].push(d);
+      });
+
+      const conProgreso = (usuarios || []).map((u: any) => {
+        const userDocs = docsMap[u.id] || [];
+        const rol = u.rol || 'flekser';
+        const docsRequeridos = rol === 'empresa'
+          ? ['ine_frente', 'ine_reverso', 'constancia_fiscal']
+          : ['ine_frente', 'ine_reverso', 'curp', 'comprobante_domicilio'];
+
+        const faltantes: string[] = [];
+        if (!u.foto_url) faltantes.push('foto de perfil');
+        if (!u.ciudad?.trim()) faltantes.push('ciudad');
+        if (!u.descripcion?.trim()) faltantes.push('descripción');
+        if (rol !== 'empresa' && (!u.habilidades || u.habilidades.length === 0)) faltantes.push('habilidades');
+        docsRequeridos.forEach(tipo => {
+          const doc = userDocs.find((d: any) => d.tipo === tipo);
+          if (!doc || doc.estado === 'pendiente') {
+            const labels: Record<string, string> = {
+              ine_frente: 'INE frente', ine_reverso: 'INE reverso',
+              curp: 'CURP', comprobante_domicilio: 'comprobante de domicilio',
+              constancia_fiscal: 'constancia fiscal',
+            };
+            faltantes.push(labels[tipo] || tipo);
+          }
+        });
+
+        let puntos = 0;
+        if (u.foto_url) puntos += 15;
+        if (u.ciudad?.trim()) puntos += 15;
+        if (u.descripcion?.trim()) puntos += 15;
+        if (u.habilidades?.length > 0) puntos += 15;
+        const docsSubidos = docsRequeridos.filter(tipo =>
+          userDocs.some((d: any) => d.tipo === tipo && (d.estado === 'subido' || d.estado === 'aprobado'))
+        ).length;
+        puntos += Math.round((docsSubidos / docsRequeridos.length) * 40);
+
+        return { ...u, faltantes, progreso: Math.min(puntos, 100) };
+      });
+
+      setUsuariosWA(conProgreso);
+    } catch (e) { console.error(e); }
+    finally { setCargandoWA(false); }
+  };
+
+  const generarMensajeWA = (u: any): string => {
+    const nombre = u.nombre?.split(' ')[0] || 'amigo';
+    const faltantes = u.faltantes || [];
+    const progreso = u.progreso || 0;
+
+    let faltaTexto = '';
+    if (faltantes.length === 0) {
+      faltaTexto = '¡Tu perfil ya está completo! 🎉';
+    } else if (faltantes.length === 1) {
+      faltaTexto = `Solo te falta agregar tu *${faltantes[0]}* y estarás listo.`;
+    } else if (faltantes.length === 2) {
+      faltaTexto = `Te falta agregar tu *${faltantes[0]}* y tu *${faltantes[1]}*.`;
+    } else {
+      const ultimos = faltantes.slice(0, -1).map((f: string) => `*${f}*`).join(', ');
+      faltaTexto = `Te falta: ${ultimos} y *${faltantes[faltantes.length - 1]}*.`;
+    }
+
+    return \`¡Hola, \${nombre}! 👋
+
+Somos el equipo de *Fleksi* y notamos que tu perfil aún no está completo.
+
+\${faltaTexto}
+
+📊 Actualmente tienes un *\${progreso}%* de perfil completado.
+
+💡 Los Fleksers con perfil completo tienen hasta un *90% más de probabilidades* de que los contraten. Es lo primero que ven los clientes al elegir a quién contratarle.
+
+📲 *Tip importante:* Si estás usando Fleksi desde el navegador de tu celular, te recomendamos *agregar la app a tu pantalla de inicio* para que se sienta como una app nativa y sea más fácil de usar. En iPhone: Safari → compartir → "Agregar a pantalla de inicio". En Android: Chrome → menú → "Agregar a pantalla de inicio".
+
+Ya hay clientes buscando servicios en Irapuato. Completa tu perfil hoy y aparece en los resultados.
+
+¡Cualquier duda aquí estamos! 🙌
+— Fernando, Fleksi
+
+bit.ly/fleksiapp\`;
+  };
+
+  const copiarMensajeWA = (userId: string, mensaje: string) => {
+    navigator.clipboard.writeText(mensaje);
+    setMensajesCopiados(prev => ({ ...prev, [userId]: true }));
+    setTimeout(() => setMensajesCopiados(prev => ({ ...prev, [userId]: false })), 2000);
   };
 
   const abrirModalUsuarios = async (rol: string) => {
@@ -417,7 +559,10 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
+
       const wb = XLSX.utils.book_new();
+
+      // ── Hoja 1: Resumen ──
       const wsResumen = XLSX.utils.aoa_to_sheet([
         ['REPORTE FLEKSI', '', ''],
         [`Período: ${periodo.label}`, `${datos.periodo.inicio} — ${datos.periodo.fin}`, ''],
@@ -448,8 +593,24 @@ export default function Admin() {
         ['Ciudad con más actividad', datos.ciudad.nombre, ''],
         ['Usuarios en esa ciudad', datos.ciudad.usuarios, ''],
       ]);
+
+      // Anchos de columna
       wsResumen['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 10 }];
+
+      // Estilos de encabezados (color azul-púrpura de Fleksi)
+      const styleHeader = { font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2563EB' } }, alignment: { horizontal: 'left' } };
+      const styleSection = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '7C3AED' } } };
+      const styleLabel = { font: { bold: true, sz: 10 }, fill: { fgColor: { rgb: 'EEF2FF' } } };
+
+      // Aplicar estilos a celdas clave
+      if (wsResumen['A1']) wsResumen['A1'].s = styleHeader;
+      ['A5','A12','A19','A26'].forEach(cell => { if (wsResumen[cell]) wsResumen[cell].s = styleSection; });
+      ['A6','A13','A20','A27'].forEach(cell => { if (wsResumen[cell]) wsResumen[cell].s = styleLabel; });
+      ['B6','B13','B20','B27'].forEach(cell => { if (wsResumen[cell]) wsResumen[cell].s = styleLabel; });
+
       XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      // ── Hoja 2: Detalle numérico ──
       const wsDetalle = XLSX.utils.aoa_to_sheet([
         ['Categoría', 'Métrica', 'Valor'],
         ['Usuarios', 'Total registrados', datos.usuarios.total],
@@ -470,6 +631,8 @@ export default function Admin() {
       ]);
       wsDetalle['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsDetalle, 'Datos');
+
+      // Descargar
       const nombreArchivo = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, nombreArchivo);
     } finally { setGenerandoReporte(''); }
@@ -481,24 +644,39 @@ export default function Admin() {
       const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
       const datos = await obtenerDatosReporte(periodo.meses);
       const fechaGen = new Date().toLocaleDateString('es-MX');
+
       const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <title>Reporte Fleksi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reporte Fleksi — ${periodo.label}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #F8FAFC; color: #0F172A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'Inter', Arial, sans-serif; background: #F8FAFC; color: #0F172A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page { max-width: 800px; margin: 0 auto; padding: 32px; background: white; }
+
+    /* Header */
     .header { background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%); border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
-    .header h1 { color: white; font-size: 26px; font-weight: 900; }
-    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 4px; }
+    .header-left h1 { color: white; font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+    .header-left p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 4px; }
     .header-logo { background: rgba(255,255,255,0.2); border-radius: 12px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+    .header-logo svg { width: 32px; height: 32px; }
+
+    /* Período badge */
+    .periodo-badge { display: inline-flex; align-items: center; gap: 6px; background: #EEF2FF; color: #4F46E5; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 999px; margin-bottom: 24px; }
+
+    /* Sección */
     .seccion { margin-bottom: 24px; }
-    .seccion-titulo { font-size: 13px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
-    .divider { height: 1px; background: #F1F5F9; margin-bottom: 16px; }
+    .seccion-titulo { font-size: 13px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; display: flex; align-items: center; gap-6px; }
+
+    /* Grid de cards */
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+
+    /* Card */
     .card { background: white; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; text-align: center; }
     .card .valor { font-size: 30px; font-weight: 900; color: #2563EB; line-height: 1; }
     .card .label { font-size: 11px; color: #94A3B8; font-weight: 600; margin-top: 6px; }
@@ -507,42 +685,165 @@ export default function Admin() {
     .card.rojo .valor { color: #DC2626; }
     .card.gris .valor { color: #374151; }
     .card.cyan .valor { color: #0891B2; }
-    .card-comision { background: linear-gradient(135deg, #2563EB, #7C3AED); border-radius: 16px; padding: 24px; text-align: center; margin-top: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .card-comision .label-top { color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+
+    /* Card destacada comisión */
+    .card-comision { background: linear-gradient(135deg, #2563EB, #7C3AED); border-radius: 16px; padding: 24px; text-align: center; margin-top: 12px; }
+    .card-comision .label-top { color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .card-comision .valor { color: white; font-size: 40px; font-weight: 900; margin: 8px 0 4px; }
     .card-comision .label-bot { color: rgba(255,255,255,0.7); font-size: 12px; }
-    .card-ciudad { background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
-    .card-ciudad .nombre { font-size: 18px; font-weight: 800; }
+
+    /* Ciudad card */
+    .card-ciudad { background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 0; }
+    .card-ciudad .nombre { font-size: 18px; font-weight: 800; color: #0F172A; }
     .card-ciudad .sub { font-size: 12px; color: #94A3B8; margin-top: 2px; }
     .card-ciudad .badge { background: #EEF2FF; color: #4F46E5; font-weight: 800; font-size: 16px; padding: 8px 16px; border-radius: 10px; }
+
+    /* Divider */
+    .divider { height: 1px; background: #F1F5F9; margin: 4px 0 16px; }
+
+    /* Footer */
     .footer { margin-top: 32px; padding-top: 20px; border-top: 1.5px solid #F1F5F9; display: flex; justify-content: space-between; align-items: center; }
-    .footer-logo { font-size: 18px; font-weight: 900; color: #2563EB; }
+    .footer-logo { font-size: 16px; font-weight: 900; background: linear-gradient(135deg, #2563EB, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .footer-info { font-size: 11px; color: #CBD5E1; text-align: right; }
-    @media print { body { background: white; } .page { padding: 20px; max-width: 100%; } .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .card-comision { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+    @media print {
+      body { background: white; }
+      .page { padding: 20px; max-width: 100%; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .card-comision { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
 <div class="page">
+
   <div class="header">
-    <div><h1>⚡ fleksi</h1><p>Reporte ${periodo.label} · ${datos.periodo.inicio} — ${datos.periodo.fin}</p><p>Generado el ${fechaGen}</p></div>
-    <div class="header-logo"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/><rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/><rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/><rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/></svg></div>
+    <div class="header-left">
+      <h1>⚡ fleksi</h1>
+      <p>Reporte ${periodo.label} &nbsp;·&nbsp; ${datos.periodo.inicio} — ${datos.periodo.fin}</p>
+      <p style="margin-top:2px">Generado el ${fechaGen}</p>
+    </div>
+    <div class="header-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
+        <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
+        <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
+        <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
+      </svg>
+    </div>
   </div>
-  <div class="seccion"><div class="seccion-titulo">👥 Usuarios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div><div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en período</div></div><div class="card purpura"><div class="valor">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div><div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div></div></div>
-  <div class="seccion"><div class="seccion-titulo">⚡ Servicios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.servicios.total}</div><div class="label">Total histórico</div></div><div class="card cyan"><div class="valor">${datos.servicios.activos}</div><div class="label">Activos</div></div><div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div><div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div></div></div>
-  <div class="seccion"><div class="seccion-titulo">💰 Ingresos (MXN)</div><div class="divider"></div><div class="grid2" style="margin-bottom:12px"><div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div><div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div></div><div class="card-comision"><div class="label-top">Comisión Fleksi acumulada (25%)</div><div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div><div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div></div></div>
-  <div class="seccion"><div class="seccion-titulo">📍 Ciudad más activa</div><div class="divider"></div><div class="card-ciudad"><div><div class="nombre">📍 ${datos.ciudad.nombre}</div><div class="sub">Ciudad con más usuarios registrados</div></div><div class="badge">${datos.ciudad.usuarios} usuarios</div></div></div>
-  <div class="footer"><div class="footer-logo">⚡ fleksi</div><div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div></div>
+
+  <!-- USUARIOS -->
+  <div class="seccion">
+    <div class="seccion-titulo">👥 Usuarios</div>
+    <div class="divider"></div>
+    <div class="grid4">
+      <div class="card">
+        <div class="valor">${datos.usuarios.total}</div>
+        <div class="label">Total registrados</div>
+      </div>
+      <div class="card verde">
+        <div class="valor">${datos.usuarios.nuevosEnPeriodo}</div>
+        <div class="label">Nuevos en período</div>
+      </div>
+      <div class="card purpura">
+        <div class="valor">${datos.usuarios.fleksers}</div>
+        <div class="label">Fleksers</div>
+      </div>
+      <div class="card gris">
+        <div class="valor">${datos.usuarios.empresas}</div>
+        <div class="label">Empresas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICIOS -->
+  <div class="seccion">
+    <div class="seccion-titulo">⚡ Servicios</div>
+    <div class="divider"></div>
+    <div class="grid4">
+      <div class="card">
+        <div class="valor">${datos.servicios.total}</div>
+        <div class="label">Total histórico</div>
+      </div>
+      <div class="card cyan">
+        <div class="valor">${datos.servicios.activos}</div>
+        <div class="label">Activos</div>
+      </div>
+      <div class="card verde">
+        <div class="valor">${datos.servicios.completados}</div>
+        <div class="label">Completados</div>
+      </div>
+      <div class="card rojo">
+        <div class="valor">${datos.servicios.cancelados}</div>
+        <div class="label">Cancelados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INGRESOS -->
+  <div class="seccion">
+    <div class="seccion-titulo">💰 Ingresos (MXN)</div>
+    <div class="divider"></div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="card verde">
+        <div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div>
+        <div class="label">Transaccionado en período</div>
+      </div>
+      <div class="card">
+        <div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div>
+        <div class="label">Ticket promedio</div>
+      </div>
+    </div>
+    <div class="card-comision">
+      <div class="label-top">Comisión Fleksi acumulada (25%)</div>
+      <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
+      <div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
+    </div>
+  </div>
+
+  <!-- GEOGRAFÍA -->
+  <div class="seccion">
+    <div class="seccion-titulo">📍 Ciudad más activa</div>
+    <div class="divider"></div>
+    <div class="card-ciudad">
+      <div>
+        <div class="nombre">📍 ${datos.ciudad.nombre}</div>
+        <div class="sub">Ciudad con más usuarios registrados</div>
+      </div>
+      <div class="badge">${datos.ciudad.usuarios} usuarios</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">fleksi</div>
+    <div class="footer-info">
+      Irapuato, Guanajuato · México<br/>
+      Reporte generado el ${fechaGen}
+    </div>
+  </div>
+
 </div>
-<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
+<script>
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 500);
+  };
+</script>
 </body>
 </html>`;
+
       const ventana = window.open('', '_blank', 'width=900,height=700');
-      if (ventana) { ventana.document.write(html); ventana.document.close(); }
-      else {
+      if (ventana) {
+        ventana.document.write(html);
+        ventana.document.close();
+      } else {
+        // Si el popup fue bloqueado, crear blob descargable
         const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.html`; a.click();
+        a.href = url;
+        a.download = `Fleksi_Reporte_${periodo.label}_${fechaGen.replace(/\//g, '-')}.html`;
+        a.click();
         URL.revokeObjectURL(url);
       }
     } finally { setGenerandoReporte(''); }
@@ -659,7 +960,6 @@ export default function Admin() {
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
           <button onClick={() => setTab('comunicaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📢 Comunicaciones</button>
-          <button onClick={() => setTab('trabajos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>⚡ Trabajos</button>
           <button onClick={() => setTab('dispersion')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
@@ -672,189 +972,12 @@ export default function Admin() {
           <button onClick={() => setTab('retiros')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'retiros' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
+          <button onClick={() => setTab('trabajos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            📋 Trabajos
+          </button>
         </div>
 
-        {tab === 'trabajos' && (() => {
-          const categoriaEmoji: Record<string, string> = {
-            hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚',
-            ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿',
-            mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨',
-          };
-          const categoriaNombre: Record<string, string> = {
-            hogar: 'Hogar y reparaciones', limpieza: 'Limpieza', eventos: 'Eventos y hospitalidad',
-            mudanza: 'Mudanza y carga', ejecutivo: 'Chofer ejecutivo', interprete: 'Intérprete',
-            cocina: 'Cocina', jardineria: 'Jardinería', mecanica: 'Mecánica', cerrajeria: 'Cerrajería',
-            estetica: 'Estética', otro: 'Otro',
-          };
-
-          const filtrados = trabajosData.filter(t => {
-            if (filtroTrabajos === 'todos') return true;
-            if (filtroTrabajos === 'activo') return ['activo','publicado','en_proceso'].includes(t.estado);
-            if (filtroTrabajos === 'completado') return t.estado === 'completado' || t.estado === 'pagado';
-            if (filtroTrabajos === 'cancelado') return t.estado === 'cancelado';
-            return true;
-          });
-
-          const total = trabajosData.length;
-          const activos = trabajosData.filter(t => ['activo','publicado','en_proceso'].includes(t.estado)).length;
-          const completados = trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').length;
-          const cancelados = trabajosData.filter(t => t.estado === 'cancelado').length;
-          const conContraoferta = trabajosData.filter(t => t.tuvo_contraoferta).length;
-          const tasaCierre = total > 0 ? Math.round((completados / total) * 100) : 0;
-          const ticketPromedio = completados > 0
-            ? Math.round(trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').reduce((acc, t) => acc + (t.presupuesto || 0), 0) / completados)
-            : 0;
-
-          const porCategoria: Record<string, { total: number; completados: number; cancelados: number; ingresos: number }> = {};
-          trabajosData.forEach(t => {
-            const cat = t.categoria || 'otro';
-            if (!porCategoria[cat]) porCategoria[cat] = { total: 0, completados: 0, cancelados: 0, ingresos: 0 };
-            porCategoria[cat].total++;
-            if (t.estado === 'completado' || t.estado === 'pagado') {
-              porCategoria[cat].completados++;
-              porCategoria[cat].ingresos += t.presupuesto || 0;
-            }
-            if (t.estado === 'cancelado') porCategoria[cat].cancelados++;
-          });
-          const categoriasOrdenadas = Object.entries(porCategoria).sort((a, b) => b[1].total - a[1].total);
-
-          return (
-            <div>
-              <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-                {[{ key: '7d', label: '7 días' }, { key: '30d', label: '30 días' }, { key: '90d', label: '90 días' }, { key: 'todo', label: 'Todo' }].map(p => (
-                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p className="text-3xl font-extrabold text-blue-600">{total}</p>
-                  <p className="text-xs text-gray-400 mt-1">Total publicados</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p className="text-3xl font-extrabold text-green-600">{tasaCierre}%</p>
-                  <p className="text-xs text-gray-400 mt-1">Tasa de cierre</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
-                  <p className="text-xl font-extrabold text-cyan-700">{activos}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Activos</p>
-                </div>
-                <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
-                  <p className="text-xl font-extrabold text-green-700">{completados}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Completados</p>
-                </div>
-                <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
-                  <p className="text-xl font-extrabold text-red-600">{cancelados}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Cancelados</p>
-                </div>
-                <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
-                  <p className="text-xl font-extrabold text-purple-600">{conContraoferta}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Contraoferta</p>
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-white/70 text-xs font-semibold">Ticket promedio</p>
-                  <p className="text-white font-extrabold text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p>
-                </div>
-                <span className="text-4xl">🎯</span>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-                <h3 className="font-extrabold text-gray-900 mb-4">📊 Por categoría</h3>
-                {categoriasOrdenadas.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">Sin datos en este período</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {categoriasOrdenadas.map(([cat, data]) => {
-                      const porcentaje = total > 0 ? Math.round((data.total / total) * 100) : 0;
-                      const tasaCat = data.total > 0 ? Math.round((data.completados / data.total) * 100) : 0;
-                      return (
-                        <div key={cat} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">{categoriaEmoji[cat] || '✨'}</span>
-                              <p className="font-bold text-gray-900 text-sm">{categoriaNombre[cat] || cat}</p>
-                            </div>
-                            <span className="text-xs font-bold text-gray-400">{porcentaje}% del total</span>
-                          </div>
-                          <div className="w-full h-2 bg-gray-200 rounded-full mb-2 overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-                              style={{ width: `${porcentaje}%` }}/>
-                          </div>
-                          <div className="flex gap-3 flex-wrap">
-                            <span className="text-xs text-gray-600 font-semibold">{data.total} publicados</span>
-                            <span className="text-xs text-green-600 font-semibold">✅ {data.completados} ({tasaCat}%)</span>
-                            {data.cancelados > 0 && <span className="text-xs text-red-500 font-semibold">❌ {data.cancelados}</span>}
-                            {data.ingresos > 0 && <span className="text-xs text-blue-600 font-semibold">💰 ${data.ingresos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100">
-                  <h3 className="font-extrabold text-gray-900 mb-3">📋 Listado</h3>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {[{ key: 'todos', label: 'Todos' }, { key: 'activo', label: '⚡ Activos' }, { key: 'completado', label: '✅ Completados' }, { key: 'cancelado', label: '❌ Cancelados' }].map(f => (
-                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {cargandoTrabajos ? (
-                  <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
-                ) : filtrados.length === 0 ? (
-                  <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400 text-sm">Sin trabajos en este filtro</p></div>
-                ) : (
-                  <div className="flex flex-col divide-y divide-gray-100">
-                    {filtrados.slice(0, 50).map((t) => (
-                      <div key={t.id} className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[t.categoria] || '✨'}</span>
-                            <div className="min-w-0">
-                              <p className="font-bold text-gray-900 text-sm truncate">{t.titulo}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">{t.usuarios?.nombre || '—'} · {new Date(t.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                              t.estado === 'completado' || t.estado === 'pagado' ? 'bg-green-100 text-green-700' :
-                              t.estado === 'cancelado' ? 'bg-red-100 text-red-600' :
-                              t.estado === 'en_proceso' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-500'
-                            }`}>
-                              {t.estado === 'completado' || t.estado === 'pagado' ? '✅ Completado' :
-                               t.estado === 'cancelado' ? '❌ Cancelado' :
-                               t.estado === 'en_proceso' ? '⚡ En proceso' : '📢 Activo'}
-                            </span>
-                            {t.presupuesto > 0 && <span className="text-xs font-bold text-gray-700">${t.presupuesto.toLocaleString('es-MX')} MXN</span>}
-                            {t.tuvo_contraoferta && <span className="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">💜 Contraoferta</span>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {filtrados.length > 50 && (
-                      <p className="text-xs text-gray-400 text-center py-3">Mostrando 50 de {filtrados.length} trabajos</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
+        {/* ── ACCIONES PENDIENTES ── */}
         {tab === 'acciones' && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -864,6 +987,7 @@ export default function Admin() {
               </div>
               <button onClick={cargarAcciones} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl hover:bg-purple-100 transition">🔄 Actualizar</button>
             </div>
+
             {cargandoAcciones ? (
               <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             ) : acciones.length === 0 ? (
@@ -891,23 +1015,30 @@ export default function Admin() {
                             {usr?.telefono && <p className="text-xs text-gray-500">📱 {usr.telefono}</p>}
                           </div>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>{tipo.emoji} {tipo.label}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${tipo.color}`}>
+                          {tipo.emoji} {tipo.label}
+                        </span>
                       </div>
+
                       <div className="bg-gray-50 rounded-xl p-3 mb-3">
                         <p className="text-xs text-gray-400 font-semibold mb-1">📩 Notificación en app:</p>
                         <p className="text-xs font-bold text-gray-800">{accion.titulo}</p>
                         {accion.mensaje && <p className="text-xs text-gray-500 mt-0.5">{accion.mensaje}</p>}
                         <p className="text-xs text-gray-400 mt-1">{new Date(accion.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
+
                       <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-3">
                         <p className="text-xs text-green-700 font-semibold mb-1">💬 Mensaje para WhatsApp:</p>
                         <p className="text-xs text-gray-700 leading-relaxed">{msgWA}</p>
                       </div>
+
                       <div className="flex gap-2">
-                        <button onClick={() => copiarMensaje(msgWA, accion.id)} className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+                        <button onClick={() => copiarMensaje(msgWA, accion.id)}
+                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition ${yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
                           {yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}
                         </button>
-                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id} className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">
+                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id}
+                          className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">
                           {marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}
                         </button>
                       </div>
@@ -919,11 +1050,13 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── COMUNICACIONES ── */}
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
-              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>👤 Mensaje individual</button>
-              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📣 Mensaje masivo</button>
+              <button onClick={() => setModoComunicacion('individual')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>👤 Individual</button>
+              <button onClick={() => setModoComunicacion('masivo')} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📣 Masivo</button>
+              <button onClick={() => { setModoComunicacion('whatsapp'); cargarUsuariosWA(); }} className={`flex-1 py-3 rounded-2xl font-bold text-sm transition ${modoComunicacion === 'whatsapp' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>📱 WhatsApp</button>
             </div>
             {modoComunicacion === 'individual' && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -967,8 +1100,76 @@ export default function Admin() {
                 <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}
                 </button>
+                <p className="text-xs text-gray-400 mt-2 text-center">El usuario recibirá una notificación en la app y un correo.</p>
               </div>
             )}
+            {modoComunicacion === 'whatsapp' && (
+              <div>
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
+                  <p className="text-green-800 text-sm font-bold mb-1">📱 Mensajes personalizados para WhatsApp</p>
+                  <p className="text-green-700 text-xs leading-relaxed">Cada mensaje incluye el nombre del usuario, qué le falta completar en su perfil, su porcentaje actual y el tip de cómo instalar la app. Copia el mensaje y mándalo por WhatsApp a cada uno.</p>
+                </div>
+                {cargandoWA ? (
+                  <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"/></div>
+                ) : usuariosWA.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin usuarios registrados</p></div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs text-gray-400">{usuariosWA.length} usuarios — toca "Copiar" en cada uno y mándalo por WhatsApp</p>
+                    {usuariosWA.map((u) => {
+                      const mensaje = generarMensajeWA(u);
+                      const copiado2 = mensajesCopiados[u.id];
+                      const telefono = u.telefono?.replace(/\D/g, '');
+                      return (
+                        <div key={u.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
+                              </div>
+                              <div>
+                                <p className="font-extrabold text-gray-900 text-sm">{u.nombre}</p>
+                                {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-lg font-extrabold ${u.progreso >= 80 ? 'text-green-600' : u.progreso >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{u.progreso}%</p>
+                              <p className="text-xs text-gray-400">perfil</p>
+                            </div>
+                          </div>
+                          {u.faltantes.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {u.faltantes.map((f: string) => (
+                                <span key={f} className="text-xs bg-red-50 text-red-600 font-semibold px-2 py-0.5 rounded-full border border-red-100">❌ {f}</span>
+                              ))}
+                            </div>
+                          )}
+                          {u.faltantes.length === 0 && (
+                            <p className="text-xs text-green-600 font-semibold mb-3">✅ Perfil completo</p>
+                          )}
+                          <div className="bg-gray-50 rounded-xl p-3 mb-3 max-h-28 overflow-y-auto">
+                            <p className="text-xs text-gray-500 whitespace-pre-line leading-relaxed">{mensaje}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => copiarMensajeWA(u.id, mensaje)}
+                              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition ${copiado2 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                              {copiado2 ? '✅ Copiado' : '📋 Copiar mensaje'}
+                            </button>
+                            {telefono && (
+                              <a href={`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`} target="_blank"
+                                className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm text-center hover:bg-green-600 transition">
+                                💬 Abrir en WA
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {modoComunicacion === 'masivo' && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-extrabold text-gray-900 mb-4">📣 Enviar mensaje masivo</h3>
@@ -995,11 +1196,13 @@ export default function Admin() {
                 <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}
                 </button>
+                <p className="text-xs text-gray-400 mt-2 text-center">Las notificaciones se insertan en la app de todos los usuarios del segmento.</p>
               </div>
             )}
           </div>
         )}
 
+        {/* ── DISPERSIÓN ── */}
         {tab === 'dispersion' && (
           <div>
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -1043,6 +1246,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
           <div>
             {cargandoMetrics ? (
@@ -1086,21 +1290,57 @@ export default function Admin() {
                   <p className="text-xs text-gray-400 mb-4">¿Con qué propósito se registraron tus usuarios?</p>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between bg-blue-50 rounded-xl p-3 border border-blue-100">
-                      <div className="flex items-center gap-2"><span className="text-lg">💼</span><div><p className="font-bold text-gray-900 text-sm">Busca trabajo</p><p className="text-xs text-gray-400">Quieren ofrecer servicios</p></div></div>
-                      <div className="text-right"><p className="text-2xl font-extrabold text-blue-600">{metrics.intencionTrabajar}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionTrabajar / metrics.totalUsuarios) * 100) : 0}%</p></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💼</span>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">Busca trabajo</p>
+                          <p className="text-xs text-gray-400">Quieren ofrecer servicios</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-blue-600">{metrics.intencionTrabajar}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionTrabajar / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between bg-purple-50 rounded-xl p-3 border border-purple-100">
-                      <div className="flex items-center gap-2"><span className="text-lg">🔍</span><div><p className="font-bold text-gray-900 text-sm">Busca contratar</p><p className="text-xs text-gray-400">Quieren encontrar ayuda</p></div></div>
-                      <div className="text-right"><p className="text-2xl font-extrabold text-purple-600">{metrics.intencionContratar}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionContratar / metrics.totalUsuarios) * 100) : 0}%</p></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🔍</span>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">Busca contratar</p>
+                          <p className="text-xs text-gray-400">Quieren encontrar ayuda</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-purple-600">{metrics.intencionContratar}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionContratar / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between bg-green-50 rounded-xl p-3 border border-green-100">
-                      <div className="flex items-center gap-2"><span className="text-lg">⚡</span><div><p className="font-bold text-gray-900 text-sm">Trabaja y contrata</p><p className="text-xs text-gray-400">Intención dual</p></div></div>
-                      <div className="text-right"><p className="text-2xl font-extrabold text-green-600">{metrics.intencionAmbos}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionAmbos / metrics.totalUsuarios) * 100) : 0}%</p></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚡</span>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">Trabaja y contrata</p>
+                          <p className="text-xs text-gray-400">Intención dual</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold text-green-600">{metrics.intencionAmbos}</p>
+                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionAmbos / metrics.totalUsuarios) * 100) : 0}%</p>
+                      </div>
                     </div>
                     {metrics.intencionSinDato > 0 && (
                       <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
-                        <div className="flex items-center gap-2"><span className="text-lg">❓</span><div><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores a esta función</p></div></div>
-                        <div className="text-right"><p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p></div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">❓</span>
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">Sin dato</p>
+                            <p className="text-xs text-gray-400">Registros anteriores a esta función</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p>
+                          <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1170,12 +1410,13 @@ export default function Admin() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
-                      {generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel
+                      {generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel / CSV
                     </button>
                     <button onClick={descargarPDF} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
-                      {generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF
+                      {generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF / Imprimir
                     </button>
                   </div>
+                  <p className="text-xs text-gray-400 mt-3 text-center">El PDF se abre en nueva ventana para imprimir o guardar.</p>
                 </div>
                 <p className="text-xs text-gray-400 text-center">Última actualización: {new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
               </div>
@@ -1183,6 +1424,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── DOCUMENTOS ── */}
         {tab === 'documentos' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -1266,6 +1508,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── VERIFICACIONES ── */}
         {tab === 'verificaciones' && (
           <div>
             <div className="grid grid-cols-4 gap-3 mb-6">
@@ -1329,6 +1572,7 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── RETIROS ── */}
         {tab === 'retiros' && (
           <div>
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -1407,6 +1651,193 @@ export default function Admin() {
         )}
 
       </div>
+
+      {/* ── MODAL LISTADO USUARIOS ── */}
+        {tab === 'trabajos' && (() => {
+          const categoriaEmoji: Record<string, string> = {
+            hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚',
+            ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿',
+            mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨',
+          };
+          const categoriaNombre: Record<string, string> = {
+            hogar: 'Hogar y reparaciones', limpieza: 'Limpieza', eventos: 'Eventos y hospitalidad',
+            mudanza: 'Mudanza y carga', ejecutivo: 'Chofer ejecutivo', interprete: 'Intérprete',
+            cocina: 'Cocina', jardineria: 'Jardinería', mecanica: 'Mecánica', cerrajeria: 'Cerrajería',
+            estetica: 'Estética', otro: 'Otro',
+          };
+
+          const filtrados = trabajosData.filter(t => {
+            if (filtroTrabajos === 'todos') return true;
+            if (filtroTrabajos === 'activo') return ['activo','publicado','en_proceso'].includes(t.estado);
+            if (filtroTrabajos === 'completado') return t.estado === 'completado' || t.estado === 'pagado';
+            if (filtroTrabajos === 'cancelado') return t.estado === 'cancelado';
+            return true;
+          });
+
+          const total = trabajosData.length;
+          const activos = trabajosData.filter(t => ['activo','publicado','en_proceso'].includes(t.estado)).length;
+          const completados = trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').length;
+          const cancelados = trabajosData.filter(t => t.estado === 'cancelado').length;
+          const conContraoferta = trabajosData.filter(t => t.tuvo_contraoferta).length;
+          const tasaCierre = total > 0 ? Math.round((completados / total) * 100) : 0;
+          const ticketPromedio = completados > 0
+            ? Math.round(trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').reduce((acc, t) => acc + (t.presupuesto || 0), 0) / completados)
+            : 0;
+
+          // Métricas por categoría
+          const porCategoria: Record<string, { total: number; completados: number; cancelados: number; ingresos: number }> = {};
+          trabajosData.forEach(t => {
+            const cat = t.categoria || 'otro';
+            if (!porCategoria[cat]) porCategoria[cat] = { total: 0, completados: 0, cancelados: 0, ingresos: 0 };
+            porCategoria[cat].total++;
+            if (t.estado === 'completado' || t.estado === 'pagado') {
+              porCategoria[cat].completados++;
+              porCategoria[cat].ingresos += t.presupuesto || 0;
+            }
+            if (t.estado === 'cancelado') porCategoria[cat].cancelados++;
+          });
+          const categoriasOrdenadas = Object.entries(porCategoria).sort((a, b) => b[1].total - a[1].total);
+
+          return (
+            <div>
+              {/* Filtro período */}
+              <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+                {[{ key: '7d', label: '7 días' }, { key: '30d', label: '30 días' }, { key: '90d', label: '90 días' }, { key: 'todo', label: 'Todo' }].map(p => (
+                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* KPIs principales */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-3xl font-extrabold text-blue-600">{total}</p>
+                  <p className="text-xs text-gray-400 mt-1">Total publicados</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-3xl font-extrabold text-green-600">{tasaCierre}%</p>
+                  <p className="text-xs text-gray-400 mt-1">Tasa de cierre</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
+                  <p className="text-xl font-extrabold text-cyan-700">{activos}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Activos</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
+                  <p className="text-xl font-extrabold text-green-700">{completados}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Completados</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                  <p className="text-xl font-extrabold text-red-600">{cancelados}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Cancelados</p>
+                </div>
+                <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
+                  <p className="text-xl font-extrabold text-purple-600">{conContraoferta}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Contraoferta</p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-xs font-semibold">Ticket promedio</p>
+                  <p className="text-white font-extrabold text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p>
+                </div>
+                <span className="text-4xl">🎯</span>
+              </div>
+
+              {/* Métricas por categoría */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+                <h3 className="font-extrabold text-gray-900 mb-4">📊 Por categoría</h3>
+                {categoriasOrdenadas.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">Sin datos en este período</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {categoriasOrdenadas.map(([cat, data]) => {
+                      const porcentaje = total > 0 ? Math.round((data.total / total) * 100) : 0;
+                      const tasaCat = data.total > 0 ? Math.round((data.completados / data.total) * 100) : 0;
+                      return (
+                        <div key={cat} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{categoriaEmoji[cat] || '✨'}</span>
+                              <p className="font-bold text-gray-900 text-sm">{categoriaNombre[cat] || cat}</p>
+                            </div>
+                            <span className="text-xs font-bold text-gray-400">{porcentaje}% del total</span>
+                          </div>
+                          <div className="w-full h-2 bg-gray-200 rounded-full mb-2 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                              style={{ width: `${porcentaje}%` }}/>
+                          </div>
+                          <div className="flex gap-3 flex-wrap">
+                            <span className="text-xs text-gray-600 font-semibold">{data.total} publicados</span>
+                            <span className="text-xs text-green-600 font-semibold">✅ {data.completados} completados ({tasaCat}%)</span>
+                            {data.cancelados > 0 && <span className="text-xs text-red-500 font-semibold">❌ {data.cancelados} cancelados</span>}
+                            {data.ingresos > 0 && <span className="text-xs text-blue-600 font-semibold">💰 ${data.ingresos.toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de trabajos */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="font-extrabold text-gray-900 mb-3">📋 Listado</h3>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {[{ key: 'todos', label: 'Todos' }, { key: 'activo', label: '⚡ Activos' }, { key: 'completado', label: '✅ Completados' }, { key: 'cancelado', label: '❌ Cancelados' }].map(f => (
+                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {cargandoTrabajos ? (
+                  <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+                ) : filtrados.length === 0 ? (
+                  <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400 text-sm">Sin trabajos en este filtro</p></div>
+                ) : (
+                  <div className="flex flex-col divide-y divide-gray-100">
+                    {filtrados.slice(0, 50).map((t) => (
+                      <div key={t.id} className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[t.categoria] || '✨'}</span>
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 text-sm truncate">{t.titulo}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{t.usuarios?.nombre || '—'} · {new Date(t.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              t.estado === 'completado' || t.estado === 'pagado' ? 'bg-green-100 text-green-700' :
+                              t.estado === 'cancelado' ? 'bg-red-100 text-red-600' :
+                              t.estado === 'en_proceso' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-500'
+                            }`}>
+                              {t.estado === 'completado' || t.estado === 'pagado' ? '✅ Completado' :
+                               t.estado === 'cancelado' ? '❌ Cancelado' :
+                               t.estado === 'en_proceso' ? '⚡ En proceso' : '📢 Activo'}
+                            </span>
+                            {t.presupuesto > 0 && <span className="text-xs font-bold text-gray-700">${t.presupuesto.toLocaleString('es-MX')} MXN</span>}
+                            {t.tuvo_contraoferta && <span className="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">💜 Contraoferta</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {filtrados.length > 50 && (
+                      <p className="text-xs text-gray-400 text-center py-3">Mostrando 50 de {filtrados.length} trabajos</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       {modalUsuarios.visible && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })}>
