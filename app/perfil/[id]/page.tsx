@@ -95,31 +95,6 @@ export default function PerfilPublico() {
     }
   };
 
-  const iniciarChat = async () => {
-    if (!usuarioActual) { window.location.href = '/login'; return; }
-    try {
-      const { data: existente } = await supabase
-        .from('mensajes')
-        .select('id')
-        .is('servicio_id', null)
-        .or(`and(remitente_id.eq.${usuarioActual.id},destinatario_id.eq.${id}),and(remitente_id.eq.${id},destinatario_id.eq.${usuarioActual.id})`)
-        .limit(1);
-
-      if (!existente || existente.length === 0) {
-        await supabase.from('mensajes').insert({
-          servicio_id: null,
-          remitente_id: usuarioActual.id,
-          destinatario_id: id,
-          contenido: '👋 Hola, me gustaría hablar contigo.',
-        });
-      }
-
-      window.location.href = `/chat?usuario=${id}`;
-    } catch (e) {
-      window.location.href = `/chat?usuario=${id}`;
-    }
-  };
-
   if (cargando) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -148,26 +123,19 @@ export default function PerfilPublico() {
             className="text-white/70 text-sm hover:text-white transition flex items-center gap-1">
             ← Regresar
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={compartirPerfil}
-              className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30"
-              title="Compartir perfil">
-              {copiado ? '✅' : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              )}
-            </button>
-            {usuarioActual && usuarioActual.id !== id && (
-              <button onClick={iniciarChat}
-                className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition border border-white/30">
-                💬 Enviar mensaje
-              </button>
+          {/* Solo botón compartir — mensaje directo eliminado */}
+          <button
+            onClick={compartirPerfil}
+            className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition border border-white/30"
+            title="Compartir perfil">
+            {copiado ? '✅' : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
             )}
-          </div>
+          </button>
         </div>
 
         <div className="max-w-md mx-auto flex items-center gap-4">
@@ -339,23 +307,24 @@ export default function PerfilPublico() {
           </div>
         )}
 
+        {/* ── CTA CONTRATAR — solo solicitud, sin mensaje directo ── */}
         {usuarioActual && usuarioActual.id !== id && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <p className="font-extrabold text-gray-900 text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
-            <p className="text-gray-400 text-sm mb-4">Envíale una solicitud directa o un mensaje para hablar primero.</p>
-            <div className="flex flex-col gap-2">
-              <a href={`/publicar?para=${id}`}
-                className="block w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center hover:opacity-90 transition">
-                🎯 Enviar solicitud a {nombreCorto}
-              </a>
-              <button onClick={iniciarChat}
-                className="w-full py-3.5 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
-                💬 Enviar mensaje directo
-              </button>
-            </div>
+            <p className="text-gray-400 text-sm mb-4">
+              Publica tu solicitud y {nombreCorto} la recibirá al instante. Acuerdan los detalles dentro de la app.
+            </p>
+            <a href={`/publicar?para=${id}`}
+              className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center text-lg hover:opacity-90 transition">
+              🎯 Contratar a {nombreCorto}
+            </a>
+            <p className="text-xs text-gray-400 text-center mt-3">
+              El pago queda protegido hasta que confirmes que el trabajo fue completado.
+            </p>
           </div>
         )}
 
+        {/* ── CTA PARA NO LOGUEADOS ── */}
         {!usuarioActual && (
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 mb-4">
             <p className="text-white font-extrabold text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
