@@ -46,34 +46,20 @@ function generarMensajeWhatsApp(notif: any, usuario: any): string {
   const nombre = usuario?.nombre?.split(' ')[0] || 'usuario';
   const link = 'bit.ly/fleksiapp';
   switch (notif.tipo) {
-    case 'nueva_aplicacion':
-      return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
-    case 'aplicacion_aceptada':
-      return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
-    case 'aplicacion_rechazada':
-      return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
-    case 'pago_liberado':
-      return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
-    case 'trabajo_completado':
-      return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
-    case 'verificacion_aprobada':
-      return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
-    case 'documento_aprobado':
-      return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
-    case 'documento_rechazado':
-      return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
-    case 'retiro_completado':
-      return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
-    case 'retiro_rechazado':
-      return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
-    case 'mensaje_nuevo':
-      return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
-    case 'disputa':
-      return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
-    case 'admin_mensaje':
-      return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
-    default:
-      return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
+    case 'nueva_aplicacion': return `Hola ${nombre}! 👋 Tienes una nueva aplicación en Fleksi. Alguien quiere trabajar contigo. Entra a ver los detalles 👉 ${link}`;
+    case 'aplicacion_aceptada': return `Hola ${nombre}! 🎉 ¡Te aceptaron! Tu aplicación fue aprobada. Entra a Fleksi para ver los detalles del trabajo 👉 ${link}`;
+    case 'aplicacion_rechazada': return `Hola ${nombre}, tu aplicación no fue seleccionada esta vez, pero hay más oportunidades esperándote en Fleksi 👉 ${link}`;
+    case 'pago_liberado': return `Hola ${nombre}! 💰 ¡Tu pago fue liberado! Ya está disponible en tu wallet de Fleksi 👉 ${link}`;
+    case 'trabajo_completado': return `Hola ${nombre}! 🎉 El trabajo fue completado. Entra a Fleksi para confirmar y liberar el pago 👉 ${link}`;
+    case 'verificacion_aprobada': return `Hola ${nombre}! ✅ ¡Tu identidad fue verificada! Ya tienes el badge de confianza en tu perfil de Fleksi 👉 ${link}`;
+    case 'documento_aprobado': return `Hola ${nombre}! ✅ Tu documento fue aprobado en Fleksi. Sigue el proceso de verificación 👉 ${link}`;
+    case 'documento_rechazado': return `Hola ${nombre}, uno de tus documentos necesita corrección en Fleksi. Entra para ver el detalle 👉 ${link}`;
+    case 'retiro_completado': return `Hola ${nombre}! ✅ Tu retiro fue procesado y enviado a tu cuenta bancaria. Revisa tu estado de cuenta 💳`;
+    case 'retiro_rechazado': return `Hola ${nombre}, tu solicitud de retiro no pudo procesarse. El saldo fue reintegrado a tu wallet de Fleksi. Entra para ver el motivo 👉 ${link}`;
+    case 'mensaje_nuevo': return `Hola ${nombre}! 💬 Tienes un mensaje nuevo en Fleksi. Entra a responder 👉 ${link}`;
+    case 'disputa': return `Hola ${nombre}, hay una disputa abierta en tu trabajo. Nuestro equipo la está revisando. Te contactaremos pronto.`;
+    case 'admin_mensaje': return `Hola ${nombre}! Tienes un mensaje del equipo Fleksi. Entra a verlo 👉 ${link}`;
+    default: return `Hola ${nombre}! Tienes una notificación nueva en Fleksi 👉 ${link}`;
   }
 }
 
@@ -105,7 +91,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -148,6 +134,12 @@ export default function Admin() {
   const [copiado, setCopiado] = useState<string | null>(null);
   const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
 
+  // Tab Trabajos
+  const [trabajosData, setTrabajosData] = useState<any[]>([]);
+  const [cargandoTrabajos, setCargandoTrabajos] = useState(false);
+  const [filtroTrabajos, setFiltroTrabajos] = useState<'todos' | 'activo' | 'completado' | 'cancelado'>('todos');
+  const [periodoTrabajos, setPeriodoTrabajos] = useState<'7d' | '30d' | '90d' | 'todo'>('30d');
+
   const [metrics, setMetrics] = useState({
     totalUsuarios: 0, fleksers: 0, empresas: 0,
     nuevosHoy: 0, nuevosEsteMes: 0,
@@ -165,6 +157,45 @@ export default function Admin() {
   useEffect(() => { if (tab === 'dispersion') cargarDispersion(); }, [tab]);
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
   useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
+  useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
+
+  const cargarTrabajos = async () => {
+    setCargandoTrabajos(true);
+    try {
+      let query = supabase
+        .from('servicios')
+        .select('id, titulo, categoria, estado, presupuesto, created_at, completado_at, usuarios(id, nombre, foto_url)')
+        .order('created_at', { ascending: false });
+
+      if (periodoTrabajos !== 'todo') {
+        const dias = periodoTrabajos === '7d' ? 7 : periodoTrabajos === '30d' ? 30 : 90;
+        const desde = new Date();
+        desde.setDate(desde.getDate() - dias);
+        query = query.gte('created_at', desde.toISOString());
+      }
+
+      const { data } = await query;
+
+      const { data: apps } = await supabase
+        .from('aplicaciones')
+        .select('servicio_id, precio_ofrecido, estado, servicios(presupuesto)')
+        .eq('estado', 'completado');
+
+      const contraofertaIds = new Set(
+        (apps || [])
+          .filter((a: any) => a.precio_ofrecido && a.servicios?.presupuesto && a.precio_ofrecido !== a.servicios.presupuesto)
+          .map((a: any) => a.servicio_id)
+      );
+
+      const trabajosConFlag = (data || []).map(t => ({
+        ...t,
+        tuvo_contraoferta: contraofertaIds.has(t.id),
+      }));
+
+      setTrabajosData(trabajosConFlag);
+    } catch (e) { console.error(e); }
+    finally { setCargandoTrabajos(false); }
+  };
 
   const cargarAcciones = async () => {
     setCargandoAcciones(true);
@@ -487,79 +518,20 @@ export default function Admin() {
     .footer { margin-top: 32px; padding-top: 20px; border-top: 1.5px solid #F1F5F9; display: flex; justify-content: space-between; align-items: center; }
     .footer-logo { font-size: 18px; font-weight: 900; color: #2563EB; }
     .footer-info { font-size: 11px; color: #CBD5E1; text-align: right; }
-    @media print {
-      body { background: white; }
-      .page { padding: 20px; max-width: 100%; }
-      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .card-comision { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    }
+    @media print { body { background: white; } .page { padding: 20px; max-width: 100%; } .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .card-comision { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   </style>
 </head>
 <body>
 <div class="page">
   <div class="header">
-    <div>
-      <h1>⚡ fleksi</h1>
-      <p>Reporte ${periodo.label} · ${datos.periodo.inicio} — ${datos.periodo.fin}</p>
-      <p>Generado el ${fechaGen}</p>
-    </div>
-    <div class="header-logo">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
-        <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
-        <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
-        <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
-      </svg>
-    </div>
+    <div><h1>⚡ fleksi</h1><p>Reporte ${periodo.label} · ${datos.periodo.inicio} — ${datos.periodo.fin}</p><p>Generado el ${fechaGen}</p></div>
+    <div class="header-logo"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/><rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/><rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/><rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/></svg></div>
   </div>
-  <div class="seccion">
-    <div class="seccion-titulo">👥 Usuarios</div>
-    <div class="divider"></div>
-    <div class="grid4">
-      <div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div>
-      <div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en período</div></div>
-      <div class="card purpura"><div class="valor">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div>
-      <div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div>
-    </div>
-  </div>
-  <div class="seccion">
-    <div class="seccion-titulo">⚡ Servicios</div>
-    <div class="divider"></div>
-    <div class="grid4">
-      <div class="card"><div class="valor">${datos.servicios.total}</div><div class="label">Total histórico</div></div>
-      <div class="card cyan"><div class="valor">${datos.servicios.activos}</div><div class="label">Activos</div></div>
-      <div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div>
-      <div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div>
-    </div>
-  </div>
-  <div class="seccion">
-    <div class="seccion-titulo">💰 Ingresos (MXN)</div>
-    <div class="divider"></div>
-    <div class="grid2" style="margin-bottom:12px">
-      <div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div>
-      <div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div>
-    </div>
-    <div class="card-comision">
-      <div class="label-top">Comisión Fleksi acumulada (25%)</div>
-      <div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
-      <div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div>
-    </div>
-  </div>
-  <div class="seccion">
-    <div class="seccion-titulo">📍 Ciudad más activa</div>
-    <div class="divider"></div>
-    <div class="card-ciudad">
-      <div>
-        <div class="nombre">📍 ${datos.ciudad.nombre}</div>
-        <div class="sub">Ciudad con más usuarios registrados</div>
-      </div>
-      <div class="badge">${datos.ciudad.usuarios} usuarios</div>
-    </div>
-  </div>
-  <div class="footer">
-    <div class="footer-logo">⚡ fleksi</div>
-    <div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div>
-  </div>
+  <div class="seccion"><div class="seccion-titulo">👥 Usuarios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.usuarios.total}</div><div class="label">Total registrados</div></div><div class="card verde"><div class="valor">${datos.usuarios.nuevosEnPeriodo}</div><div class="label">Nuevos en período</div></div><div class="card purpura"><div class="valor">${datos.usuarios.fleksers}</div><div class="label">Fleksers</div></div><div class="card gris"><div class="valor">${datos.usuarios.empresas}</div><div class="label">Empresas</div></div></div></div>
+  <div class="seccion"><div class="seccion-titulo">⚡ Servicios</div><div class="divider"></div><div class="grid4"><div class="card"><div class="valor">${datos.servicios.total}</div><div class="label">Total histórico</div></div><div class="card cyan"><div class="valor">${datos.servicios.activos}</div><div class="label">Activos</div></div><div class="card verde"><div class="valor">${datos.servicios.completados}</div><div class="label">Completados</div></div><div class="card rojo"><div class="valor">${datos.servicios.cancelados}</div><div class="label">Cancelados</div></div></div></div>
+  <div class="seccion"><div class="seccion-titulo">💰 Ingresos (MXN)</div><div class="divider"></div><div class="grid2" style="margin-bottom:12px"><div class="card verde"><div class="valor">$${datos.ingresos.transaccionadoPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Transaccionado en período</div></div><div class="card"><div class="valor">$${datos.ingresos.ticketPromedio.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="label">Ticket promedio</div></div></div><div class="card-comision"><div class="label-top">Comisión Fleksi acumulada (25%)</div><div class="valor">$${datos.ingresos.comisionAcumulada.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div><div class="label-bot">En este período: $${datos.ingresos.comisionPeriodo.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN</div></div></div>
+  <div class="seccion"><div class="seccion-titulo">📍 Ciudad más activa</div><div class="divider"></div><div class="card-ciudad"><div><div class="nombre">📍 ${datos.ciudad.nombre}</div><div class="sub">Ciudad con más usuarios registrados</div></div><div class="badge">${datos.ciudad.usuarios} usuarios</div></div></div>
+  <div class="footer"><div class="footer-logo">⚡ fleksi</div><div class="footer-info">Irapuato, Guanajuato · México<br/>Reporte generado el ${fechaGen}</div></div>
 </div>
 <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
 </body>
@@ -687,6 +659,7 @@ export default function Admin() {
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
           <button onClick={() => setTab('comunicaciones')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>📢 Comunicaciones</button>
+          <button onClick={() => setTab('trabajos')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>⚡ Trabajos</button>
           <button onClick={() => setTab('dispersion')} className={`flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ${tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200'}`}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
@@ -700,6 +673,187 @@ export default function Admin() {
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
+
+        {tab === 'trabajos' && (() => {
+          const categoriaEmoji: Record<string, string> = {
+            hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚',
+            ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿',
+            mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨',
+          };
+          const categoriaNombre: Record<string, string> = {
+            hogar: 'Hogar y reparaciones', limpieza: 'Limpieza', eventos: 'Eventos y hospitalidad',
+            mudanza: 'Mudanza y carga', ejecutivo: 'Chofer ejecutivo', interprete: 'Intérprete',
+            cocina: 'Cocina', jardineria: 'Jardinería', mecanica: 'Mecánica', cerrajeria: 'Cerrajería',
+            estetica: 'Estética', otro: 'Otro',
+          };
+
+          const filtrados = trabajosData.filter(t => {
+            if (filtroTrabajos === 'todos') return true;
+            if (filtroTrabajos === 'activo') return ['activo','publicado','en_proceso'].includes(t.estado);
+            if (filtroTrabajos === 'completado') return t.estado === 'completado' || t.estado === 'pagado';
+            if (filtroTrabajos === 'cancelado') return t.estado === 'cancelado';
+            return true;
+          });
+
+          const total = trabajosData.length;
+          const activos = trabajosData.filter(t => ['activo','publicado','en_proceso'].includes(t.estado)).length;
+          const completados = trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').length;
+          const cancelados = trabajosData.filter(t => t.estado === 'cancelado').length;
+          const conContraoferta = trabajosData.filter(t => t.tuvo_contraoferta).length;
+          const tasaCierre = total > 0 ? Math.round((completados / total) * 100) : 0;
+          const ticketPromedio = completados > 0
+            ? Math.round(trabajosData.filter(t => t.estado === 'completado' || t.estado === 'pagado').reduce((acc, t) => acc + (t.presupuesto || 0), 0) / completados)
+            : 0;
+
+          const porCategoria: Record<string, { total: number; completados: number; cancelados: number; ingresos: number }> = {};
+          trabajosData.forEach(t => {
+            const cat = t.categoria || 'otro';
+            if (!porCategoria[cat]) porCategoria[cat] = { total: 0, completados: 0, cancelados: 0, ingresos: 0 };
+            porCategoria[cat].total++;
+            if (t.estado === 'completado' || t.estado === 'pagado') {
+              porCategoria[cat].completados++;
+              porCategoria[cat].ingresos += t.presupuesto || 0;
+            }
+            if (t.estado === 'cancelado') porCategoria[cat].cancelados++;
+          });
+          const categoriasOrdenadas = Object.entries(porCategoria).sort((a, b) => b[1].total - a[1].total);
+
+          return (
+            <div>
+              <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+                {[{ key: '7d', label: '7 días' }, { key: '30d', label: '30 días' }, { key: '90d', label: '90 días' }, { key: 'todo', label: 'Todo' }].map(p => (
+                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-3xl font-extrabold text-blue-600">{total}</p>
+                  <p className="text-xs text-gray-400 mt-1">Total publicados</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-3xl font-extrabold text-green-600">{tasaCierre}%</p>
+                  <p className="text-xs text-gray-400 mt-1">Tasa de cierre</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
+                  <p className="text-xl font-extrabold text-cyan-700">{activos}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Activos</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
+                  <p className="text-xl font-extrabold text-green-700">{completados}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Completados</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                  <p className="text-xl font-extrabold text-red-600">{cancelados}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Cancelados</p>
+                </div>
+                <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
+                  <p className="text-xl font-extrabold text-purple-600">{conContraoferta}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Contraoferta</p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-xs font-semibold">Ticket promedio</p>
+                  <p className="text-white font-extrabold text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p>
+                </div>
+                <span className="text-4xl">🎯</span>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+                <h3 className="font-extrabold text-gray-900 mb-4">📊 Por categoría</h3>
+                {categoriasOrdenadas.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">Sin datos en este período</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {categoriasOrdenadas.map(([cat, data]) => {
+                      const porcentaje = total > 0 ? Math.round((data.total / total) * 100) : 0;
+                      const tasaCat = data.total > 0 ? Math.round((data.completados / data.total) * 100) : 0;
+                      return (
+                        <div key={cat} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{categoriaEmoji[cat] || '✨'}</span>
+                              <p className="font-bold text-gray-900 text-sm">{categoriaNombre[cat] || cat}</p>
+                            </div>
+                            <span className="text-xs font-bold text-gray-400">{porcentaje}% del total</span>
+                          </div>
+                          <div className="w-full h-2 bg-gray-200 rounded-full mb-2 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                              style={{ width: `${porcentaje}%` }}/>
+                          </div>
+                          <div className="flex gap-3 flex-wrap">
+                            <span className="text-xs text-gray-600 font-semibold">{data.total} publicados</span>
+                            <span className="text-xs text-green-600 font-semibold">✅ {data.completados} ({tasaCat}%)</span>
+                            {data.cancelados > 0 && <span className="text-xs text-red-500 font-semibold">❌ {data.cancelados}</span>}
+                            {data.ingresos > 0 && <span className="text-xs text-blue-600 font-semibold">💰 ${data.ingresos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="font-extrabold text-gray-900 mb-3">📋 Listado</h3>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {[{ key: 'todos', label: 'Todos' }, { key: 'activo', label: '⚡ Activos' }, { key: 'completado', label: '✅ Completados' }, { key: 'cancelado', label: '❌ Cancelados' }].map(f => (
+                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ${filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {cargandoTrabajos ? (
+                  <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+                ) : filtrados.length === 0 ? (
+                  <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400 text-sm">Sin trabajos en este filtro</p></div>
+                ) : (
+                  <div className="flex flex-col divide-y divide-gray-100">
+                    {filtrados.slice(0, 50).map((t) => (
+                      <div key={t.id} className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[t.categoria] || '✨'}</span>
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 text-sm truncate">{t.titulo}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{t.usuarios?.nombre || '—'} · {new Date(t.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              t.estado === 'completado' || t.estado === 'pagado' ? 'bg-green-100 text-green-700' :
+                              t.estado === 'cancelado' ? 'bg-red-100 text-red-600' :
+                              t.estado === 'en_proceso' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-500'
+                            }`}>
+                              {t.estado === 'completado' || t.estado === 'pagado' ? '✅ Completado' :
+                               t.estado === 'cancelado' ? '❌ Cancelado' :
+                               t.estado === 'en_proceso' ? '⚡ En proceso' : '📢 Activo'}
+                            </span>
+                            {t.presupuesto > 0 && <span className="text-xs font-bold text-gray-700">${t.presupuesto.toLocaleString('es-MX')} MXN</span>}
+                            {t.tuvo_contraoferta && <span className="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">💜 Contraoferta</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {filtrados.length > 50 && (
+                      <p className="text-xs text-gray-400 text-center py-3">Mostrando 50 de {filtrados.length} trabajos</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {tab === 'acciones' && (
           <div>
@@ -813,7 +967,6 @@ export default function Admin() {
                 <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}
                 </button>
-                <p className="text-xs text-gray-400 mt-2 text-center">El usuario recibirá una notificación en la app y un correo.</p>
               </div>
             )}
             {modoComunicacion === 'masivo' && (
@@ -842,7 +995,6 @@ export default function Admin() {
                 <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                   {enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}
                 </button>
-                <p className="text-xs text-gray-400 mt-2 text-center">Las notificaciones se insertan en la app de todos los usuarios del segmento.</p>
               </div>
             )}
           </div>
@@ -934,45 +1086,21 @@ export default function Admin() {
                   <p className="text-xs text-gray-400 mb-4">¿Con qué propósito se registraron tus usuarios?</p>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between bg-blue-50 rounded-xl p-3 border border-blue-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">💼</span>
-                        <div><p className="font-bold text-gray-900 text-sm">Busca trabajo</p><p className="text-xs text-gray-400">Quieren ofrecer servicios</p></div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-extrabold text-blue-600">{metrics.intencionTrabajar}</p>
-                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionTrabajar / metrics.totalUsuarios) * 100) : 0}%</p>
-                      </div>
+                      <div className="flex items-center gap-2"><span className="text-lg">💼</span><div><p className="font-bold text-gray-900 text-sm">Busca trabajo</p><p className="text-xs text-gray-400">Quieren ofrecer servicios</p></div></div>
+                      <div className="text-right"><p className="text-2xl font-extrabold text-blue-600">{metrics.intencionTrabajar}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionTrabajar / metrics.totalUsuarios) * 100) : 0}%</p></div>
                     </div>
                     <div className="flex items-center justify-between bg-purple-50 rounded-xl p-3 border border-purple-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🔍</span>
-                        <div><p className="font-bold text-gray-900 text-sm">Busca contratar</p><p className="text-xs text-gray-400">Quieren encontrar ayuda</p></div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-extrabold text-purple-600">{metrics.intencionContratar}</p>
-                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionContratar / metrics.totalUsuarios) * 100) : 0}%</p>
-                      </div>
+                      <div className="flex items-center gap-2"><span className="text-lg">🔍</span><div><p className="font-bold text-gray-900 text-sm">Busca contratar</p><p className="text-xs text-gray-400">Quieren encontrar ayuda</p></div></div>
+                      <div className="text-right"><p className="text-2xl font-extrabold text-purple-600">{metrics.intencionContratar}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionContratar / metrics.totalUsuarios) * 100) : 0}%</p></div>
                     </div>
                     <div className="flex items-center justify-between bg-green-50 rounded-xl p-3 border border-green-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">⚡</span>
-                        <div><p className="font-bold text-gray-900 text-sm">Trabaja y contrata</p><p className="text-xs text-gray-400">Intención dual</p></div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-extrabold text-green-600">{metrics.intencionAmbos}</p>
-                        <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionAmbos / metrics.totalUsuarios) * 100) : 0}%</p>
-                      </div>
+                      <div className="flex items-center gap-2"><span className="text-lg">⚡</span><div><p className="font-bold text-gray-900 text-sm">Trabaja y contrata</p><p className="text-xs text-gray-400">Intención dual</p></div></div>
+                      <div className="text-right"><p className="text-2xl font-extrabold text-green-600">{metrics.intencionAmbos}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionAmbos / metrics.totalUsuarios) * 100) : 0}%</p></div>
                     </div>
                     {metrics.intencionSinDato > 0 && (
                       <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">❓</span>
-                          <div><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores a esta función</p></div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p>
-                          <p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p>
-                        </div>
+                        <div className="flex items-center gap-2"><span className="text-lg">❓</span><div><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores a esta función</p></div></div>
+                        <div className="text-right"><p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p></div>
                       </div>
                     )}
                   </div>
@@ -1042,13 +1170,12 @@ export default function Admin() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
-                      {generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel / CSV
+                      {generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel
                     </button>
                     <button onClick={descargarPDF} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
-                      {generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF / Imprimir
+                      {generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-3 text-center">El PDF se abre en nueva ventana para imprimir o guardar.</p>
                 </div>
                 <p className="text-xs text-gray-400 text-center">Última actualización: {new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
               </div>
