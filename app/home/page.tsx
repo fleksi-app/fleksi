@@ -40,6 +40,7 @@ export default function HomeWorker() {
   const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
+  const [notifModalAbierta, setNotifModalAbierta] = useState<any>(null);
 
   const [ciudadActiva, setCiudadActiva] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
@@ -84,12 +85,11 @@ export default function HomeWorker() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
 
-    // Perfil: caché 5 min
-    let perfil = cacheGet<any>(`perfil_${user.id}`);
+    let perfil = cacheGet<any>('perfil_' + user.id);
     if (!perfil) {
       const { data } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
       perfil = data;
-      if (perfil) cacheSet(`perfil_${user.id}`, perfil, TTL.PERFIL);
+      if (perfil) cacheSet('perfil_' + user.id, perfil, TTL.PERFIL);
     }
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
@@ -98,7 +98,6 @@ export default function HomeWorker() {
     setInputCiudad(ciudadUsuario);
     setCiudadesVisitadas(perfil?.ciudades_visitadas || []);
 
-    // Servicios: caché 1 min
     let servicios = cacheGet<any[]>('servicios_activos');
     if (!servicios) {
       const { data } = await supabase.from('servicios')
@@ -110,18 +109,16 @@ export default function HomeWorker() {
     }
     setTrabajos(servicios);
 
-    // Aplicaciones: sin caché (crítico para UX)
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);
     setAplicacionesUsuario((apps || []).map(a => a.servicio_id));
     setTrabajosCompletados((apps || []).filter(a => a.estado === 'completado').map(a => a.servicio_id));
     setAplicacionesRechazadas((apps || []).filter(a => a.estado === 'rechazado').map(a => a.servicio_id));
 
-    // Notificaciones: caché 30 seg
-    let notifs = cacheGet<any[]>(`notifs_${user.id}`);
+    let notifs = cacheGet<any[]>('notifs_' + user.id);
     if (!notifs) {
       const { data } = await supabase.from('notificaciones').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(20);
       notifs = data || [];
-      cacheSet(`notifs_${user.id}`, notifs, TTL.NOTIFICACIONES);
+      cacheSet('notifs_' + user.id, notifs, TTL.NOTIFICACIONES);
     }
     setNotificaciones(notifs);
     setNoLeidas(notifs.filter(n => !n.leida).length);
@@ -161,7 +158,7 @@ export default function HomeWorker() {
         ciudad: nuevaCiudad.trim() || usuario.ciudad_base || usuario.ciudad || '',
         ciudades_visitadas: ciudadesActualizadas,
       }).eq('id', usuario.id);
-      cacheInvalidate(`perfil_${usuario.id}`);
+      cacheInvalidate('perfil_' + usuario.id);
       setCiudadActiva(nuevaCiudad.trim());
       setCiudadesVisitadas(ciudadesActualizadas);
       setMostrarSelectorCiudad(false);
@@ -329,15 +326,12 @@ export default function HomeWorker() {
               <span className="text-lg">📍</span>
               <div className="text-left">
                 <p className="text-white/60 text-xs font-semibold">¿Dónde estás buscando?</p>
-                <p className="text-white font-extrabold text-sm">
-                  {ciudadActiva || 'Todo el país 🗺️'}
-                </p>
+                <p className="text-white font-extrabold text-sm">{ciudadActiva || 'Todo el país 🗺️'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {ciudadActiva && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setCiudadActiva(''); }}
+                <button onClick={(e) => { e.stopPropagation(); setCiudadActiva(''); }}
                   className="text-white/50 hover:text-white text-xs font-bold bg-white/10 rounded-full px-2 py-0.5 transition">
                   Ver todo
                 </button>
@@ -348,15 +342,13 @@ export default function HomeWorker() {
 
           {ciudadesSugeridas.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
-              <button
-                onClick={() => setCiudadActiva('')}
-                className={`flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ${!ciudadActiva ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25'}`}>
+              <button onClick={() => setCiudadActiva('')}
+                className={'flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ' + (!ciudadActiva ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25')}>
                 🗺️ Todo
               </button>
               {ciudadesSugeridas.map((c) => (
-                <button key={c}
-                  onClick={() => setCiudadActiva(c)}
-                  className={`flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ${ciudadActiva === c ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25'}`}>
+                <button key={c} onClick={() => setCiudadActiva(c)}
+                  className={'flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ' + (ciudadActiva === c ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25')}>
                   📍 {c}
                 </button>
               ))}
@@ -365,7 +357,7 @@ export default function HomeWorker() {
 
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
             <p className="text-white/70 text-xs font-semibold mb-1">
-              {ciudadActiva ? `⚡ Trabajos en ${ciudadActiva}` : '🗺️ Trabajos en todo el país'}
+              {ciudadActiva ? '⚡ Trabajos en ' + ciudadActiva : '🗺️ Trabajos en todo el país'}
             </p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
@@ -477,7 +469,7 @@ export default function HomeWorker() {
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {categorias.map((cat) => (
             <button key={cat} onClick={() => setCategoriaActiva(cat)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${categoriaActiva === cat ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md' : 'bg-white text-gray-500 border-2 border-gray-200'}`}>
+              className={'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ' + (categoriaActiva === cat ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md' : 'bg-white text-gray-500 border-2 border-gray-200')}>
               {cat}
             </button>
           ))}
@@ -515,7 +507,7 @@ export default function HomeWorker() {
 
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-extrabold text-gray-900">
-            {ciudadActiva ? `Trabajos en ${ciudadActiva}` : '🗺️ Trabajos en todo el país'}
+            {ciudadActiva ? 'Trabajos en ' + ciudadActiva : '🗺️ Trabajos en todo el país'}
           </h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
         </div>
@@ -525,8 +517,7 @@ export default function HomeWorker() {
             <p className="text-4xl mb-4">🔍</p>
             <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
             <p className="text-gray-400 text-sm mb-4">
-              {ciudadActiva
-                ? `No hay trabajos en ${ciudadActiva} en este momento`
+              {ciudadActiva ? 'No hay trabajos en ' + ciudadActiva + ' en este momento'
                 : filtrosActivos > 0 ? 'Prueba cambiando los filtros'
                 : 'Vuelve más tarde para ver nuevas solicitudes'}
             </p>
@@ -551,7 +542,7 @@ export default function HomeWorker() {
               const ganancia = calcularPagoFlekser(trabajo.presupuesto);
               const cuposLabel = getCuposLabel(trabajo);
               return (
-                <a href={`/trabajo?id=${trabajo.id}`} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
+                <a href={'/trabajo?id=' + trabajo.id} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
                   <div className="flex gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
                       {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
@@ -602,27 +593,19 @@ export default function HomeWorker() {
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">Escribe una ciudad</label>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ej. Guadalajara, Monterrey, CDMX..."
-                    value={inputCiudad}
-                    onChange={(e) => setInputCiudad(e.target.value)}
+                  <input type="text" placeholder="Ej. Guadalajara, Monterrey, CDMX..."
+                    value={inputCiudad} onChange={(e) => setInputCiudad(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && inputCiudad.trim()) aplicarCiudad(inputCiudad); }}
-                    className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => inputCiudad.trim() && aplicarCiudad(inputCiudad)}
+                    className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm" autoFocus/>
+                  <button onClick={() => inputCiudad.trim() && aplicarCiudad(inputCiudad)}
                     disabled={guardandoCiudad || !inputCiudad.trim()}
                     className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm disabled:opacity-40 transition">
                     {guardandoCiudad ? '...' : 'Ir'}
                   </button>
                 </div>
               </div>
-
-              <button
-                onClick={() => { setCiudadActiva(''); setMostrarSelectorCiudad(false); }}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${!ciudadActiva ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <button onClick={() => { setCiudadActiva(''); setMostrarSelectorCiudad(false); }}
+                className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (!ciudadActiva ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300')}>
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">🗺️</div>
                 <div className="flex-1 text-left">
                   <p className="font-extrabold text-gray-900">Todo el país</p>
@@ -630,21 +613,17 @@ export default function HomeWorker() {
                 </div>
                 {!ciudadActiva && <span className="text-purple-600 text-xs font-bold bg-purple-100 px-2 py-1 rounded-full">Activo</span>}
               </button>
-
               {ciudadesSugeridas.length > 0 && (
                 <div>
                   <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades</p>
                   <div className="flex flex-col gap-2">
                     {ciudadesSugeridas.map((c) => (
-                      <button key={c}
-                        onClick={() => aplicarCiudad(c)}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${ciudadActiva === c ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <button key={c} onClick={() => aplicarCiudad(c)}
+                        className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (ciudadActiva === c ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300')}>
                         <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
                         <div className="flex-1 text-left">
                           <p className="font-bold text-gray-900">{c}</p>
-                          {c === (usuario?.ciudad_base || usuario?.ciudad) && (
-                            <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>
-                          )}
+                          {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
                         </div>
                         {ciudadActiva === c && <span className="text-purple-600 text-xs font-bold bg-purple-100 px-2 py-1 rounded-full">Activo</span>}
                       </button>
@@ -652,14 +631,12 @@ export default function HomeWorker() {
                   </div>
                 </div>
               )}
-
               <div>
                 <p className="text-sm font-extrabold text-gray-900 mb-3">🔥 Ciudades populares</p>
                 <div className="flex flex-wrap gap-2">
                   {['CDMX', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Cancún', 'Mérida', 'Querétaro', 'San Luis Potosí'].map((c) => (
-                    <button key={c}
-                      onClick={() => aplicarCiudad(c)}
-                      className={`text-sm px-4 py-2 rounded-full font-semibold border-2 transition ${ciudadActiva === c ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}>
+                    <button key={c} onClick={() => aplicarCiudad(c)}
+                      className={'text-sm px-4 py-2 rounded-full font-semibold border-2 transition ' + (ciudadActiva === c ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300')}>
                       {c}
                     </button>
                   ))}
@@ -694,8 +671,8 @@ export default function HomeWorker() {
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {[['0','500'],['500','1000'],['1000','3000'],['3000','']].map(([min,max],i) => (
                     <button key={i} onClick={() => { setFiltroPresupuestoMin(min); setFiltroPresupuestoMax(max); }}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${filtroPresupuestoMin===min&&filtroPresupuestoMax===max ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
-                      {max ? `$${min}-$${max}` : `$${min}+`}
+                      className={'text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ' + (filtroPresupuestoMin===min&&filtroPresupuestoMax===max ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500')}>
+                      {max ? '$' + min + '-$' + max : '$' + min + '+'}
                     </button>
                   ))}
                 </div>
@@ -706,7 +683,7 @@ export default function HomeWorker() {
                 <div className="flex gap-2 mt-2">
                   {[['Hoy', new Date().toISOString().split('T')[0]], ['Mañana', new Date(Date.now()+86400000).toISOString().split('T')[0]]].map(([label,val],i) => (
                     <button key={i} onClick={() => setFiltroFecha(val)}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${filtroFecha===val ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
+                      className={'text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ' + (filtroFecha===val ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500')}>
                       {label}
                     </button>
                   ))}
@@ -717,29 +694,29 @@ export default function HomeWorker() {
                 <div className="flex flex-wrap gap-2">
                   {categorias.map((cat) => (
                     <button key={cat} onClick={() => setCategoriaActiva(cat)}
-                      className={`text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ${categoriaActiva===cat ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'}`}>
+                      className={'text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ' + (categoriaActiva===cat ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500')}>
                       {cat}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                <div onClick={() => setFiltroUrgente(!filtroUrgente)} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${filtroUrgente ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}>
+                <div onClick={() => setFiltroUrgente(!filtroUrgente)} className={'flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ' + (filtroUrgente ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white')}>
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🔴</span>
                     <div><p className="font-semibold text-gray-900 text-sm">Solo urgentes</p><p className="text-xs text-gray-400">Trabajos marcados como urgentes</p></div>
                   </div>
-                  <div className={`w-11 h-6 rounded-full transition-all ${filtroUrgente ? 'bg-red-500' : 'bg-gray-200'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroUrgente ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
+                  <div className={'w-11 h-6 rounded-full transition-all ' + (filtroUrgente ? 'bg-red-500' : 'bg-gray-200')}>
+                    <div className={'w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ' + (filtroUrgente ? 'translate-x-5 ml-0.5' : 'translate-x-0.5')}/>
                   </div>
                 </div>
-                <div onClick={() => setFiltroSeguro(!filtroSeguro)} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${filtroSeguro ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'}`}>
+                <div onClick={() => setFiltroSeguro(!filtroSeguro)} className={'flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ' + (filtroSeguro ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white')}>
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🛡️</span>
                     <div><p className="font-semibold text-gray-900 text-sm">Con Fleksi Protege</p><p className="text-xs text-gray-400">Trabajos con seguro incluido</p></div>
                   </div>
-                  <div className={`w-11 h-6 rounded-full transition-all ${filtroSeguro ? 'bg-purple-500' : 'bg-gray-200'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ${filtroSeguro ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`}/>
+                  <div className={'w-11 h-6 rounded-full transition-all ' + (filtroSeguro ? 'bg-purple-500' : 'bg-gray-200')}>
+                    <div className={'w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-all ' + (filtroSeguro ? 'translate-x-5 ml-0.5' : 'translate-x-0.5')}/>
                   </div>
                 </div>
               </div>
@@ -771,21 +748,54 @@ export default function HomeWorker() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {notificaciones.map((n) => (
-                    <a key={n.id} href={n.link || '#'} onClick={() => setMostrarNotifs(false)}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'}`}>
+                    <button key={n.id}
+                      onClick={() => {
+                        if (n.tipo === 'admin_mensaje') {
+                          setNotifModalAbierta(n);
+                          supabase.from('notificaciones').update({ leida: true }).eq('id', n.id).then(() => {
+                            setNotificaciones(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
+                            setNoLeidas(prev => Math.max(0, prev - 1));
+                          });
+                        } else if (n.link && n.link !== '/notificaciones') {
+                          setMostrarNotifs(false);
+                          window.location.href = n.link;
+                        }
+                      }}
+                      className={'flex items-start gap-3 p-3 rounded-2xl transition text-left w-full ' + (!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50')}>
                       <span className="text-2xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo] || '🔔'}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
-                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
+                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.mensaje}</p>}
                         <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
                       {!n.leida && <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>}
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
             <div className="pb-8"/>
+          </div>
+        </div>
+      )}
+
+      {notifModalAbierta && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-6" onClick={() => setNotifModalAbierta(null)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📢</span>
+              </div>
+              <h3 className="text-white font-extrabold text-lg text-center">{notifModalAbierta.titulo}</h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-gray-700 text-sm leading-relaxed mb-4">{notifModalAbierta.mensaje}</p>
+              <p className="text-xs text-gray-400 mb-5">{new Date(notifModalAbierta.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</p>
+              <button onClick={() => setNotifModalAbierta(null)}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition">
+                Entendido ✓
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -802,11 +812,11 @@ export default function HomeWorker() {
                 const esActivo = r === 'flekser';
                 return (
                   <button key={r} onClick={() => cambiarRol(r)} disabled={cambiandoRol || esActivo}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${esActivo ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${esActivo ? 'bg-white/20' : 'bg-gray-100'}`}>{info.emoji}</div>
+                    className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (esActivo ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white' : 'border-gray-200 bg-white hover:border-gray-300')}>
+                    <div className={'w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ' + (esActivo ? 'bg-white/20' : 'bg-gray-100')}>{info.emoji}</div>
                     <div className="flex-1 text-left">
-                      <p className={`font-extrabold ${esActivo ? 'text-white' : 'text-gray-900'}`}>Modo {info.label}</p>
-                      <p className={`text-xs mt-0.5 ${esActivo ? 'text-white/70' : 'text-gray-400'}`}>
+                      <p className={'font-extrabold ' + (esActivo ? 'text-white' : 'text-gray-900')}>Modo {info.label}</p>
+                      <p className={'text-xs mt-0.5 ' + (esActivo ? 'text-white/70' : 'text-gray-400')}>
                         {r === 'flekser' ? 'Busca y ofrece servicios' : 'Gestiona tus solicitudes'}
                       </p>
                     </div>

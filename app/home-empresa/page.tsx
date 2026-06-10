@@ -26,6 +26,7 @@ export default function HomeEmpresa() {
   const [cambiandoRol, setCambiandoRol] = useState(false);
   const [busquedaCiudad, setBusquedaCiudad] = useState('');
   const [ciudadFiltro, setCiudadFiltro] = useState('');
+  const [notifModalAbierta, setNotifModalAbierta] = useState<any>(null);
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -50,25 +51,17 @@ export default function HomeEmpresa() {
     setNotificaciones(notifs || []);
     setNoLeidas((notifs || []).filter(n => !n.leida).length);
     setCargando(false);
-
-    // Push: registrar suscripción silenciosamente si ya tiene permiso
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        try {
-          if ('serviceWorker' in navigator && 'PushManager' in window) {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
-            });
-            await fetch('/api/push', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }),
-            });
-          }
-        } catch (e) {}
-      }
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+          });
+          await fetch('/api/push', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: user.id, subscription: subscription.toJSON() }) });
+        }
+      } catch (e) {}
     }
   };
 
@@ -132,7 +125,6 @@ export default function HomeEmpresa() {
         <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-16 translate-x-16"/>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-12 -translate-x-8"/>
         <div className="absolute inset-0 opacity-5" style={{backgroundImage:'linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
-
         <div className="max-w-md mx-auto relative">
           <div className="flex items-center justify-between mb-5">
             <button onClick={() => setMostrarCambioRol(true)}
@@ -146,27 +138,24 @@ export default function HomeEmpresa() {
               {noLeidas > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">{noLeidas > 9 ? '9+' : noLeidas}</span>}
             </button>
           </div>
-
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"/>
             <p className="text-white/50 text-xs font-semibold tracking-widest uppercase">Panel empresarial</p>
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-5">{usuario?.nombre}</h1>
-
           <div className="grid grid-cols-4 gap-2 mb-5">
             {[
               { valor: stats.activos, label: 'Activos', color: 'text-blue-300' },
               { valor: stats.prestadores, label: 'Profesionales', color: 'text-purple-300' },
               { valor: stats.completados, label: 'Completados', color: 'text-emerald-300' },
-              { valor: `$${stats.gasto > 999 ? (stats.gasto/1000).toFixed(1)+'k' : stats.gasto}`, label: 'Invertido', color: 'text-amber-300' },
+              { valor: '$' + (stats.gasto > 999 ? (stats.gasto/1000).toFixed(1)+'k' : stats.gasto), label: 'Invertido', color: 'text-amber-300' },
             ].map((s, i) => (
               <div key={i} className="bg-white/10 rounded-xl p-2.5 text-center border border-white/10">
-                <p className={`text-xl font-extrabold ${s.color}`}>{s.valor}</p>
+                <p className={'text-xl font-extrabold ' + s.color}>{s.valor}</p>
                 <p className="text-white/40 text-xs mt-0.5 leading-tight">{s.label}</p>
               </div>
             ))}
           </div>
-
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">📍</span>
             <input type="text" placeholder="Filtrar mis servicios por ciudad..."
@@ -192,7 +181,7 @@ export default function HomeEmpresa() {
 
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-extrabold text-slate-800 text-lg">
-            {ciudadFiltro ? `Servicios en "${ciudadFiltro}"` : 'Mis servicios'}
+            {ciudadFiltro ? 'Servicios en "' + ciudadFiltro + '"' : 'Mis servicios'}
           </h2>
           <span className="text-xs text-slate-400 font-semibold">{serviciosFiltrados.length} total</span>
         </div>
@@ -200,12 +189,8 @@ export default function HomeEmpresa() {
         {serviciosFiltrados.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100">
             <p className="text-4xl mb-3">{ciudadFiltro ? '🔍' : '📋'}</p>
-            <p className="font-bold text-slate-700 mb-1">
-              {ciudadFiltro ? `Sin servicios en "${ciudadFiltro}"` : 'Sin servicios publicados'}
-            </p>
-            <p className="text-slate-400 text-sm">
-              {ciudadFiltro ? 'Intenta con otra ciudad' : 'Publica tu primer servicio para encontrar profesionales'}
-            </p>
+            <p className="font-bold text-slate-700 mb-1">{ciudadFiltro ? 'Sin servicios en "' + ciudadFiltro + '"' : 'Sin servicios publicados'}</p>
+            <p className="text-slate-400 text-sm">{ciudadFiltro ? 'Intenta con otra ciudad' : 'Publica tu primer servicio para encontrar profesionales'}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -222,14 +207,12 @@ export default function HomeEmpresa() {
                       {servicio.direccion && <p className="text-xs text-slate-400 mt-0.5">📍 {servicio.direccion}</p>}
                       {cuposLabel && <div className="mt-1">{cuposLabel}</div>}
                     </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-lg ${estadoColor(servicio.estado)}`}>{estadoLabel(servicio.estado)}</span>
+                    <span className={'text-xs font-bold px-3 py-1 rounded-lg ' + estadoColor(servicio.estado)}>{estadoLabel(servicio.estado)}</span>
                   </div>
-
                   <div className="flex justify-between items-center mb-3 py-2 border-y border-slate-50">
                     <span className="text-blue-700 font-extrabold">${servicio.presupuesto} MXN</span>
                     <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">{servicio.categoria}</span>
                   </div>
-
                   {aplicacionesAceptadas.length > 0 && (
                     <div className="bg-emerald-50 rounded-xl p-3 mb-3 border border-emerald-100">
                       <p className="text-xs font-bold text-emerald-700 mb-2">✓ Profesionales confirmados ({aplicacionesAceptadas.length})</p>
@@ -244,20 +227,14 @@ export default function HomeEmpresa() {
                       ))}
                     </div>
                   )}
-
                   {aplicacionesPendientes.length > 0 && (
                     <div className="bg-amber-50 rounded-xl p-3 mb-3 border border-amber-100">
                       <p className="text-xs font-bold text-amber-700">⏳ {aplicacionesPendientes.length} propuesta{aplicacionesPendientes.length!==1?'s':''} pendiente{aplicacionesPendientes.length!==1?'s':''}</p>
                     </div>
                   )}
-
-                  <a href={`/aplicaciones?servicio=${servicio.id}`}
+                  <a href={'/aplicaciones?servicio=' + servicio.id}
                     className="block w-full py-2.5 bg-gradient-to-r from-slate-700 to-blue-800 text-white rounded-xl font-semibold text-sm text-center hover:opacity-90 transition">
-                    {aplicacionesPendientes.length > 0
-                      ? `Ver propuestas (${aplicacionesPendientes.length})`
-                      : aplicacionesAceptadas.length > 0
-                      ? `Gestionar (${aplicacionesAceptadas.length} confirmados)`
-                      : 'Ver detalle'}
+                    {aplicacionesPendientes.length > 0 ? 'Ver propuestas (' + aplicacionesPendientes.length + ')' : aplicacionesAceptadas.length > 0 ? 'Gestionar (' + aplicacionesAceptadas.length + ' confirmados)' : 'Ver detalle'}
                   </a>
                 </div>
               );
@@ -279,20 +256,54 @@ export default function HomeEmpresa() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {notificaciones.map((n) => (
-                    <a key={n.id} href={n.link||'#'} onClick={() => setMostrarNotifs(false)} className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida?'bg-purple-50 border border-purple-100':'bg-gray-50'}`}>
+                    <button key={n.id}
+                      onClick={() => {
+                        if (n.tipo === 'admin_mensaje') {
+                          setNotifModalAbierta(n);
+                          supabase.from('notificaciones').update({ leida: true }).eq('id', n.id).then(() => {
+                            setNotificaciones(prev => prev.map((x: any) => x.id === n.id ? { ...x, leida: true } : x));
+                            setNoLeidas(prev => Math.max(0, prev - 1));
+                          });
+                        } else if (n.link && n.link !== '/notificaciones') {
+                          setMostrarNotifs(false);
+                          window.location.href = n.link;
+                        }
+                      }}
+                      className={'flex items-start gap-3 p-3 rounded-2xl transition text-left w-full ' + (!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50')}>
                       <span className="text-2xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo]||'🔔'}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
-                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
+                        {n.mensaje && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.mensaje}</p>}
                         <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</p>
                       </div>
                       {!n.leida && <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>}
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
             <div className="pb-8"/>
+          </div>
+        </div>
+      )}
+
+      {notifModalAbierta && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-6" onClick={() => setNotifModalAbierta(null)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📢</span>
+              </div>
+              <h3 className="text-white font-extrabold text-lg text-center">{notifModalAbierta.titulo}</h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-gray-700 text-sm leading-relaxed mb-4">{notifModalAbierta.mensaje}</p>
+              <p className="text-xs text-gray-400 mb-5">{new Date(notifModalAbierta.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}</p>
+              <button onClick={() => setNotifModalAbierta(null)}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition">
+                Entendido ✓
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -309,15 +320,15 @@ export default function HomeEmpresa() {
                 const esActivo = r === 'empresa';
                 return (
                   <button key={r} onClick={() => cambiarRol(r)} disabled={cambiandoRol || esActivo}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${esActivo?'border-transparent bg-gradient-to-r '+info.color+' text-white':'border-gray-200 bg-white hover:border-gray-300'}`}>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${esActivo?'bg-white/20':'bg-gray-100'}`}>{info.emoji}</div>
+                    className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (esActivo ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white' : 'border-gray-200 bg-white hover:border-gray-300')}>
+                    <div className={'w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ' + (esActivo ? 'bg-white/20' : 'bg-gray-100')}>{info.emoji}</div>
                     <div className="flex-1 text-left">
-                      <p className={`font-extrabold ${esActivo?'text-white':'text-gray-900'}`}>Modo {info.label}</p>
-                      <p className={`text-xs mt-0.5 ${esActivo?'text-white/70':'text-gray-400'}`}>
+                      <p className={'font-extrabold ' + (esActivo ? 'text-white' : 'text-gray-900')}>Modo {info.label}</p>
+                      <p className={'text-xs mt-0.5 ' + (esActivo ? 'text-white/70' : 'text-gray-400')}>
                         {r === 'flekser' ? 'Busca y ofrece servicios' : 'Gestiona tus solicitudes'}
                       </p>
                     </div>
-                    {esActivo?<span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span>:<span className="text-gray-400 text-xs font-bold">Cambiar →</span>}
+                    {esActivo ? <span className="text-white/80 text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Activo</span> : <span className="text-gray-400 text-xs font-bold">Cambiar →</span>}
                   </button>
                 );
               })}
