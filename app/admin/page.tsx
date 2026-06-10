@@ -127,7 +127,9 @@ export default function Admin() {
   const [cuerpoMasivo, setCuerpoMasivo] = useState('');
   const [enviandoMasivo, setEnviandoMasivo] = useState(false);
   const [mensajeMasivoEnviado, setMensajeMasivoEnviado] = useState('');
-  const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo' | 'whatsapp'>('individual');
+  const [modoComunicacion, setModoComunicacion] = useState<'individual' | 'masivo' | 'whatsapp' | 'metricas'>('individual');
+  const [metricasMensajes, setMetricasMensajes] = useState<any[]>([]);
+  const [cargandoMetricasMensajes, setCargandoMetricasMensajes] = useState(false);
 
   const [acciones, setAcciones] = useState<any[]>([]);
   const [cargandoAcciones, setCargandoAcciones] = useState(false);
@@ -161,6 +163,33 @@ export default function Admin() {
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
   useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
   useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
+
+  const cargarMetricasMensajes = async () => {
+    setCargandoMetricasMensajes(true);
+    try {
+      const { data: mensajes } = await supabase
+        .from('notificaciones')
+        .select('titulo, mensaje, created_at, leida, tipo, usuario_id')
+        .eq('tipo', 'admin_mensaje')
+        .order('created_at', { ascending: false });
+      if (!mensajes || mensajes.length === 0) { setMetricasMensajes([]); return; }
+      const grupos: Record<string, any> = {};
+      mensajes.forEach((m: any) => {
+        const key = m.titulo + '||' + m.created_at.slice(0, 16);
+        if (!grupos[key]) {
+          grupos[key] = { titulo: m.titulo, mensaje: m.mensaje, fecha: m.created_at, total: 0, leidos: 0, noLeidos: 0 };
+        }
+        grupos[key].total++;
+        if (m.leida) grupos[key].leidos++;
+        else grupos[key].noLeidos++;
+      });
+      const lista = Object.values(grupos).sort((a: any, b: any) =>
+        new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      );
+      setMetricasMensajes(lista);
+    } catch (e) { console.error(e); }
+    finally { setCargandoMetricasMensajes(false); }
+  };
 
   const cargarTrabajos = async () => {
     setCargandoTrabajos(true);
@@ -820,7 +849,64 @@ export default function Admin() {
               <button onClick={() => setModoComunicacion('individual')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>👤 Individual</button>
               <button onClick={() => setModoComunicacion('masivo')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📣 Masivo</button>
               <button onClick={() => { setModoComunicacion('whatsapp'); cargarUsuariosWA(); }} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'whatsapp' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📱 WhatsApp</button>
+              <button onClick={() => { setModoComunicacion('metricas'); cargarMetricasMensajes(); }} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'metricas' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📊 Métricas</button>
             </div>
+
+            {modoComunicacion === 'metricas' && (
+              <div>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+                  <p className="text-amber-800 text-sm font-bold mb-1">📊 Métricas de mensajes</p>
+                  <p className="text-amber-700 text-xs leading-relaxed">Aquí ves cuántos usuarios leyeron cada mensaje que enviaste. Se agrupan por título y minuto de envío.</p>
+                </div>
+                {cargandoMetricasMensajes ? (
+                  <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"/></div>
+                ) : metricasMensajes.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                    <p className="text-4xl mb-3">📭</p>
+                    <p className="font-bold text-gray-900">Sin mensajes enviados aún</p>
+                    <p className="text-gray-400 text-sm mt-1">Los mensajes masivos e individuales aparecerán aquí</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {metricasMensajes.map((m, i) => {
+                      const pct = m.total > 0 ? Math.round((m.leidos / m.total) * 100) : 0;
+                      return (
+                        <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 pr-3">
+                              <p className="font-extrabold text-gray-900 text-sm">{m.titulo}</p>
+                              {m.mensaje && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{m.mensaje}</p>}
+                              <p className="text-xs text-gray-400 mt-1">{new Date(m.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={'text-2xl font-extrabold ' + (pct >= 70 ? 'text-green-600' : pct >= 40 ? 'text-amber-500' : 'text-red-500')}>{pct}%</p>
+                              <p className="text-xs text-gray-400">leído</p>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 bg-gray-100 rounded-full mb-3 overflow-hidden">
+                            <div className={'h-full rounded-full transition-all ' + (pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400')} style={{ width: pct + '%' }}/>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-gray-50 rounded-xl p-2.5 text-center">
+                              <p className="text-lg font-extrabold text-gray-900">{m.total}</p>
+                              <p className="text-xs text-gray-400">Enviados</p>
+                            </div>
+                            <div className="bg-green-50 rounded-xl p-2.5 text-center">
+                              <p className="text-lg font-extrabold text-green-600">{m.leidos}</p>
+                              <p className="text-xs text-gray-400">✅ Leídos</p>
+                            </div>
+                            <div className="bg-red-50 rounded-xl p-2.5 text-center">
+                              <p className="text-lg font-extrabold text-red-500">{m.noLeidos}</p>
+                              <p className="text-xs text-gray-400">🔴 Sin leer</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {modoComunicacion === 'whatsapp' && (
               <div>
