@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -24,21 +24,86 @@ const horas = [
   '19:00', '20:00', '21:00',
 ];
 
+const preguntasPorCategoria: Record<string, { id: string; pregunta: string; placeholder: string }[]> = {
+  hogar: [
+    { id: 'tipo_problema', pregunta: '¿Qué necesitas reparar o arreglar?', placeholder: 'Ej. Fuga de agua, puerta que no cierra, lampara...' },
+    { id: 'urgencia_desc', pregunta: '¿Desde cuándo tienes este problema?', placeholder: 'Ej. Desde ayer, hace una semana...' },
+    { id: 'materiales', pregunta: '¿Tienes los materiales o necesitas que los traigan?', placeholder: 'Ej. Tengo los materiales, necesito que traigan todo...' },
+  ],
+  limpieza: [
+    { id: 'tipo_inmueble', pregunta: '¿Qué tipo de inmueble es?', placeholder: 'Ej. Casa, departamento, oficina, Airbnb...' },
+    { id: 'tamano', pregunta: '¿Cuántos cuartos o metros aproximadamente?', placeholder: 'Ej. 3 cuartos, 80m2...' },
+    { id: 'tipo_limpieza', pregunta: '¿Limpieza regular o profunda?', placeholder: 'Ej. Limpieza regular semanal, limpieza profunda...' },
+  ],
+  eventos: [
+    { id: 'tipo_evento', pregunta: '¿Qué tipo de evento es?', placeholder: 'Ej. Boda, quinceañera, cumpleaños, corporativo...' },
+    { id: 'num_personas', pregunta: '¿Cuántas personas asistirán aproximadamente?', placeholder: 'Ej. 50 personas, 200 invitados...' },
+    { id: 'servicio_necesario', pregunta: '¿Qué servicio necesitas específicamente?', placeholder: 'Ej. Meseros, cocineros, staff, bartender...' },
+  ],
+  mudanza: [
+    { id: 'origen_destino', pregunta: '¿De dónde a dónde es la mudanza?', placeholder: 'Ej. De Col. Centro a Col. Jardines...' },
+    { id: 'volumen', pregunta: '¿Qué tan grande es la mudanza?', placeholder: 'Ej. Solo muebles de sala, departamento completo...' },
+    { id: 'piso', pregunta: '¿Hay escaleras o elevador?', placeholder: 'Ej. Piso 3 sin elevador, planta baja...' },
+  ],
+  ejecutivo: [
+    { id: 'ruta', pregunta: '¿De dónde a dónde necesitas transporte?', placeholder: 'Ej. Del aeropuerto al hotel, traslados diarios...' },
+    { id: 'frecuencia', pregunta: '¿Es un servicio de una vez o recurrente?', placeholder: 'Ej. Solo hoy, todos los días de lunes a viernes...' },
+    { id: 'num_pasajeros', pregunta: '¿Cuántos pasajeros serán?', placeholder: 'Ej. Solo yo, 3 personas...' },
+  ],
+  interprete: [
+    { id: 'idiomas', pregunta: '¿Qué idiomas necesitas?', placeholder: 'Ej. Español-Inglés, Español-Francés...' },
+    { id: 'contexto', pregunta: '¿Para qué lo necesitas?', placeholder: 'Ej. Reunión de negocios, visita médica, evento...' },
+    { id: 'duracion', pregunta: '¿Cuántas horas aproximadamente?', placeholder: 'Ej. 2 horas, todo el día...' },
+  ],
+  cocina: [
+    { id: 'tipo_comida', pregunta: '¿Qué tipo de comida o platillos necesitas?', placeholder: 'Ej. Comida mexicana para 10 personas, postres...' },
+    { id: 'ocasion', pregunta: '¿Es para qué ocasión?', placeholder: 'Ej. Comida familiar, evento de empresa, cena especial...' },
+    { id: 'lugar', pregunta: '¿Cocinará en tu casa o traerá la comida lista?', placeholder: 'Ej. En mi cocina, necesito que traiga todo listo...' },
+  ],
+  jardineria: [
+    { id: 'tipo_trabajo', pregunta: '¿Qué necesitas exactamente?', placeholder: 'Ej. Poda de árboles, siembra, mantenimiento mensual...' },
+    { id: 'tamano_jardin', pregunta: '¿Qué tan grande es el jardín o espacio?', placeholder: 'Ej. Jardín pequeño de casa, espacio grande...' },
+    { id: 'frecuencia', pregunta: '¿Es un servicio de una vez o recurrente?', placeholder: 'Ej. Solo esta vez, cada 15 días...' },
+  ],
+  mecanica: [
+    { id: 'tipo_vehiculo', pregunta: '¿Qué tipo de vehículo es?', placeholder: 'Ej. Sedan 2018, camioneta, motocicleta...' },
+    { id: 'problema', pregunta: '¿Qué problema presenta?', placeholder: 'Ej. No enciende, hace ruido extraño, cambio de aceite...' },
+    { id: 'ubicacion_auto', pregunta: '¿El vehículo puede moverse o está varado?', placeholder: 'Ej. Está en mi casa, está varado en la calle...' },
+  ],
+  cerrajeria: [
+    { id: 'tipo_problema', pregunta: '¿Qué necesitas?', placeholder: 'Ej. Perdí mis llaves, cerradura descompuesta, duplicado...' },
+    { id: 'tipo_puerta', pregunta: '¿Es puerta de casa, coche, oficina?', placeholder: 'Ej. Puerta principal de casa, coche, candado...' },
+    { id: 'urgencia_desc', pregunta: '¿Estás encerrado o puedes esperar?', placeholder: 'Ej. Estoy afuera de mi casa, puedo esperar...' },
+  ],
+  estetica: [
+    { id: 'servicio', pregunta: '¿Qué servicio necesitas?', placeholder: 'Ej. Uñas acrílicas, manicure, pedicure, depilación...' },
+    { id: 'lugar', pregunta: '¿A domicilio o en su lugar de trabajo?', placeholder: 'Ej. En mi casa, en su salón...' },
+    { id: 'referencia', pregunta: '¿Tienes alguna referencia o foto de lo que quieres?', placeholder: 'Ej. Sí tengo foto, quiero algo sencillo en color nude...' },
+  ],
+  otro: [
+    { id: 'descripcion_libre', pregunta: '¿Qué necesitas exactamente?', placeholder: 'Describe con el mayor detalle posible lo que necesitas...' },
+    { id: 'experiencia', pregunta: '¿Necesitas que tenga experiencia específica?', placeholder: 'Ej. Con experiencia en X, no importa si es nuevo...' },
+  ],
+};
+
 function PublicarForm() {
   const searchParams = useSearchParams();
   const paraId = searchParams.get('para');
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const [paso, setPaso] = useState(1);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [titulo, setTitulo] = useState('');
-  const [descripcion, setDescripcion] = useState('');
+  const [respuestasCategoria, setRespuestasCategoria] = useState<Record<string, string>>({});
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
-  const [presupuesto, setPresupuesto] = useState('');
   const [direccion, setDireccion] = useState('');
   const [urgente, setUrgente] = useState(false);
   const [metodoPago, setMetodoPago] = useState<'stripe' | 'efectivo'>('stripe');
   const [cupos, setCupos] = useState(1);
+  const [fotoProblema, setFotoProblema] = useState<File | null>(null);
+  const [fotoProblemaUrl, setFotoProblemaUrl] = useState<string>('');
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [publicado, setPublicado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +113,7 @@ function PublicarForm() {
   const [rolUsuario, setRolUsuario] = useState('flekser');
   const [horaMinima, setHoraMinima] = useState('');
   const [geocodificando, setGeocodificando] = useState(false);
+  const [usuarioId, setUsuarioId] = useState('');
 
   const hoyStr = new Date().toISOString().split('T')[0];
 
@@ -55,6 +121,7 @@ function PublicarForm() {
     const cargarDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUsuarioId(user.id);
       const { data } = await supabase.from('usuarios').select('wallet_saldo, rol, rol_activo').eq('id', user.id).single();
       setWalletSaldo(data?.wallet_saldo || 0);
       setRolUsuario(data?.rol_activo || data?.rol || 'flekser');
@@ -73,8 +140,8 @@ function PublicarForm() {
       ahora.setHours(ahora.getHours() + 3);
       const hh = String(ahora.getHours()).padStart(2, '0');
       const mm = String(ahora.getMinutes()).padStart(2, '0');
-      setHoraMinima(`${hh}:${mm}`);
-      if (hora && hora < `${hh}:${mm}`) setHora('');
+      setHoraMinima(hh + ':' + mm);
+      if (hora && hora < hh + ':' + mm) setHora('');
     } else {
       setHoraMinima('');
     }
@@ -84,11 +151,55 @@ function PublicarForm() {
   const esEmpresa = rolUsuario === 'empresa';
   const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : '/home';
   const horasFiltradas = horas.filter(h => { if (!horaMinima) return true; return h >= horaMinima.slice(0, 5); });
+  const preguntasActuales = preguntasPorCategoria[categoriaSeleccionada] || preguntasPorCategoria['otro'];
+
+  const generarTituloAutomatico = () => {
+    const cat = categorias.find(c => c.id === categoriaSeleccionada);
+    const primeraRespuesta = respuestasCategoria[preguntasActuales[0]?.id];
+    if (primeraRespuesta && primeraRespuesta.trim()) {
+      return cat?.emoji + ' ' + primeraRespuesta.trim().slice(0, 60);
+    }
+    return cat?.emoji + ' ' + cat?.nombre + ' en Irapuato';
+  };
+
+  const generarDescripcion = () => {
+    return preguntasActuales
+      .map(p => {
+        const r = respuestasCategoria[p.id];
+        if (!r?.trim()) return null;
+        return p.pregunta + '\n' + r.trim();
+      })
+      .filter(Boolean)
+      .join('\n\n');
+  };
+
+  const handleFotoProblema = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoProblema(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setFotoProblemaUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const subirFotoProblema = async (servicioId: string): Promise<string | null> => {
+    if (!fotoProblema || !usuarioId) return null;
+    try {
+      setSubiendoFoto(true);
+      const ext = fotoProblema.name.split('.').pop();
+      const path = usuarioId + '/servicios/' + servicioId + '.' + ext;
+      const { error: uploadError } = await supabase.storage.from('fotos-servicios').upload(path, fotoProblema, { upsert: true });
+      if (uploadError) return null;
+      const { data } = supabase.storage.from('fotos-servicios').getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e) { return null; }
+    finally { setSubiendoFoto(false); }
+  };
 
   const geocodificarDireccion = async (dir: string): Promise<{ lat: number; lng: number } | null> => {
     try {
       setGeocodificando(true);
-      const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(dir + ', México')}&format=json&limit=1`, { headers: { 'Accept-Language': 'es', 'User-Agent': 'FleksiApp/1.0' } });
+      const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(dir + ', México') + '&format=json&limit=1', { headers: { 'Accept-Language': 'es', 'User-Agent': 'FleksiApp/1.0' } });
       const data = await resp.json();
       if (data?.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       return null;
@@ -97,15 +208,16 @@ function PublicarForm() {
   };
 
   const handlePublicar = async () => {
-    if (!titulo || !fecha || !presupuesto) { setError('Por favor completa título, fecha y presupuesto'); return; }
+    const tituloFinal = titulo.trim() || generarTituloAutomatico();
+    if (!tituloFinal || !fecha) { setError('Por favor completa el título y la fecha'); return; }
     setCargando(true); setError('');
     const ahora = new Date();
-    const fechaSeleccionada = new Date(`${fecha}T${hora || '23:59'}`);
+    const fechaSeleccionada = new Date(fecha + 'T' + (hora || '23:59'));
     if (fechaSeleccionada < ahora) { setError('La fecha y hora del trabajo no puede ser en el pasado'); setCargando(false); return; }
     if (urgente) {
       const tresHoras = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
       if (fechaSeleccionada < tresHoras) {
-        setError(`Para trabajos urgentes necesitas al menos 3 horas de anticipación. El trabajo más temprano es a las ${String(tresHoras.getHours()).padStart(2,'0')}:${String(tresHoras.getMinutes()).padStart(2,'0')}.`);
+        setError('Para trabajos urgentes necesitas al menos 3 horas de anticipación. El trabajo más temprano es a las ' + String(tresHoras.getHours()).padStart(2, '0') + ':' + String(tresHoras.getMinutes()).padStart(2, '0') + '.');
         setCargando(false); return;
       }
     }
@@ -114,23 +226,34 @@ function PublicarForm() {
       if (!user) { window.location.href = '/login'; return; }
       let coords = null;
       if (direccion.trim()) coords = await geocodificarDireccion(direccion);
+      const descripcionFinal = generarDescripcion();
       const { data: servicioCreado, error: dbError } = await supabase.from('servicios').insert({
-        cliente_id: user.id, titulo, descripcion,
-        categoria: categoriaSeleccionada, fecha, hora: hora || null,
-        presupuesto: Number(presupuesto), direccion: direccion || null,
+        cliente_id: user.id,
+        titulo: tituloFinal,
+        descripcion: descripcionFinal,
+        categoria: categoriaSeleccionada,
+        fecha, hora: hora || null,
+        presupuesto: null,
+        direccion: direccion || null,
         lat: coords?.lat || null, lng: coords?.lng || null,
         urgente, seguro: false, metodo_pago: metodoPago, estado: 'activo',
         flekser_sugerido_id: flekserSugerido?.id || null,
         cupos: esEmpresa ? cupos : 1, cupos_tomados: 0,
       }).select().single();
       if (dbError) throw dbError;
+      if (fotoProblema && servicioCreado) {
+        const urlFoto = await subirFotoProblema(servicioCreado.id);
+        if (urlFoto) {
+          await supabase.from('servicios').update({ foto_problema: urlFoto }).eq('id', servicioCreado.id);
+        }
+      }
       if (flekserSugerido?.id && servicioCreado) {
         try {
           await supabase.from('notificaciones').insert({
             usuario_id: flekserSugerido.id, tipo: 'solicitud_directa',
             titulo: '🎯 ¡Te enviaron una solicitud directa!',
-            mensaje: `Alguien quiere contratarte para: "${titulo}" el ${fecha}. ¡Aplica antes que nadie!`,
-            link: `/trabajo?id=${servicioCreado.id}`,
+            mensaje: 'Alguien quiere contratarte para: "' + tituloFinal + '" el ' + fecha + '. ¡Aplica antes que nadie!',
+            link: '/trabajo?id=' + servicioCreado.id,
           });
         } catch (e) {}
       }
@@ -140,6 +263,7 @@ function PublicarForm() {
   };
 
   if (publicado) {
+    const tituloFinal = titulo.trim() || generarTituloAutomatico();
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
@@ -147,12 +271,16 @@ function PublicarForm() {
             <span className="text-4xl">{flekserSugerido ? '🎯' : '🎉'}</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
-            {flekserSugerido ? `¡Solicitud enviada a ${flekserSugerido.nombre?.split(' ')[0]}!` : '¡Publicado con éxito!'}
+            {flekserSugerido ? '¡Solicitud enviada a ' + flekserSugerido.nombre?.split(' ')[0] + '!' : '¡Publicado con éxito!'}
           </h1>
           <p className="text-gray-400 mb-8 font-light">
-            {flekserSugerido ? `${flekserSugerido.nombre?.split(' ')[0]} recibió una notificación y podrá aplicar directamente.` : 'Tu solicitud ya está visible para los fleksers cerca de ti.'}
+            {flekserSugerido ? flekserSugerido.nombre?.split(' ')[0] + ' recibió una notificación y podrá aplicar directamente.' : 'Tu solicitud ya está visible. Los Fleksers cercanos te enviarán sus propuestas con precio incluido.'}
           </p>
-          <div className="bg-white rounded-2xl p-4 mb-6 text-left border border-gray-100">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 text-left">
+            <p className="text-blue-800 text-sm font-bold mb-1">💡 ¿Qué sigue?</p>
+            <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados aplicarán con su precio propuesto. Tú revisas sus perfiles, calificaciones y precios, y eliges al que más te convenga. También puedes hacerles una contraoferta.</p>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4 text-left">
             {flekserSugerido && (
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -164,15 +292,14 @@ function PublicarForm() {
                 </div>
               </div>
             )}
-            <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Servicio</span><span className="font-semibold text-sm text-gray-900">{titulo}</span></div>
-            <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Presupuesto</span><span className="font-semibold text-sm text-purple-600">${presupuesto} MXN</span></div>
+            <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Servicio</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{tituloFinal}</span></div>
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Fecha</span><span className="font-semibold text-sm text-gray-900">{fecha} {hora}</span></div>
-            {esEmpresa && cupos > 1 && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Cupos</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
+            <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Stripe' : '💵 Efectivo'}</span></div>
             <div className="flex justify-between"><span className="text-gray-400 text-sm">Estado</span><span className="font-semibold text-sm text-green-600">✅ Activo</span></div>
           </div>
-          <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver mis solicitudes</a>
+          <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver propuestas</a>
           <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">Volver al inicio</a>
         </div>
       </main>
@@ -191,7 +318,7 @@ function PublicarForm() {
             </div>
           </div>
           <div className="flex gap-2">
-            {[1,2,3].map((p) => (<div key={p} className={`h-1.5 flex-1 rounded-full transition-all ${p <= paso ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-200'}`}/>))}
+            {[1,2,3].map((p) => (<div key={p} className={'h-1.5 flex-1 rounded-full transition-all ' + (p <= paso ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-200')}/>))}
           </div>
         </div>
       </div>
@@ -211,6 +338,7 @@ function PublicarForm() {
           </div>
         )}
 
+        {/* ── PASO 1: CATEGORÍA ── */}
         {paso === 1 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">¿Qué necesitas?</h2>
@@ -218,7 +346,7 @@ function PublicarForm() {
             <div className="grid grid-cols-2 gap-3">
               {categorias.map((cat) => (
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
-                  className={`p-4 rounded-2xl border-2 text-left transition ${categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
+                  className={'p-4 rounded-2xl border-2 text-left transition ' + (categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300')}>
                   <span className="text-2xl mb-2 block">{cat.emoji}</span>
                   <span className="text-sm font-semibold text-gray-900">{cat.nombre}</span>
                 </button>
@@ -227,39 +355,80 @@ function PublicarForm() {
           </div>
         )}
 
+        {/* ── PASO 2: DETALLES ── */}
         {paso === 2 && (
           <div>
-            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Cuéntanos más</h2>
-            <p className="text-gray-400 mb-6 font-light">Mientras más detalle des, mejores propuestas recibirás</p>
+            <h2 className="text-xl font-extrabold text-gray-900 mb-1">Cuéntanos más</h2>
+            <p className="text-gray-400 mb-6 font-light">Con más detalles recibirás mejores propuestas</p>
             {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
+
+              {/* Preguntas específicas por categoría */}
+              {preguntasActuales.map((p) => (
+                <div key={p.id}>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">{p.pregunta}</label>
+                  <textarea
+                    placeholder={p.placeholder}
+                    value={respuestasCategoria[p.id] || ''}
+                    onChange={(e) => setRespuestasCategoria(prev => ({ ...prev, [p.id]: e.target.value }))}
+                    rows={2}
+                    className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none text-sm"
+                  />
+                </div>
+              ))}
+
+              {/* Foto opcional del problema */}
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Título de tu solicitud</label>
-                <input type="text" placeholder="Ej. Necesito plomero para fuga en cocina" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                  📸 Foto del problema o referencia <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-3">Una imagen ayuda mucho a los Fleksers a entender exactamente qué necesitas</p>
+                {fotoProblemaUrl ? (
+                  <div className="relative">
+                    <img src={fotoProblemaUrl} alt="Foto del problema" className="w-full h-48 object-cover rounded-2xl border-2 border-purple-200"/>
+                    <button
+                      onClick={() => { setFotoProblema(null); setFotoProblemaUrl(''); }}
+                      className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-gray-600 font-bold hover:bg-red-50 hover:text-red-500 transition">
+                      ✕
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">✅ Foto agregada</div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fotoInputRef.current?.click()}
+                    className="w-full h-32 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition">
+                    <span className="text-3xl">📷</span>
+                    <span className="text-sm font-semibold text-gray-500">Toca para agregar foto</span>
+                    <span className="text-xs text-gray-400">JPG, PNG — máx 10MB</span>
+                  </button>
+                )}
+                <input ref={fotoInputRef} type="file" accept="image/*" onChange={handleFotoProblema} className="hidden"/>
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">Descripción detallada</label>
-                <textarea placeholder="Describe exactamente qué necesitas..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={4} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
-              </div>
+
+              {/* Dirección */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección del trabajo</label>
-                <input type="text" placeholder="Ej. Av. Insurgentes 123, Col. Roma, CDMX" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-                <p className="text-xs text-gray-400 mt-1">📍 Se usará para verificar la ubicación del flekser al hacer check-in</p>
+                <input type="text" placeholder="Ej. Calle Reforma 123, Col. Centro, Irapuato" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                <p className="text-xs text-gray-400 mt-1">Se usará para mostrar Fleksers cercanos a ti</p>
               </div>
+
+              {/* Fecha */}
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 ¿Para cuándo lo necesitas?</label>
                 <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} min={hoyStr} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
                 {fecha && fecha === hoyStr && <p className="text-xs text-amber-600 font-semibold mt-1">📅 Estás publicando para hoy</p>}
               </div>
+
+              {/* Hora */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                  🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span>
-                  {horaMinima && <span className="text-amber-600 font-semibold ml-2">— mínimo {horaMinima.slice(0,5)} por trabajo urgente</span>}
+                  🕐 Hora preferida <span className="text-gray-400 font-normal">(opcional)</span>
+                  {horaMinima && <span className="text-amber-600 font-semibold ml-2">— mínimo {horaMinima.slice(0,5)} por urgente</span>}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {horasFiltradas.map((h) => (
                     <button key={h} onClick={() => setHora(hora === h ? '' : h)}
-                      className={`py-2 rounded-xl text-sm font-semibold transition border-2 ${hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300'}`}>
+                      className={'py-2 rounded-xl text-sm font-semibold transition border-2 ' + (hora === h ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-500 hover:border-purple-300')}>
                       {h}
                     </button>
                   ))}
@@ -271,10 +440,8 @@ function PublicarForm() {
                   )}
                 </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">💰 Tu presupuesto por persona (MXN)</label>
-                <input type="number" placeholder="Ej. 500" value={presupuesto} onChange={(e) => setPresupuesto(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-              </div>
+
+              {/* Cupos empresa */}
               {esEmpresa && (
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">👥 ¿Cuántas personas necesitas?</label>
@@ -286,14 +453,15 @@ function PublicarForm() {
                     </div>
                     <button onClick={() => setCupos(Math.min(50, cupos + 1))} className="w-10 h-10 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-purple-400 transition text-lg">+</button>
                   </div>
-                  {cupos > 1 && <p className="text-xs text-purple-600 font-semibold mt-2 text-center">💰 Total estimado: ${Number(presupuesto || 0) * cupos} MXN ({cupos} × ${presupuesto || 0})</p>}
                 </div>
               )}
+
+              {/* Método de pago */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">💳 Método de pago</label>
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => setMetodoPago('stripe')} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300'}`}>
+                  <button onClick={() => setMetodoPago('stripe')} className={'flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ' + (metodoPago === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white')}>
+                    <div className={'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (metodoPago === 'stripe' ? 'border-purple-500' : 'border-gray-300')}>
                       {metodoPago === 'stripe' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
                     </div>
                     <div className="flex-1">
@@ -303,8 +471,8 @@ function PublicarForm() {
                     <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">Recomendado</span>
                   </button>
                   <button onClick={() => efectivoHabilitado ? setMetodoPago('efectivo') : null}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ${!efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' : metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'}`}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300'}`}>
+                    className={'flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ' + (!efectivoHabilitado ? 'opacity-60 cursor-not-allowed border-gray-200 bg-gray-50' : metodoPago === 'efectivo' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white')}>
+                    <div className={'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (metodoPago === 'efectivo' && efectivoHabilitado ? 'border-teal-500' : 'border-gray-300')}>
                       {metodoPago === 'efectivo' && efectivoHabilitado && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full"/>}
                     </div>
                     <div className="flex-1">
@@ -314,13 +482,15 @@ function PublicarForm() {
                       </div>
                       {efectivoHabilitado
                         ? <p className="text-xs text-gray-400">5% de comisión para cada parte vía wallet.</p>
-                        : <p className="text-xs text-amber-600 font-semibold">Necesitas $50 en tu wallet.{' '}<a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>Recargar →</a></p>}
+                        : <p className="text-xs text-amber-600 font-semibold">Necesitas $50 en tu wallet. <a href="/wallet/recargar" className="underline" onClick={(e) => e.stopPropagation()}>Recargar →</a></p>}
                     </div>
                     {efectivoHabilitado && <span className="text-xs bg-teal-100 text-teal-700 font-bold px-2 py-1 rounded-full">Saldo: ${walletSaldo.toFixed(0)}</span>}
                   </button>
                 </div>
               </div>
-              <div onClick={() => setUrgente(!urgente)} className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}>
+
+              {/* Urgente */}
+              <div onClick={() => setUrgente(!urgente)} className={'flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ' + (urgente ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white')}>
                 <div className="flex items-center gap-3">
                   <span className="text-xl">🔴</span>
                   <div>
@@ -328,19 +498,21 @@ function PublicarForm() {
                     <p className="text-xs text-gray-400">Mínimo 3 horas de anticipación · Aparece primero</p>
                   </div>
                 </div>
-                <div className={`w-12 h-6 rounded-full transition-all ${urgente ? 'bg-red-500' : 'bg-gray-300'}`}>
-                  <div className={`w-6 h-6 bg-white rounded-full shadow transition-all ${urgente ? 'translate-x-6' : 'translate-x-0'}`}/>
+                <div className={'w-12 h-6 rounded-full transition-all ' + (urgente ? 'bg-red-500' : 'bg-gray-300')}>
+                  <div className={'w-6 h-6 bg-white rounded-full shadow transition-all ' + (urgente ? 'translate-x-6' : 'translate-x-0')}/>
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* ── PASO 3: CONFIRMACIÓN ── */}
         {paso === 3 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">Confirma tu solicitud</h2>
             <p className="text-gray-400 mb-6 font-light">Revisa los detalles antes de publicar</p>
             {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
+
             {flekserSugerido && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -353,36 +525,57 @@ function PublicarForm() {
                 </div>
               </div>
             )}
+
+            {/* Resumen */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <div className="flex flex-col gap-3">
-                <div className="flex justify-between"><span className="text-gray-400 text-sm">Categoría</span><span className="font-semibold text-sm text-gray-900">{categorias.find(c => c.id === categoriaSeleccionada)?.emoji} {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-sm">Título</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{titulo}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-sm">Fecha</span><span className="font-semibold text-sm text-gray-900">{fecha} {hora || 'Sin hora'}</span></div>
-                {direccion && <div className="flex justify-between"><span className="text-gray-400 text-sm">📍 Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
-                <div className="flex justify-between"><span className="text-gray-400 text-sm">Presupuesto por persona</span><span className="font-extrabold text-sm text-purple-600">${presupuesto} MXN</span></div>
-                {esEmpresa && cupos > 1 && <div className="flex justify-between"><span className="text-gray-400 text-sm">👥 Cupos</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-400 text-sm">Categoría</span>
+                  <span className="font-semibold text-sm text-gray-900">{categorias.find(c => c.id === categoriaSeleccionada)?.emoji} {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}</span>
+                </div>
+                {fecha && <div className="flex justify-between"><span className="text-gray-400 text-sm">Fecha</span><span className="font-semibold text-sm text-gray-900">{fecha} {hora || 'Sin hora fija'}</span></div>}
+                {direccion && <div className="flex justify-between items-start"><span className="text-gray-400 text-sm flex-shrink-0">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right ml-4">{direccion}</span></div>}
+                {esEmpresa && cupos > 1 && <div className="flex justify-between"><span className="text-gray-400 text-sm">Personas</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
                 <div className="flex justify-between"><span className="text-gray-400 text-sm">Método de pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span></div>
                 {urgente && <div className="flex justify-between"><span className="text-gray-400 text-sm">Urgencia</span><span className="font-semibold text-sm text-red-600">🔴 Urgente</span></div>}
               </div>
             </div>
+
+            {/* Resumen de respuestas */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
-              <div className="flex justify-between mb-2"><span className="text-gray-500 text-sm">Presupuesto por persona</span><span className="font-semibold text-sm">${presupuesto} MXN</span></div>
-              {esEmpresa && cupos > 1 && <div className="flex justify-between mb-2"><span className="text-gray-500 text-sm">× {cupos} personas</span><span className="font-semibold text-sm">${Number(presupuesto) * cupos} MXN</span></div>}
-              {metodoPago === 'efectivo' && <div className="flex justify-between mb-2"><span className="text-gray-500 text-sm">📊 Comisión efectivo (5%)</span><span className="font-semibold text-sm text-orange-600">${(Number(presupuesto) * 0.05).toFixed(2)} MXN (de tu wallet)</span></div>}
-              <div className="border-t border-gray-200 pt-2 flex justify-between">
-                <span className="font-extrabold text-gray-900">{metodoPago === 'stripe' ? 'Total a pagar' : 'Pagas al flekser'}</span>
-                <span className="font-extrabold text-purple-600">{metodoPago === 'stripe' ? `$${Number(presupuesto)} MXN` : `$${presupuesto} MXN en efectivo`}</span>
+              <p className="text-sm font-bold text-gray-700 mb-3">📋 Tu descripción</p>
+              <div className="flex flex-col gap-3">
+                {preguntasActuales.map((p) => {
+                  const r = respuestasCategoria[p.id];
+                  if (!r?.trim()) return null;
+                  return (
+                    <div key={p.id}>
+                      <p className="text-xs font-semibold text-gray-500">{p.pregunta}</p>
+                      <p className="text-sm text-gray-800 mt-0.5">{r}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            {metodoPago === 'efectivo' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
-                <p className="text-amber-800 text-xs font-semibold">💡 Al confirmar el trabajo, se descontará ${(Number(presupuesto) * 0.05).toFixed(2)} MXN de tu wallet como comisión de Fleksi. El flekser también paga 5%.</p>
+
+            {/* Foto si la subió */}
+            {fotoProblemaUrl && (
+              <div className="mb-4">
+                <p className="text-sm font-bold text-gray-700 mb-2">📸 Foto adjunta</p>
+                <img src={fotoProblemaUrl} alt="Foto del problema" className="w-full h-40 object-cover rounded-2xl border border-gray-200"/>
               </div>
             )}
+
+            {/* Info de precio */}
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
+              <p className="text-blue-800 text-sm font-bold mb-1">💡 Sobre el precio</p>
+              <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados te enviarán sus propuestas con precio incluido. Tú puedes aceptar directamente o hacer una contraoferta con el precio que tienes disponible.</p>
+            </div>
+
             {geocodificando && (
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4 flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0"/>
-                <p className="text-blue-700 text-xs font-semibold">Geocodificando dirección...</p>
+                <p className="text-blue-700 text-xs font-semibold">Verificando dirección...</p>
               </div>
             )}
           </div>
@@ -393,12 +586,18 @@ function PublicarForm() {
         <div className="max-w-md mx-auto flex gap-3">
           {paso > 1 && <button onClick={() => setPaso(paso - 1)} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">← Regresar</button>}
           {paso < 3 ? (
-            <button onClick={() => { setError(''); setPaso(paso + 1); }} disabled={paso === 1 && !categoriaSeleccionada} className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+            <button
+              onClick={() => { setError(''); setPaso(paso + 1); }}
+              disabled={paso === 1 && !categoriaSeleccionada}
+              className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
               Continuar →
             </button>
           ) : (
-            <button onClick={handlePublicar} disabled={cargando || geocodificando} className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-              {cargando ? 'Publicando...' : geocodificando ? 'Geocodificando...' : flekserSugerido ? `🎯 Enviar solicitud a ${flekserSugerido.nombre?.split(' ')[0]}` : '🚀 Publicar solicitud'}
+            <button
+              onClick={handlePublicar}
+              disabled={cargando || geocodificando || subiendoFoto}
+              className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar solicitud a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
             </button>
           )}
         </div>
