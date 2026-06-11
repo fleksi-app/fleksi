@@ -59,19 +59,32 @@ export default function PerfilPublico() {
         .from('badges').select('*').eq('usuario_id', id);
       setBadges(badgesData || []);
 
+      // Portafolio manual + fotos de trabajos completados
+      const { data: portManual } = await supabase
+        .from('portafolio_fotos')
+        .select('*')
+        .eq('usuario_id', id)
+        .order('created_at', { ascending: false });
+
       const { data: appsData } = await supabase
         .from('aplicaciones')
         .select('fotos_despues, servicios(titulo)')
         .eq('prestador_id', id)
         .eq('estado', 'completado');
 
-      const fotos: { foto: string; titulo: string }[] = [];
+      const fotosTrabajos: { foto: string; titulo: string }[] = [];
       (appsData || []).forEach((app: any) => {
         (app.fotos_despues || []).forEach((url: string) => {
-          fotos.push({ foto: url, titulo: app.servicios?.titulo || 'Trabajo completado' });
+          fotosTrabajos.push({ foto: url, titulo: app.servicios?.titulo || 'Trabajo completado' });
         });
       });
-      setPortafolio(fotos);
+
+      const fotosManual = (portManual || []).map((f: any) => ({
+        foto: f.foto_url,
+        titulo: f.titulo || 'Mi trabajo',
+      }));
+
+      setPortafolio([...fotosManual, ...fotosTrabajos]);
 
     } catch (err) {
       console.error(err);
@@ -184,6 +197,26 @@ export default function PerfilPublico() {
           {perfil.descripcion && <p className="text-gray-600 text-sm leading-relaxed">{perfil.descripcion}</p>}
         </div>
 
+        {portafolio.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-gray-900">📸 Portafolio</h3>
+              <span className="text-xs text-gray-400">{portafolio.length} foto{portafolio.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {portafolio.map((item, i) => (
+                <button key={i} onClick={() => setFotoAmpliada(item.foto)}
+                  className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
+                  <img src={item.foto} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
+                    <p className="text-white text-xs font-semibold truncate">{item.titulo}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {perfil.habilidades?.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Habilidades</h3>
@@ -250,26 +283,6 @@ export default function PerfilPublico() {
             </div>
           )}
         </div>
-
-        {portafolio.length > 0 && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-gray-900">📸 Portafolio</h3>
-              <span className="text-xs text-gray-400">{portafolio.length} foto{portafolio.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {portafolio.map((item, i) => (
-                <button key={i} onClick={() => setFotoAmpliada(item.foto)}
-                  className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
-                  <img src={item.foto} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
-                    <p className="text-white text-xs font-semibold truncate">{item.titulo}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {perfil.ciudades_visitadas?.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">

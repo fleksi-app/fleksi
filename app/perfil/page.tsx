@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
-import { cacheGet, cacheSet, cacheInvalidate, TTL } from '@/lib/cache';
+import { cacheInvalidate } from '@/lib/cache';
 
 const habilidades = [
   '🧹 Limpieza del hogar', '🌿 Jardinería', '🎨 Pintura',
@@ -81,7 +81,8 @@ export default function Perfil() {
   const [fotoUrl, setFotoUrl] = useState('');
   const [badges, setBadges] = useState<any[]>([]);
   const [reseñas, setReseñas] = useState<any[]>([]);
-  const [portafolio, setPortafolio] = useState<{ foto: string; titulo: string }[]>([]);
+  const [portafolioTrabajos, setPortafolioTrabajos] = useState<{ foto: string; titulo: string }[]>([]);
+  const [portafolioManual, setPortafolioManual] = useState<any[]>([]);
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
   const [verificacion, setVerificacion] = useState<any>(null);
@@ -120,7 +121,14 @@ export default function Perfil() {
   const [mostrarEliminar, setMostrarEliminar] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState('');
 
+  // Portafolio manual
+  const [subiendoPortafolio, setSubiendoPortafolio] = useState(false);
+  const [tituloNuevoPortafolio, setTituloNuevoPortafolio] = useState('');
+  const [eliminandoFoto, setEliminandoFoto] = useState('');
+  const [mostrarAgregarFoto, setMostrarAgregarFoto] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const portafolioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { cargarPerfil(); }, []);
 
@@ -196,16 +204,27 @@ export default function Perfil() {
         .eq('prestador_id', user.id)
         .eq('estado', 'completado');
 
-      const fotosPortafolio: { foto: string; titulo: string }[] = [];
+      const fotosTrabajos: { foto: string; titulo: string }[] = [];
       let total = 0;
       (appsData || []).forEach((app: any) => {
         total += app.precio_ofrecido || app.servicios?.presupuesto || 0;
         (app.fotos_despues || []).forEach((url: string) => {
-          fotosPortafolio.push({ foto: url, titulo: app.servicios?.titulo || 'Trabajo completado' });
+          fotosTrabajos.push({ foto: url, titulo: app.servicios?.titulo || 'Trabajo completado' });
         });
       });
-      setPortafolio(fotosPortafolio);
+      setPortafolioTrabajos(fotosTrabajos);
       setTotalGanado(total);
+
+      // Cargar portafolio manual
+      const { data: { user: u2 } } = await supabase.auth.getUser();
+      if (u2) {
+        const { data: portData } = await supabase
+          .from('portafolio_fotos')
+          .select('*')
+          .eq('usuario_id', u2.id)
+          .order('created_at', { ascending: false });
+        setPortafolioManual(portData || []);
+      }
 
       const { data: verifData } = await supabase
         .from('verificaciones').select('*').eq('usuario_id', user.id).single();
@@ -221,6 +240,58 @@ export default function Perfil() {
       console.error(err);
     } finally {
       setCargando(false);
+    }
+  };
+
+  const subirFotoPortafolio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !usuario) return;
+    setSubiendoPortafolio(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = usuario.id + '/' + Date.now() + '.' + ext;
+      const { error: uploadError } = await supabase.storage
+        .from('portafolio')
+        .upload(path, file, { upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('portafolio').getPublicUrl(path);
+      await supabase.from('portafolio_fotos').insert({
+        usuario_id: usuario.id,
+        foto_url: urlData.publicUrl,
+        titulo: tituloNuevoPortafolio.trim() || null,
+      });
+      setTituloNuevoPortafolio('');
+      setMostrarAgregarFoto(false);
+      // Recargar portafolio
+      const { data: portData } = await supabase
+        .from('portafolio_fotos')
+        .select('*')
+        .eq('usuario_id', usuario.id)
+        .order('created_at', { ascending: false });
+      setPortafolioManual(portData || []);
+    } catch (err: any) {
+      alert('Error al subir foto: ' + err.message);
+    } finally {
+      setSubiendoPortafolio(false);
+      if (portafolioInputRef.current) portafolioInputRef.current.value = '';
+    }
+  };
+
+  const eliminarFotoPortafolio = async (foto: any) => {
+    setEliminandoFoto(foto.id);
+    try {
+      // Extraer path del URL
+      const url = foto.foto_url;
+      const partes = url.split('/portafolio/');
+      if (partes.length > 1) {
+        await supabase.storage.from('portafolio').remove([partes[1]]);
+      }
+      await supabase.from('portafolio_fotos').delete().eq('id', foto.id);
+      setPortafolioManual(prev => prev.filter(f => f.id !== foto.id));
+    } catch (err: any) {
+      alert('Error al eliminar: ' + err.message);
+    } finally {
+      setEliminandoFoto('');
     }
   };
 
@@ -419,6 +490,7 @@ export default function Perfil() {
   const verif = verificacionInfo();
   const perfilCompleto = progresoPerfil === 100;
   const faltantes = pasosFaltantes();
+  const todasLasFotos = [...portafolioManual.map((f: any) => ({ foto: f.foto_url, titulo: f.titulo || 'Mi trabajo', id: f.id, esManual: true })), ...portafolioTrabajos.map(f => ({ ...f, esManual: false }))];
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
@@ -713,6 +785,91 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* ── PORTAFOLIO MANUAL ── */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-extrabold text-gray-900">📸 Mi portafolio</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Fotos de tu trabajo que los clientes verán antes de contratarte</p>
+            </div>
+            <button
+              onClick={() => setMostrarAgregarFoto(!mostrarAgregarFoto)}
+              className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 py-2 rounded-xl hover:opacity-90 transition">
+              + Agregar
+            </button>
+          </div>
+
+          {mostrarAgregarFoto && (
+            <div className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
+              <p className="text-sm font-bold text-gray-700 mb-3">Nueva foto de portafolio</p>
+              <input
+                type="text"
+                placeholder="Título opcional (ej. Uñas acrílicas, Limpieza de casa...)"
+                value={tituloNuevoPortafolio}
+                onChange={(e) => setTituloNuevoPortafolio(e.target.value)}
+                className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm mb-3 transition"/>
+              <input
+                ref={portafolioInputRef}
+                type="file"
+                accept="image/*"
+                onChange={subirFotoPortafolio}
+                className="hidden"/>
+              <button
+                onClick={() => portafolioInputRef.current?.click()}
+                disabled={subiendoPortafolio}
+                className="w-full py-3 border-2 border-dashed border-purple-300 rounded-xl text-purple-600 font-bold text-sm hover:bg-purple-50 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                {subiendoPortafolio ? (
+                  <><div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"/> Subiendo...</>
+                ) : (
+                  <> 📷 Seleccionar foto</>
+                )}
+              </button>
+              <button
+                onClick={() => { setMostrarAgregarFoto(false); setTituloNuevoPortafolio(''); }}
+                className="w-full mt-2 py-2 text-gray-400 text-sm font-semibold hover:text-gray-600 transition">
+                Cancelar
+              </button>
+            </div>
+          )}
+
+          {todasLasFotos.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-2xl">
+              <p className="text-3xl mb-2">📷</p>
+              <p className="text-gray-500 font-semibold text-sm">Sin fotos todavía</p>
+              <p className="text-gray-400 text-xs mt-1">Agrega fotos de tus trabajos para atraer más clientes</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {todasLasFotos.map((item, i) => (
+                <div key={i} className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
+                  <button onClick={() => setFotoAmpliada(item.foto)} className="w-full h-full">
+                    <img src={item.foto} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-200 rounded-xl"/>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
+                      <p className="text-white text-xs font-semibold truncate">{item.titulo}</p>
+                    </div>
+                  </button>
+                  {item.esManual && (
+                    <button
+                      onClick={() => eliminarFotoPortafolio(item)}
+                      disabled={eliminandoFoto === item.id}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
+                      {eliminandoFoto === item.id ? '⏳' : '✕'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {todasLasFotos.length > 0 && (
+            <p className="text-xs text-gray-400 text-center mt-3">
+              {portafolioManual.length} foto{portafolioManual.length !== 1 ? 's' : ''} manual{portafolioManual.length !== 1 ? 'es' : ''}
+              {portafolioTrabajos.length > 0 && ' · ' + portafolioTrabajos.length + ' de trabajos completados'}
+            </p>
+          )}
+        </div>
+
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-4">🏅 Insignias</h3>
           <div className="grid grid-cols-4 gap-3">
@@ -750,27 +907,6 @@ export default function Perfil() {
                   </div>
                   {r.comentario && <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {portafolio.length > 0 && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-gray-900">📸 Mi portafolio</h3>
-              <span className="text-xs text-gray-400">{portafolio.length} foto{portafolio.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {portafolio.map((item, i) => (
-                <button key={i} onClick={() => setFotoAmpliada(item.foto)}
-                  className="relative group overflow-hidden rounded-xl aspect-square bg-gray-100">
-                  <img src={item.foto} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition duration-200"/>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-200 rounded-xl"/>
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 rounded-b-xl">
-                    <p className="text-white text-xs font-semibold truncate">{item.titulo}</p>
-                  </div>
-                </button>
               ))}
             </div>
           </div>
