@@ -15,6 +15,9 @@ const categorias = [
   { id: 'mecanica', emoji: '🔩', nombre: 'Mecánica básica' },
   { id: 'cerrajeria', emoji: '🔑', nombre: 'Cerrajería' },
   { id: 'estetica', emoji: '💅', nombre: 'Uñas / Estética' },
+  { id: 'envios', emoji: '🛵', nombre: 'Envíos y mensajería' },
+  { id: 'mascotas', emoji: '🐾', nombre: 'Mascotas y paseo' },
+  { id: 'super', emoji: '🛒', nombre: 'Hacer el súper' },
   { id: 'otro', emoji: '✨', nombre: 'Otro' },
 ];
 
@@ -80,6 +83,21 @@ const preguntasPorCategoria: Record<string, { id: string; pregunta: string; plac
     { id: 'lugar', pregunta: '¿A domicilio o en su lugar de trabajo?', placeholder: 'Ej. En mi casa, en su salón...' },
     { id: 'referencia', pregunta: '¿Tienes alguna referencia o foto de lo que quieres?', placeholder: 'Ej. Sí tengo foto, quiero algo sencillo en color nude...' },
   ],
+  envios: [
+    { id: 'tipo_envio', pregunta: '¿Qué necesitas enviar?', placeholder: 'Ej. Paquete pequeño, documentos, comida...' },
+    { id: 'ruta_envio', pregunta: '¿De dónde a dónde?', placeholder: 'Ej. De Col. Centro a Col. Jardines...' },
+    { id: 'vehiculo', pregunta: '¿Qué tipo de vehículo necesitas?', placeholder: 'Ej. Moto, bici, carro, camioneta...' },
+  ],
+  mascotas: [
+    { id: 'tipo_mascota', pregunta: '¿Qué tipo de mascota tienes?', placeholder: 'Ej. Perro labrador, gato, 2 perros pequeños...' },
+    { id: 'servicio_mascota', pregunta: '¿Qué servicio necesitas?', placeholder: 'Ej. Paseo diario, cuidado en casa, guardería...' },
+    { id: 'duracion_mascota', pregunta: '¿Por cuánto tiempo?', placeholder: 'Ej. 1 hora diaria, 3 días mientras viajo...' },
+  ],
+  super: [
+    { id: 'lista', pregunta: '¿Tienes lista o necesitas que elijan?', placeholder: 'Ej. Tengo lista en WhatsApp, solo frutas y verduras frescas...' },
+    { id: 'tienda', pregunta: '¿En qué tienda o supermercado?', placeholder: 'Ej. Walmart, Chedraui, mercado local...' },
+    { id: 'entrega', pregunta: '¿Lo recogen o necesitas entrega a domicilio?', placeholder: 'Ej. Entrega en mi casa, yo lo recojo...' },
+  ],
   otro: [
     { id: 'descripcion_libre', pregunta: '¿Qué necesitas exactamente?', placeholder: 'Describe con el mayor detalle posible lo que necesitas...' },
     { id: 'experiencia', pregunta: '¿Necesitas que tenga experiencia específica?', placeholder: 'Ej. Con experiencia en X, no importa si es nuevo...' },
@@ -95,11 +113,12 @@ function PublicarForm() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [titulo, setTitulo] = useState('');
   const [respuestasCategoria, setRespuestasCategoria] = useState<Record<string, string>>({});
-  const [fecha, setFecha] = useState('');
+  const [fechas, setFechas] = useState<string[]>([]);
   const [hora, setHora] = useState('');
   const [direccion, setDireccion] = useState('');
   const [urgente, setUrgente] = useState(false);
   const [metodoPago, setMetodoPago] = useState<'stripe' | 'efectivo'>('stripe');
+  const [modoPago, setModoPago] = useState<'total' | 'por_dia'>('total');
   const [cupos, setCupos] = useState(1);
   const [fotoProblema, setFotoProblema] = useState<File | null>(null);
   const [fotoProblemaUrl, setFotoProblemaUrl] = useState<string>('');
@@ -135,7 +154,8 @@ function PublicarForm() {
   }, [paraId]);
 
   useEffect(() => {
-    if (urgente && fecha === hoyStr) {
+    const fechaHoy = fechas.includes(hoyStr);
+    if (urgente && fechaHoy) {
       const ahora = new Date();
       ahora.setHours(ahora.getHours() + 3);
       const hh = String(ahora.getHours()).padStart(2, '0');
@@ -145,13 +165,35 @@ function PublicarForm() {
     } else {
       setHoraMinima('');
     }
-  }, [urgente, fecha]);
+  }, [urgente, fechas]);
 
   const efectivoHabilitado = walletSaldo >= 50;
   const esEmpresa = rolUsuario === 'empresa';
   const homeUrl = rolUsuario === 'empresa' ? '/home-empresa' : '/home';
   const horasFiltradas = horas.filter(h => { if (!horaMinima) return true; return h >= horaMinima.slice(0, 5); });
   const preguntasActuales = preguntasPorCategoria[categoriaSeleccionada] || preguntasPorCategoria['otro'];
+  const esMutipleDias = fechas.length > 1;
+
+  const toggleFecha = (f: string) => {
+    setFechas(prev =>
+      prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f].sort()
+    );
+  };
+
+  const generarFechasProximas = () => {
+    const dias: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      dias.push(d.toISOString().split('T')[0]);
+    }
+    return dias;
+  };
+
+  const formatFecha = (f: string) => {
+    const d = new Date(f + 'T12:00:00');
+    return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
 
   const generarTituloAutomatico = () => {
     const cat = categorias.find(c => c.id === categoriaSeleccionada);
@@ -207,17 +249,26 @@ function PublicarForm() {
     finally { setGeocodificando(false); }
   };
 
+  const handleAtras = () => {
+    if (paso > 1) {
+      setPaso(paso - 1);
+    } else {
+      window.history.back();
+    }
+  };
+
   const handlePublicar = async () => {
     const tituloFinal = titulo.trim() || generarTituloAutomatico();
-    if (!tituloFinal || !fecha) { setError('Por favor completa el título y la fecha'); return; }
+    if (!tituloFinal || fechas.length === 0) { setError('Por favor completa el título y selecciona al menos una fecha'); return; }
     setCargando(true); setError('');
+    const fechaPrincipal = fechas[0];
     const ahora = new Date();
-    const fechaSeleccionada = new Date(fecha + 'T' + (hora || '23:59'));
+    const fechaSeleccionada = new Date(fechaPrincipal + 'T' + (hora || '23:59'));
     if (fechaSeleccionada < ahora) { setError('La fecha y hora del trabajo no puede ser en el pasado'); setCargando(false); return; }
     if (urgente) {
       const tresHoras = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
       if (fechaSeleccionada < tresHoras) {
-        setError('Para trabajos urgentes necesitas al menos 3 horas de anticipación. El trabajo más temprano es a las ' + String(tresHoras.getHours()).padStart(2, '0') + ':' + String(tresHoras.getMinutes()).padStart(2, '0') + '.');
+        setError('Para trabajos urgentes necesitas al menos 3 horas de anticipación.');
         setCargando(false); return;
       }
     }
@@ -232,11 +283,15 @@ function PublicarForm() {
         titulo: tituloFinal,
         descripcion: descripcionFinal,
         categoria: categoriaSeleccionada,
-        fecha, hora: hora || null,
+        fecha: fechaPrincipal,
+        fechas_multiples: fechas.length > 1 ? fechas : null,
+        hora: hora || null,
         presupuesto: null,
         direccion: direccion || null,
         lat: coords?.lat || null, lng: coords?.lng || null,
-        urgente, seguro: false, metodo_pago: metodoPago, estado: 'activo',
+        urgente, seguro: false, metodo_pago: metodoPago,
+        modo_pago: fechas.length > 1 ? modoPago : null,
+        estado: 'activo',
         flekser_sugerido_id: flekserSugerido?.id || null,
         cupos: esEmpresa ? cupos : 1, cupos_tomados: 0,
       }).select().single();
@@ -252,7 +307,7 @@ function PublicarForm() {
           await supabase.from('notificaciones').insert({
             usuario_id: flekserSugerido.id, tipo: 'solicitud_directa',
             titulo: '🎯 ¡Te enviaron una solicitud directa!',
-            mensaje: 'Alguien quiere contratarte para: "' + tituloFinal + '" el ' + fecha + '. ¡Aplica antes que nadie!',
+            mensaje: 'Alguien quiere contratarte para: "' + tituloFinal + '" el ' + fechaPrincipal + '. ¡Aplica antes que nadie!',
             link: '/trabajo?id=' + servicioCreado.id,
           });
         } catch (e) {}
@@ -278,7 +333,7 @@ function PublicarForm() {
           </p>
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 text-left">
             <p className="text-blue-800 text-sm font-bold mb-1">💡 ¿Qué sigue?</p>
-            <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados aplicarán con su precio propuesto. Tú revisas sus perfiles, calificaciones y precios, y eliges al que más te convenga. También puedes hacerles una contraoferta.</p>
+            <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados aplicarán con su precio propuesto. Tú revisas sus perfiles, calificaciones y precios, y eliges al que más te convenga.</p>
           </div>
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4 text-left">
             {flekserSugerido && (
@@ -293,10 +348,16 @@ function PublicarForm() {
               </div>
             )}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Servicio</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{tituloFinal}</span></div>
-            <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Fecha</span><span className="font-semibold text-sm text-gray-900">{fecha} {hora}</span></div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
+              <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
+                {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
+              </span>
+            </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Stripe' : '💵 Efectivo'}</span></div>
+            {esMutipleDias && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Cobro</span><span className="font-semibold text-sm text-gray-900">{modoPago === 'por_dia' ? '📅 Por día' : '💰 Total al final'}</span></div>}
             <div className="flex justify-between"><span className="text-gray-400 text-sm">Estado</span><span className="font-semibold text-sm text-green-600">✅ Activo</span></div>
           </div>
           <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver propuestas</a>
@@ -311,7 +372,11 @@ function PublicarForm() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href={homeUrl} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</a>
+            <button
+              onClick={handleAtras}
+              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
+              ←
+            </button>
             <div>
               <h1 className="font-extrabold text-gray-900 text-lg">Publicar solicitud</h1>
               <p className="text-gray-400 text-xs">Paso {paso} de 3</p>
@@ -363,7 +428,6 @@ function PublicarForm() {
             {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
             <div className="flex flex-col gap-5">
 
-              {/* Preguntas específicas por categoría */}
               {preguntasActuales.map((p) => (
                 <div key={p.id}>
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">{p.pregunta}</label>
@@ -377,7 +441,7 @@ function PublicarForm() {
                 </div>
               ))}
 
-              {/* Foto opcional del problema */}
+              {/* Foto opcional */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">
                   📸 Foto del problema o referencia <span className="text-gray-400 font-normal">(opcional)</span>
@@ -386,17 +450,11 @@ function PublicarForm() {
                 {fotoProblemaUrl ? (
                   <div className="relative">
                     <img src={fotoProblemaUrl} alt="Foto del problema" className="w-full h-48 object-cover rounded-2xl border-2 border-purple-200"/>
-                    <button
-                      onClick={() => { setFotoProblema(null); setFotoProblemaUrl(''); }}
-                      className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-gray-600 font-bold hover:bg-red-50 hover:text-red-500 transition">
-                      ✕
-                    </button>
+                    <button onClick={() => { setFotoProblema(null); setFotoProblemaUrl(''); }} className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-gray-600 font-bold hover:bg-red-50 hover:text-red-500 transition">✕</button>
                     <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">✅ Foto agregada</div>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => fotoInputRef.current?.click()}
-                    className="w-full h-32 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition">
+                  <button onClick={() => fotoInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition">
                     <span className="text-3xl">📷</span>
                     <span className="text-sm font-semibold text-gray-500">Toca para agregar foto</span>
                     <span className="text-xs text-gray-400">JPG, PNG — máx 10MB</span>
@@ -412,18 +470,72 @@ function PublicarForm() {
                 <p className="text-xs text-gray-400 mt-1">Se usará para mostrar Fleksers cercanos a ti</p>
               </div>
 
-              {/* Fecha */}
+              {/* ── SELECTOR DE FECHAS MÚLTIPLES ── */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 ¿Para cuándo lo necesitas?</label>
-                <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} min={hoyStr} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-                {fecha && fecha === hoyStr && <p className="text-xs text-amber-600 font-semibold mt-1">📅 Estás publicando para hoy</p>}
+                <p className="text-xs text-gray-400 mb-3">Puedes seleccionar varios días si necesitas el servicio más de una vez</p>
+                <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                  {generarFechasProximas().map((f) => {
+                    const seleccionada = fechas.includes(f);
+                    const esHoy = f === hoyStr;
+                    return (
+                      <button key={f} onClick={() => toggleFecha(f)}
+                        className={'py-2.5 px-2 rounded-xl text-xs font-semibold transition border-2 ' + (seleccionada ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300')}>
+                        {esHoy ? '📅 Hoy' : formatFecha(f)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {fechas.length > 0 && (
+                  <div className="mt-3 bg-purple-50 rounded-xl p-3 border border-purple-100">
+                    <p className="text-xs font-bold text-purple-700 mb-1">{fechas.length === 1 ? '1 día seleccionado' : fechas.length + ' días seleccionados'}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {fechas.map(f => (
+                        <span key={f} className="text-xs bg-white border border-purple-200 text-purple-600 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          {formatFecha(f)}
+                          <button onClick={() => toggleFecha(f)} className="text-purple-400 hover:text-red-500 ml-0.5">✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Modo de cobro para múltiples días */}
+              {esMutipleDias && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">💰 ¿Cómo prefieres pagar?</label>
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => setModoPago('total')} className={'flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ' + (modoPago === 'total' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white')}>
+                      <div className={'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (modoPago === 'total' ? 'border-purple-500' : 'border-gray-300')}>
+                        {modoPago === 'total' && <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"/>}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">💰 Pago total al finalizar</p>
+                        <p className="text-xs text-gray-400">El Flekser propone un precio por todos los días. Pagas cuando termina el último día.</p>
+                      </div>
+                    </button>
+                    <button onClick={() => setModoPago('por_dia')} className={'flex items-center gap-3 p-4 rounded-2xl border-2 transition text-left ' + (modoPago === 'por_dia' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white')}>
+                      <div className={'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (modoPago === 'por_dia' ? 'border-blue-500' : 'border-gray-300')}>
+                        {modoPago === 'por_dia' && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full"/>}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">📅 Cobro por día</p>
+                        <p className="text-xs text-gray-400">El Flekser propone un precio diario. Se cobra automáticamente al terminar cada día.</p>
+                      </div>
+                    </button>
+                  </div>
+                  <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p className="text-xs text-amber-700 font-semibold">🔒 En ambos casos el dinero queda retenido en Stripe hasta que confirmes que el trabajo fue completado.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Hora */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">
                   🕐 Hora preferida <span className="text-gray-400 font-normal">(opcional)</span>
-                  {horaMinima && <span className="text-amber-600 font-semibold ml-2">— mínimo {horaMinima.slice(0,5)} por urgente</span>}
+                  {horaMinima && <span className="text-amber-600 font-semibold ml-2">— mínimo {horaMinima.slice(0,5)}</span>}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {horasFiltradas.map((h) => (
@@ -432,12 +544,6 @@ function PublicarForm() {
                       {h}
                     </button>
                   ))}
-                  {horasFiltradas.length === 0 && (
-                    <div className="col-span-4 text-center py-3 bg-amber-50 rounded-xl border border-amber-200">
-                      <p className="text-amber-700 text-xs font-semibold">⚠️ No hay horas disponibles para hoy con trabajo urgente</p>
-                      <p className="text-amber-600 text-xs mt-1">Cambia la fecha a mañana o desactiva "urgente"</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -526,22 +632,33 @@ function PublicarForm() {
               </div>
             )}
 
-            {/* Resumen */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <span className="text-gray-400 text-sm">Categoría</span>
                   <span className="font-semibold text-sm text-gray-900">{categorias.find(c => c.id === categoriaSeleccionada)?.emoji} {categorias.find(c => c.id === categoriaSeleccionada)?.nombre}</span>
                 </div>
-                {fecha && <div className="flex justify-between"><span className="text-gray-400 text-sm">Fecha</span><span className="font-semibold text-sm text-gray-900">{fecha} {hora || 'Sin hora fija'}</span></div>}
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-400 text-sm flex-shrink-0">Fecha{fechas.length > 1 ? 's' : ''}</span>
+                  <div className="text-right ml-4">
+                    {fechas.length === 1 ? (
+                      <span className="font-semibold text-sm text-gray-900">{fechas[0]} {hora || ''}</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {fechas.map(f => <span key={f} className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">{formatFecha(f)}</span>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {hora && <div className="flex justify-between"><span className="text-gray-400 text-sm">Hora</span><span className="font-semibold text-sm text-gray-900">{hora}</span></div>}
                 {direccion && <div className="flex justify-between items-start"><span className="text-gray-400 text-sm flex-shrink-0">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right ml-4">{direccion}</span></div>}
                 {esEmpresa && cupos > 1 && <div className="flex justify-between"><span className="text-gray-400 text-sm">Personas</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
                 <div className="flex justify-between"><span className="text-gray-400 text-sm">Método de pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span></div>
+                {esMutipleDias && <div className="flex justify-between"><span className="text-gray-400 text-sm">Cobro</span><span className="font-semibold text-sm text-gray-900">{modoPago === 'por_dia' ? '📅 Por día' : '💰 Total al finalizar'}</span></div>}
                 {urgente && <div className="flex justify-between"><span className="text-gray-400 text-sm">Urgencia</span><span className="font-semibold text-sm text-red-600">🔴 Urgente</span></div>}
               </div>
             </div>
 
-            {/* Resumen de respuestas */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-4">
               <p className="text-sm font-bold text-gray-700 mb-3">📋 Tu descripción</p>
               <div className="flex flex-col gap-3">
@@ -558,7 +675,6 @@ function PublicarForm() {
               </div>
             </div>
 
-            {/* Foto si la subió */}
             {fotoProblemaUrl && (
               <div className="mb-4">
                 <p className="text-sm font-bold text-gray-700 mb-2">📸 Foto adjunta</p>
@@ -566,10 +682,9 @@ function PublicarForm() {
               </div>
             )}
 
-            {/* Info de precio */}
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
               <p className="text-blue-800 text-sm font-bold mb-1">💡 Sobre el precio</p>
-              <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados te enviarán sus propuestas con precio incluido. Tú puedes aceptar directamente o hacer una contraoferta con el precio que tienes disponible.</p>
+              <p className="text-blue-700 text-xs leading-relaxed">Los Fleksers interesados te enviarán sus propuestas con precio incluido. Tú puedes aceptar directamente o hacer una contraoferta.</p>
             </div>
 
             {geocodificando && (
@@ -584,7 +699,11 @@ function PublicarForm() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
         <div className="max-w-md mx-auto flex gap-3">
-          {paso > 1 && <button onClick={() => setPaso(paso - 1)} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">← Regresar</button>}
+          {paso > 1 && (
+            <button onClick={() => setPaso(paso - 1)} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
+              ← Regresar
+            </button>
+          )}
           {paso < 3 ? (
             <button
               onClick={() => { setError(''); setPaso(paso + 1); }}
@@ -595,9 +714,9 @@ function PublicarForm() {
           ) : (
             <button
               onClick={handlePublicar}
-              disabled={cargando || geocodificando || subiendoFoto}
+              disabled={cargando || geocodificando || subiendoFoto || fechas.length === 0}
               className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-              {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar solicitud a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
+              {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
             </button>
           )}
         </div>
