@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { calcularPagoCliente, calcularPagoFlekser } from '@/lib/comisiones';
 
 function AplicacionesContent() {
   const searchParams = useSearchParams();
@@ -13,11 +14,9 @@ function AplicacionesContent() {
   const [procesando, setProcesando] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
 
-  // Eliminar
   const [confirmandoEliminar, setConfirmandoEliminar] = useState('');
   const [eliminando, setEliminando] = useState(false);
 
-  // Editar
   const [editandoServicio, setEditandoServicio] = useState<any>(null);
   const [editTitulo, setEditTitulo] = useState('');
   const [editFecha, setEditFecha] = useState('');
@@ -71,12 +70,10 @@ function AplicacionesContent() {
   const handleEliminar = async (servicioId: string) => {
     setEliminando(true);
     try {
-      // Cancelar aplicaciones pendientes
       await supabase.from('aplicaciones')
         .update({ estado: 'rechazado' })
         .eq('servicio_id', servicioId)
         .eq('estado', 'pendiente');
-      // Marcar como cancelado
       await supabase.from('servicios')
         .update({ estado: 'cancelado' })
         .eq('id', servicioId);
@@ -154,7 +151,6 @@ function AplicacionesContent() {
   const esEmpresa = rol === 'empresa';
   const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
   const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const chatBorder = esEmpresa ? 'border-blue-200 text-blue-700 hover:bg-blue-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50';
   const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
@@ -163,20 +159,19 @@ function AplicacionesContent() {
 
   if (cargando) {
     return (
-      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
+      <main className={'min-h-screen ' + bgFondo + ' flex items-center justify-center'}>
         <div className="text-center">
-          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
+          <div className={'w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ' + spinnerColor}></div>
           <p className="text-gray-400">Cargando...</p>
         </div>
       </main>
     );
   }
 
-  // ── MODAL EDITAR ──
   if (editandoServicio) {
     return (
-      <main className={`min-h-screen ${bgFondo} pb-32`}>
-        <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
+      <main className={'min-h-screen ' + bgFondo + ' pb-32'}>
+        <div className={'bg-gradient-to-r ' + headerGradient + ' px-6 pt-12 pb-4 shadow-sm'}>
           <div className="max-w-md mx-auto flex items-center gap-4">
             <button onClick={() => setEditandoServicio(null)}
               className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">←</button>
@@ -192,35 +187,22 @@ function AplicacionesContent() {
           )}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">📋 Título</label>
-            <input
-              type="text"
-              value={editTitulo}
-              onChange={(e) => setEditTitulo(e.target.value)}
+            <input type="text" value={editTitulo} onChange={(e) => setEditTitulo(e.target.value)}
               className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
-            <input
-              type="date"
-              value={editFecha}
-              min={hoyStr}
-              onChange={(e) => setEditFecha(e.target.value)}
+            <input type="date" value={editFecha} min={hoyStr} onChange={(e) => setEditFecha(e.target.value)}
               className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
-            <input
-              type="time"
-              value={editHora}
-              onChange={(e) => setEditHora(e.target.value)}
+            <input type="time" value={editHora} onChange={(e) => setEditHora(e.target.value)}
               className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección <span className="text-gray-400 font-normal">(opcional)</span></label>
-            <input
-              type="text"
-              value={editDireccion}
-              onChange={(e) => setEditDireccion(e.target.value)}
+            <input type="text" value={editDireccion} onChange={(e) => setEditDireccion(e.target.value)}
               placeholder="Ej. Calle Reforma 123, Col. Centro"
               className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
           </div>
@@ -233,7 +215,7 @@ function AplicacionesContent() {
               Cancelar
             </button>
             <button onClick={guardarEdicion} disabled={guardandoEdicion || !editTitulo.trim() || !editFecha}
-              className={`flex-1 py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold disabled:opacity-50 transition`}>
+              className={'flex-1 py-4 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-bold disabled:opacity-50 transition'}>
               {guardandoEdicion ? 'Guardando...' : 'Guardar cambios ✓'}
             </button>
           </div>
@@ -256,8 +238,8 @@ function AplicacionesContent() {
       .filter((v: string) => new Date(v) > hace7dias).length;
 
     return (
-      <main className={`min-h-screen ${bgFondo} pb-32`}>
-        <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
+      <main className={'min-h-screen ' + bgFondo + ' pb-32'}>
+        <div className={'bg-gradient-to-r ' + headerGradient + ' px-6 pt-12 pb-4 shadow-sm'}>
           <div className="max-w-md mx-auto">
             <div className="flex items-center gap-4 mb-2">
               <button onClick={() => setServicioActivo(null)}
@@ -308,12 +290,11 @@ function AplicacionesContent() {
 
           {puedeConfirmar && (
             <a href={'/confirmar?id=' + servicioActivo.id}
-              className={`block w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4`}>
+              className={'block w-full py-4 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4'}>
               🎉 Confirmar trabajo y liberar pago
             </a>
           )}
 
-          {/* ── ACCIONES EDITAR / ELIMINAR ── */}
           {(puedeEditar || puedeEliminar) && (
             <div className="flex gap-2 mb-4">
               {puedeEditar && (
@@ -331,11 +312,10 @@ function AplicacionesContent() {
             </div>
           )}
 
-          {/* Modal confirmar eliminar */}
           {confirmandoEliminar === servicioActivo.id && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
               <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar esta solicitud?</p>
-              <p className="text-red-600 text-xs mb-3">Se rechazarán automáticamente todas las aplicaciones pendientes. Esta acción no se puede deshacer.</p>
+              <p className="text-red-600 text-xs mb-3">Se rechazarán automáticamente todas las aplicaciones pendientes.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmandoEliminar('')}
                   className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
@@ -363,94 +343,115 @@ function AplicacionesContent() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {aplicaciones.map((app) => (
-                <div key={app.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r ${avatarGradient} flex items-center justify-center flex-shrink-0`}>
-                      {app.usuarios?.foto_url ? (
-                        <img src={app.usuarios.foto_url} alt={app.usuarios.nombre} className="w-full h-full object-cover"/>
-                      ) : (
-                        <span className="text-white font-bold text-lg">{app.usuarios?.nombre?.charAt(0) || '?'}</span>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-gray-900">{app.usuarios?.nombre || 'Flekser'}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-yellow-500">⭐ {app.usuarios?.calificacion || '5.0'}</p>
-                        <p className="text-xs text-gray-400">· {app.usuarios?.trabajos_completados || 0} trabajos</p>
+              {aplicaciones.map((app) => {
+                const precioFlekser = app.precio_ofrecido || 0;
+                const pagoCliente = precioFlekser > 0 ? calcularPagoCliente(precioFlekser) : null;
+                const pagoFlekser = precioFlekser > 0 ? calcularPagoFlekser(precioFlekser) : null;
+
+                return (
+                  <div key={app.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={'w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r ' + avatarGradient + ' flex items-center justify-center flex-shrink-0'}>
+                        {app.usuarios?.foto_url ? (
+                          <img src={app.usuarios.foto_url} alt={app.usuarios.nombre} className="w-full h-full object-cover"/>
+                        ) : (
+                          <span className="text-white font-bold text-lg">{app.usuarios?.nombre?.charAt(0) || '?'}</span>
+                        )}
                       </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900">{app.usuarios?.nombre || 'Flekser'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-yellow-500">⭐ {app.usuarios?.calificacion || '5.0'}</p>
+                          <p className="text-xs text-gray-400">· {app.usuarios?.trabajos_completados || 0} trabajos</p>
+                        </div>
+                      </div>
+                      <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (estadoColor[app.estado] || 'bg-gray-100 text-gray-600')}>
+                        {estadoLabel[app.estado] || app.estado}
+                      </span>
                     </div>
-                    <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (estadoColor[app.estado] || 'bg-gray-100 text-gray-600')}>
-                      {estadoLabel[app.estado] || app.estado}
-                    </span>
-                  </div>
 
-                  {app.usuarios?.habilidades?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {app.usuarios.habilidades.slice(0, 3).map((h: string) => (
-                        <span key={h} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{h}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="bg-gray-50 rounded-xl p-3 mb-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm text-gray-500">Precio ofrecido</span>
-                      <span className={'font-extrabold ' + precioColor}>${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
-                    </div>
-                    {servicioActivo.seguro && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">+ Fleksi Protege</span>
-                        <span className="text-xs text-gray-500">$45 MXN</span>
+                    {app.usuarios?.habilidades?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {app.usuarios.habilidades.slice(0, 3).map((h: string) => (
+                          <span key={h} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{h}</span>
+                        ))}
                       </div>
                     )}
-                    {app.mensaje && <p className="text-sm text-gray-600 italic mt-2">"{app.mensaje}"</p>}
+
+                    {/* ── BLOQUE DE PRECIOS ── */}
+                    {precioFlekser > 0 && pagoCliente && pagoFlekser ? (
+                      <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 mb-4">
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">Precio del Flekser</span>
+                          <span className="font-bold text-gray-700 text-sm">${precioFlekser.toLocaleString('es-MX')} MXN</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
+                          <span className="text-xs text-gray-500">Comisión de servicio (17.4%)</span>
+                          <span className="font-bold text-gray-500 text-sm">+${pagoCliente.comision.toLocaleString('es-MX')} MXN</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-3 bg-blue-50">
+                          <span className="text-sm font-extrabold text-blue-700">💳 Tú pagarías</span>
+                          <span className="text-xl font-extrabold text-blue-700">${pagoCliente.total.toLocaleString('es-MX')} MXN</span>
+                        </div>
+                        {app.mensaje && (
+                          <div className="px-4 py-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-400 font-semibold mb-1">Mensaje del Flekser:</p>
+                            <p className="text-sm text-gray-600 italic">"{app.mensaje}"</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-xl p-3 mb-4">
+                        <p className="text-sm text-gray-400 text-center">Sin precio propuesto</p>
+                        {app.mensaje && <p className="text-sm text-gray-600 italic mt-2">"{app.mensaje}"</p>}
+                      </div>
+                    )}
+
+                    {app.checkout_at && (
+                      <div className="bg-blue-50 rounded-xl p-3 mb-3 text-center">
+                        <p className="text-blue-700 text-xs font-bold">
+                          ✅ Trabajo terminado — Salida: {new Date(app.checkout_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                      </div>
+                    )}
+
+                    {app.estado === 'pendiente' && (
+                      <div className="flex flex-col gap-2">
+                        <div className="bg-blue-50 rounded-xl p-3 mb-1">
+                          <p className="text-blue-700 text-xs font-semibold">
+                            🔒 Al aceptar se retendrá el pago. Se liberará cuando confirmes que el trabajo quedó bien.
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <button onClick={() => handleRechazar(app.id)} disabled={procesando === app.id}
+                            className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
+                            ❌ Rechazar
+                          </button>
+                          <button onClick={() => window.location.href = '/pago?aplicacion=' + app.id}
+                            className={'flex-1 py-3 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition'}>
+                            ✅ Aceptar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {app.estado === 'aceptado' && (
+                      <div className="flex flex-col gap-2">
+                        <div className="bg-green-50 rounded-xl p-3">
+                          <p className="text-green-600 font-bold text-sm text-center">✅ Flekser confirmado</p>
+                          <p className="text-green-500 text-xs text-center mt-1">
+                            {app.pago_retenido ? '🔒 Pago retenido — se liberará al confirmar el trabajo' : 'El servicio está en proceso'}
+                          </p>
+                        </div>
+                        <button onClick={() => iniciarChat(app.usuarios?.id)}
+                          className={'w-full py-3 border-2 ' + chatBorder + ' rounded-2xl font-bold transition flex items-center justify-center gap-2'}>
+                          💬 Enviar mensaje
+                        </button>
+                      </div>
+                    )}
                   </div>
-
-                  {app.checkout_at && (
-                    <div className="bg-blue-50 rounded-xl p-3 mb-3 text-center">
-                      <p className="text-blue-700 text-xs font-bold">
-                        ✅ Trabajo terminado — Salida: {new Date(app.checkout_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
-                      </p>
-                    </div>
-                  )}
-
-                  {app.estado === 'pendiente' && (
-                    <div className="flex flex-col gap-2">
-                      <div className="bg-blue-50 rounded-xl p-3 mb-1">
-                        <p className="text-blue-700 text-xs font-semibold">
-                          🔒 Al aceptar se retendrá el pago. Se liberará cuando confirmes que el trabajo quedó bien.
-                        </p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button onClick={() => handleRechazar(app.id)} disabled={procesando === app.id}
-                          className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
-                          ❌ Rechazar
-                        </button>
-                        <button onClick={() => window.location.href = '/pago?aplicacion=' + app.id}
-                          className={'flex-1 py-3 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition'}>
-                          ✅ Aceptar y pagar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {app.estado === 'aceptado' && (
-                    <div className="flex flex-col gap-2">
-                      <div className="bg-green-50 rounded-xl p-3">
-                        <p className="text-green-600 font-bold text-sm text-center">✅ Flekser confirmado</p>
-                        <p className="text-green-500 text-xs text-center mt-1">
-                          {app.pago_retenido ? '🔒 Pago retenido — se liberará al confirmar el trabajo' : 'El servicio está en proceso'}
-                        </p>
-                      </div>
-                      <button onClick={() => iniciarChat(app.usuarios?.id)}
-                        className={'w-full py-3 border-2 ' + chatBorder + ' rounded-2xl font-bold transition flex items-center justify-center gap-2'}>
-                        💬 Enviar mensaje
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -461,8 +462,8 @@ function AplicacionesContent() {
   }
 
   return (
-    <main className={`min-h-screen ${bgFondo} pb-32`}>
-      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
+    <main className={'min-h-screen ' + bgFondo + ' pb-32'}>
+      <div className={'bg-gradient-to-r ' + headerGradient + ' px-6 pt-12 pb-4 shadow-sm'}>
         <div className="max-w-md mx-auto">
           <h1 className="font-extrabold text-white text-xl mb-1">Mis solicitudes</h1>
           <p className="text-white/70 text-sm">Gestiona las aplicaciones que has recibido</p>
@@ -491,8 +492,7 @@ function AplicacionesContent() {
               const puedeEditar = svc.estado === 'activo';
               return (
                 <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <button onClick={() => verAplicaciones(svc)}
-                    className="w-full p-4 text-left active:scale-95 transition">
+                  <button onClick={() => verAplicaciones(svc)} className="w-full p-4 text-left active:scale-95 transition">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
                       <span className={'text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ' + (
@@ -510,16 +510,10 @@ function AplicacionesContent() {
                          svc.estado === 'cancelado' ? '❌ Cancelado' : svc.estado}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                    </div>
+                    <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      {svc.visitas > 0 && (
-                        <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''}</span>
-                      )}
-                      {visitasSemana > 0 && (
-                        <span className="text-xs text-purple-500 font-semibold">📅 {visitasSemana} esta semana</span>
-                      )}
+                      {svc.visitas > 0 && <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''}</span>}
+                      {visitasSemana > 0 && <span className="text-xs text-purple-500 font-semibold">📅 {visitasSemana} esta semana</span>}
                     </div>
                     {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
                       <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">

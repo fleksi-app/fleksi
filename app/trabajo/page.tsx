@@ -3,19 +3,19 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
-import { calcularPagoFlekser } from '@/lib/comisiones';
+import { calcularPagoFlekser, calcularPagoCliente } from '@/lib/comisiones';
 
 function BotonCompartir({ trabajo }: { trabajo: any }) {
   const [copiado, setCopiado] = useState(false);
 
   const handleCompartir = async () => {
-    const url = `${window.location.origin}/trabajo?id=${trabajo.id}`;
-    const texto = `🔧 ${trabajo.titulo}\n💰 Presupuesto: $${trabajo.presupuesto} MXN\n📍 ${trabajo.ciudad || 'Irapuato'}\n\nAplica en Fleksi 👇`;
+    const url = window.location.origin + '/trabajo?id=' + trabajo.id;
+    const texto = '🔧 ' + trabajo.titulo + '\n📍 ' + (trabajo.ciudad || 'Irapuato') + '\n\nAplica en Fleksi 👇';
     if (navigator.share) {
       try { await navigator.share({ title: trabajo.titulo, text: texto, url }); } catch (e) {}
     } else {
       try {
-        await navigator.clipboard.writeText(`${texto}\n${url}`);
+        await navigator.clipboard.writeText(texto + '\n' + url);
         setCopiado(true);
         setTimeout(() => setCopiado(false), 2000);
       } catch (e) {}
@@ -34,7 +34,6 @@ function DetalleTrabajoContent() {
   const searchParams = useSearchParams();
   const [aplicado, setAplicado] = useState(false);
   const [yaAplico, setYaAplico] = useState(false);
-  const [mostrarOferta, setMostrarOferta] = useState(false);
   const [miPrecio, setMiPrecio] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -43,6 +42,7 @@ function DetalleTrabajoContent() {
   const [trabajo, setTrabajo] = useState<any>(null);
   const [usuario, setUsuario] = useState<any>(null);
   const [sinSesion, setSinSesion] = useState(false);
+  const [mostrarDesglose, setMostrarDesglose] = useState(false);
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -78,17 +78,19 @@ function DetalleTrabajoContent() {
 
     if (servicio) {
       setTrabajo(servicio);
-      setMiPrecio(servicio.presupuesto?.toString() || '');
-      const { data: appExistente } = await supabase.from('aplicaciones').select('id')
-        .eq('servicio_id', servicio.id).eq('prestador_id', user.id).single();
-      if (appExistente) setYaAplico(true);
       if (servicio.cliente_id !== user.id) {
+        const { data: appExistente } = await supabase.from('aplicaciones').select('id')
+          .eq('servicio_id', servicio.id).eq('prestador_id', user.id).single();
+        if (appExistente) setYaAplico(true);
         const hoy = new Date().toISOString();
         const hace7dias = new Date();
         hace7dias.setDate(hace7dias.getDate() - 7);
         const visitasSemana = (servicio.visitas_semana || []).filter((v: string) => new Date(v) > hace7dias);
         visitasSemana.push(hoy);
-        await supabase.from('servicios').update({ visitas: (servicio.visitas || 0) + 1, visitas_semana: visitasSemana }).eq('id', servicio.id);
+        await supabase.from('servicios').update({
+          visitas: (servicio.visitas || 0) + 1,
+          visitas_semana: visitasSemana,
+        }).eq('id', servicio.id);
       }
     }
     setCargandoPagina(false);
@@ -97,12 +99,13 @@ function DetalleTrabajoContent() {
   const handleAplicar = async () => {
     if (!trabajo || !usuario) return;
     if (yaAplico) { setError('Ya aplicaste a este trabajo.'); return; }
+    if (!miPrecio || Number(miPrecio) <= 0) { setError('Escribe el precio que cobrarás por este trabajo.'); return; }
     setCargando(true); setError('');
     try {
       const { error: dbError } = await supabase.from('aplicaciones').insert({
         servicio_id: trabajo.id,
         prestador_id: usuario.id,
-        precio_ofrecido: Number(miPrecio) || trabajo.presupuesto,
+        precio_ofrecido: Number(miPrecio),
         mensaje: mensaje || null,
         estado: 'pendiente',
       });
@@ -121,7 +124,7 @@ function DetalleTrabajoContent() {
               prestador_id: usuario.id,
               trabajo: trabajo.titulo,
               servicio_id: trabajo.id,
-              precio: miPrecio || trabajo.presupuesto,
+              precio: miPrecio,
             },
           }),
         });
@@ -135,7 +138,7 @@ function DetalleTrabajoContent() {
   const categoriaEmoji: any = {
     hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
     interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
-    cerrajeria: '🔑', estetica: '💅', otro: '✨'
+    cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨',
   };
 
   if (cargandoPagina) return (
@@ -158,8 +161,8 @@ function DetalleTrabajoContent() {
     </main>
   );
 
-  const precioBase = Number(miPrecio) || trabajo.presupuesto;
-  const ganancia = usuario ? calcularPagoFlekser(precioBase) : { total: precioBase };
+  const precioNum = Number(miPrecio) || 0;
+  const ganancia = precioNum > 0 ? calcularPagoFlekser(precioNum) : null;
   const esPropioServicio = trabajo.cliente_id === usuario?.id;
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const homeUrl = rol === 'empresa' ? '/home-empresa' : '/home';
@@ -176,10 +179,27 @@ function DetalleTrabajoContent() {
         </div>
         <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Aplicación enviada!</h1>
         <p className="text-gray-400 mb-8 font-light">{trabajo.usuarios?.nombre} recibirá tu solicitud y te contactará pronto.</p>
-        <div className="bg-white rounded-2xl p-4 mb-6 text-left border border-gray-100">
-          <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Trabajo</span><span className="font-semibold text-sm text-gray-900">{trabajo.titulo}</span></div>
-          <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">💰 Recibirás</span><span className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</span></div>
-          <div className="flex justify-between"><span className="text-gray-400 text-sm">Estado</span><span className="font-semibold text-sm text-yellow-600">⏳ Esperando respuesta</span></div>
+        <div className="bg-white rounded-2xl p-5 mb-6 text-left border border-gray-100 shadow-sm">
+          <div className="flex justify-between mb-3 pb-3 border-b border-gray-100">
+            <span className="text-gray-400 text-sm">Trabajo</span>
+            <span className="font-semibold text-sm text-gray-900 text-right max-w-48">{trabajo.titulo}</span>
+          </div>
+          <div className="flex justify-between mb-3 pb-3 border-b border-gray-100">
+            <span className="text-gray-400 text-sm">Tu precio</span>
+            <span className="font-bold text-sm text-gray-900">${Number(miPrecio).toLocaleString('es-MX')} MXN</span>
+          </div>
+          <div className="flex justify-between mb-3 pb-3 border-b border-gray-100">
+            <span className="text-gray-400 text-sm">Comisión Fleksi</span>
+            <span className="font-bold text-sm text-red-500">-${ganancia?.comision.toLocaleString('es-MX')} MXN</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-700 text-sm font-bold">💰 Recibirás</span>
+            <span className="font-extrabold text-green-600">${ganancia?.total.toLocaleString('es-MX')} MXN</span>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 text-left">
+          <p className="text-blue-800 text-xs font-semibold">⏳ ¿Qué sigue?</p>
+          <p className="text-blue-700 text-xs mt-1 leading-relaxed">El cliente revisará tu propuesta. Si te acepta, recibirás una notificación y el pago quedará retenido en Fleksi hasta que completes el trabajo.</p>
         </div>
         <a href="/mis-trabajos" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver mis aplicaciones</a>
         <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">Volver al inicio</a>
@@ -188,11 +208,12 @@ function DetalleTrabajoContent() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-44">
+    <main className="min-h-screen bg-gray-50 pb-56">
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <a href={sinSesion ? '/registro' : homeUrl} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</a>
+            <button onClick={() => window.history.back()}
+              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</button>
             <h1 className="font-extrabold text-gray-900 text-lg flex-1">Detalle del trabajo</h1>
             <BotonCompartir trabajo={trabajo} />
           </div>
@@ -229,14 +250,14 @@ function DetalleTrabajoContent() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
-              <p className="text-xs text-green-600 font-semibold mb-1">💰 {sinSesion ? 'Presupuesto' : 'Tú recibirás'}</p>
-              <p className="font-extrabold text-green-700 text-xl">${sinSesion ? trabajo.presupuesto : ganancia.total} MXN</p>
-            </div>
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-1">📅 Cuándo</p>
               <p className="font-bold text-gray-900 text-sm">{trabajo.fecha}</p>
               {trabajo.hora && <p className="text-xs text-gray-400">{trabajo.hora.slice(0,5)}</p>}
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">💳 Pago</p>
+              <p className="font-bold text-gray-900 text-sm">{trabajo.metodo_pago === 'stripe' ? 'Tarjeta' : 'Efectivo'}</p>
             </div>
           </div>
         </div>
@@ -244,7 +265,14 @@ function DetalleTrabajoContent() {
         {trabajo.descripcion && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">📋 Descripción</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">{trabajo.descripcion}</p>
+            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{trabajo.descripcion}</p>
+          </div>
+        )}
+
+        {trabajo.foto_problema && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+            <h3 className="font-extrabold text-gray-900 mb-3">📸 Foto del trabajo</h3>
+            <img src={trabajo.foto_problema} alt="Foto del trabajo" className="w-full rounded-xl object-cover max-h-64"/>
           </div>
         )}
 
@@ -272,33 +300,58 @@ function DetalleTrabajoContent() {
 
         {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm">{error}</div>}
 
-        {!yaAplico && mostrarOferta && !esPropioServicio && tieneFoto && !sinSesion && (
+        {/* ── BLOQUE DE PRECIO ── */}
+        {!yaAplico && !esPropioServicio && tieneFoto && !sinSesion && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <h3 className="font-extrabold text-gray-900 mb-3">💬 Tu propuesta</h3>
-            <div className="mb-3">
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Tu precio (MXN)</label>
-              <input type="number" placeholder="Ej. 600" value={miPrecio} onChange={(e) => setMiPrecio(e.target.value)}
-                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
-              {miPrecio && (
-                <div className="mt-2 bg-green-50 rounded-xl p-2 flex justify-between text-xs">
-                  <span className="text-green-600">💰 Recibirás</span>
-                  <span className="font-extrabold text-green-700">${calcularPagoFlekser(Number(miPrecio)).total} MXN</span>
-                </div>
-              )}
+            <h3 className="font-extrabold text-gray-900 mb-1">💰 ¿Cuánto cobras por este trabajo?</h3>
+            <p className="text-xs text-gray-400 mb-4">El cliente verá tu precio. Tú recibirás eso menos la comisión de Fleksi.</p>
+
+            <div className="mb-4">
+              <label className="text-sm font-semibold text-gray-700 mb-2 block">Tu precio (MXN)</label>
+              <input
+                type="number"
+                placeholder="Ej. 500"
+                value={miPrecio}
+                onChange={(e) => setMiPrecio(e.target.value)}
+                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-xl font-bold"/>
             </div>
+
+            {precioNum > 0 && ganancia && (
+              <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 mb-4">
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">Tu precio</span>
+                  <span className="font-bold text-gray-900">${precioNum.toLocaleString('es-MX')} MXN</span>
+                </div>
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-red-50">
+                  <span className="text-sm text-red-500">Comisión Fleksi (11.6%)</span>
+                  <span className="font-bold text-red-500">-${ganancia.comision.toLocaleString('es-MX')} MXN</span>
+                </div>
+                <div className="flex justify-between items-center px-4 py-4 bg-green-50">
+                  <span className="text-sm font-extrabold text-green-700">💰 Tú recibirás</span>
+                  <span className="text-2xl font-extrabold text-green-700">${ganancia.total.toLocaleString('es-MX')} MXN</span>
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje al cliente</label>
-              <textarea placeholder="Cuéntale tu experiencia..." value={mensaje} onChange={(e) => setMensaje(e.target.value)} rows={3}
-                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none"/>
+              <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                Mensaje al cliente <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <textarea
+                placeholder="Cuéntale tu experiencia, por qué eres la mejor opción..."
+                value={mensaje}
+                onChange={(e) => setMensaje(e.target.value)}
+                rows={3}
+                className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none text-sm"/>
             </div>
           </div>
         )}
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 z-20">
-        <div className="max-w-md mx-auto flex gap-3">
+        <div className="max-w-md mx-auto">
           {sinSesion ? (
-            <div className="w-full flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <a href="/registro" className="block w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center shadow-lg hover:opacity-90 transition text-sm">
                 ⚡ Crear cuenta y aplicar gratis
               </a>
@@ -309,20 +362,18 @@ function DetalleTrabajoContent() {
           ) : esPropioServicio ? (
             <div className="w-full py-3 bg-gray-100 text-gray-400 rounded-2xl font-bold text-center">Esta es tu propia solicitud</div>
           ) : !tieneFoto ? (
-            <a href="/perfil" className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+            <a href="/perfil" className="block w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
               📷 Agrega tu foto para aplicar
             </a>
           ) : !yaAplico ? (
-            <>
-              <button onClick={() => setMostrarOferta(!mostrarOferta)} className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
-                💬 Contraoferta
-              </button>
-              <button onClick={handleAplicar} disabled={cargando} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
-                {cargando ? 'Enviando...' : `✋ Aplicar — $${ganancia.total}`}
-              </button>
-            </>
+            <button
+              onClick={handleAplicar}
+              disabled={cargando || !miPrecio || Number(miPrecio) <= 0}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              {cargando ? 'Enviando...' : precioNum > 0 && ganancia ? '✋ Enviar propuesta — recibirás $' + ganancia.total.toLocaleString('es-MX') + ' MXN' : '✋ Escribe tu precio para aplicar'}
+            </button>
           ) : (
-            <a href="/mis-trabajos" className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+            <a href="/mis-trabajos" className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
               Ver mis aplicaciones →
             </a>
           )}
