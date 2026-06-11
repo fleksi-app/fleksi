@@ -2,11 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
-import { calcularPagoFlekser } from '@/lib/comisiones';
 import TourInicial from '@/components/TourInicial';
 import { cacheGet, cacheSet, cacheInvalidate, TTL } from '@/lib/cache';
 
-const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Otro'];
+const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Envíos', 'Mascotas', 'Súper', 'Otro'];
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -229,7 +228,7 @@ export default function HomeWorker() {
   const categoriaEmoji: any = {
     hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
     interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
-    cerrajeria: '🔑', estetica: '💅', otro: '✨'
+    cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨',
   };
 
   const trabajosFiltrados = trabajos
@@ -246,8 +245,8 @@ export default function HomeWorker() {
       const matchCiudad = !ciudadActiva ||
         t.usuarios?.ciudad?.toLowerCase().includes(ciudadActiva.toLowerCase()) ||
         t.direccion?.toLowerCase().includes(ciudadActiva.toLowerCase());
-      const matchMin = !filtroPresupuestoMin || t.presupuesto >= Number(filtroPresupuestoMin);
-      const matchMax = !filtroPresupuestoMax || t.presupuesto <= Number(filtroPresupuestoMax);
+      const matchMin = !filtroPresupuestoMin || (t.presupuesto || 0) >= Number(filtroPresupuestoMin);
+      const matchMax = !filtroPresupuestoMax || (t.presupuesto || 0) <= Number(filtroPresupuestoMax);
       const matchFecha = !filtroFecha || t.fecha === filtroFecha;
       const matchUrgente = !filtroUrgente || t.urgente === true;
       const matchSeguro = !filtroSeguro || t.seguro === true;
@@ -539,7 +538,6 @@ export default function HomeWorker() {
         ) : (
           <div className="flex flex-col gap-3">
             {trabajosFiltrados.map((trabajo) => {
-              const ganancia = calcularPagoFlekser(trabajo.presupuesto);
               const cuposLabel = getCuposLabel(trabajo);
               return (
                 <a href={'/trabajo?id=' + trabajo.id} key={trabajo.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition block">
@@ -566,8 +564,9 @@ export default function HomeWorker() {
                           {cuposLabel && <div className="mt-0.5">{cuposLabel}</div>}
                         </div>
                         <div className="text-right">
-                          <p className="font-extrabold text-green-600 text-sm">${ganancia.total} MXN</p>
-                          <span className="mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white">Aplicar</span>
+                          <p className="text-xs text-purple-500 font-semibold">💰 Tú propones</p>
+                          <p className="text-xs text-gray-700 font-bold">tu precio</p>
+                          <span className="mt-1 text-xs font-bold px-3 py-1 rounded-full inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white">Aplicar →</span>
                         </div>
                       </div>
                     </div>
@@ -661,22 +660,6 @@ export default function HomeWorker() {
               </div>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-5">
-              <div>
-                <label className="text-sm font-extrabold text-gray-900 mb-2 block">💰 Ganancia estimada (MXN)</label>
-                <div className="flex gap-3">
-                  <input type="number" placeholder="Mínimo" value={filtroPresupuestoMin} onChange={(e) => setFiltroPresupuestoMin(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
-                  <div className="flex items-center text-gray-400 font-bold">—</div>
-                  <input type="number" placeholder="Máximo" value={filtroPresupuestoMax} onChange={(e) => setFiltroPresupuestoMax(e.target.value)} className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
-                </div>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {[['0','500'],['500','1000'],['1000','3000'],['3000','']].map(([min,max],i) => (
-                    <button key={i} onClick={() => { setFiltroPresupuestoMin(min); setFiltroPresupuestoMax(max); }}
-                      className={'text-xs px-3 py-1.5 rounded-full font-semibold transition border-2 ' + (filtroPresupuestoMin===min&&filtroPresupuestoMax===max ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500')}>
-                      {max ? '$' + min + '-$' + max : '$' + min + '+'}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div>
                 <label className="text-sm font-extrabold text-gray-900 mb-2 block">📅 Fecha</label>
                 <input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)} className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm"/>
