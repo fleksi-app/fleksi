@@ -436,7 +436,7 @@ export default function Admin() {
       });
       setPagosDispersion(procesados);
     } catch (e) { console.error(e); }
-    finally { setCargandoDispersion(false); }
+    finally { setCargandoDispersion(false)); }
   };
 
   const marcarDispersado = async (appId: string, nota: string) => {
@@ -856,7 +856,7 @@ export default function Admin() {
               <div>
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
                   <p className="text-amber-800 text-sm font-bold mb-1">📊 Métricas de mensajes</p>
-                  <p className="text-amber-700 text-xs leading-relaxed">Aquí ves cuántos usuarios leyeron cada mensaje que enviaste. Se agrupan por título y minuto de envío.</p>
+                  <p className="text-amber-700 text-xs leading-relaxed">Aquí ves cuántos usuarios leyeron cada mensaje que enviaste.</p>
                 </div>
                 {cargandoMetricasMensajes ? (
                   <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"/></div>
@@ -864,7 +864,6 @@ export default function Admin() {
                   <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
                     <p className="text-4xl mb-3">📭</p>
                     <p className="font-bold text-gray-900">Sin mensajes enviados aún</p>
-                    <p className="text-gray-400 text-sm mt-1">Los mensajes masivos e individuales aparecerán aquí</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -887,18 +886,9 @@ export default function Admin() {
                             <div className={'h-full rounded-full transition-all ' + (pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400')} style={{ width: pct + '%' }}/>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                              <p className="text-lg font-extrabold text-gray-900">{m.total}</p>
-                              <p className="text-xs text-gray-400">Enviados</p>
-                            </div>
-                            <div className="bg-green-50 rounded-xl p-2.5 text-center">
-                              <p className="text-lg font-extrabold text-green-600">{m.leidos}</p>
-                              <p className="text-xs text-gray-400">✅ Leídos</p>
-                            </div>
-                            <div className="bg-red-50 rounded-xl p-2.5 text-center">
-                              <p className="text-lg font-extrabold text-red-500">{m.noLeidos}</p>
-                              <p className="text-xs text-gray-400">🔴 Sin leer</p>
-                            </div>
+                            <div className="bg-gray-50 rounded-xl p-2.5 text-center"><p className="text-lg font-extrabold text-gray-900">{m.total}</p><p className="text-xs text-gray-400">Enviados</p></div>
+                            <div className="bg-green-50 rounded-xl p-2.5 text-center"><p className="text-lg font-extrabold text-green-600">{m.leidos}</p><p className="text-xs text-gray-400">✅ Leídos</p></div>
+                            <div className="bg-red-50 rounded-xl p-2.5 text-center"><p className="text-lg font-extrabold text-red-500">{m.noLeidos}</p><p className="text-xs text-gray-400">🔴 Sin leer</p></div>
                           </div>
                         </div>
                       );
@@ -912,13 +902,13 @@ export default function Admin() {
               <div>
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
                   <p className="text-green-800 text-sm font-bold mb-1">📱 Mensajes personalizados para WhatsApp</p>
-                  <p className="text-green-700 text-xs leading-relaxed">Cada mensaje incluye el nombre, qué le falta completar, su porcentaje y el tip de cómo instalar la app. Copia y manda por WhatsApp a cada uno.</p>
+                  <p className="text-green-700 text-xs leading-relaxed">Cada mensaje incluye el nombre, qué le falta completar y su porcentaje.</p>
                 </div>
                 {cargandoWA ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"/></div>
                 : usuariosWA.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin usuarios</p></div>
                 : (
                   <div className="flex flex-col gap-3">
-                    <p className="text-xs text-gray-400">{usuariosWA.length} usuarios — toca "Copiar" en cada uno y mándalo por WhatsApp</p>
+                    <p className="text-xs text-gray-400">{usuariosWA.length} usuarios</p>
                     {usuariosWA.map((u) => {
                       const mensaje = generarMensajeWA(u);
                       const yaCopiado2 = mensajesCopiados[u.id];
@@ -1255,7 +1245,23 @@ export default function Admin() {
                                       </div>
                                     )
                                   )}
-                                  {doc.estado === 'aprobado' && <span className="text-xs text-green-600 font-semibold ml-auto">Aprobado ✓</span>}
+                                  {doc.estado === 'aprobado' && (
+                                    rechazandoDoc === doc.id ? (
+                                      <div className="w-full flex flex-col gap-2 mt-2">
+                                        <p className="text-xs text-amber-700 font-semibold">⚠️ Esto revertirá la aprobación y el usuario deberá subir el documento de nuevo.</p>
+                                        <textarea value={motivoDoc} onChange={(e) => setMotivoDoc(e.target.value)} placeholder="Motivo del rechazo..." rows={2} className="w-full p-2 rounded-lg border-2 border-red-300 outline-none text-gray-900 text-xs resize-none"/>
+                                        <div className="flex gap-2">
+                                          <button onClick={() => { setRechazandoDoc(''); setMotivoDoc(''); }} className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-lg font-semibold text-xs">Cancelar</button>
+                                          <button onClick={() => rechazarDoc(doc.id, grupo.usuario_id, doc.tipo)} disabled={procesandoDoc === doc.id} className="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold text-xs disabled:opacity-50">{procesandoDoc === doc.id ? '...' : 'Confirmar rechazo'}</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 ml-auto">
+                                        <span className="text-xs text-green-600 font-semibold">Aprobado ✓</span>
+                                        <button onClick={() => setRechazandoDoc(doc.id)} className="px-2 py-1 border border-red-200 text-red-400 rounded-lg font-bold text-xs hover:bg-red-50 transition">↩️ Revertir</button>
+                                      </div>
+                                    )
+                                  )}
                                 </div>
                                 <p className="text-xs text-gray-400 mt-2">{new Date(doc.updated_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                               </div>
@@ -1332,7 +1338,7 @@ export default function Admin() {
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-green-600">{retiros.filter(r => r.estado === 'completado').length}</p><p className="text-xs text-gray-400 mt-1">Completados</p></div>
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"><p className="text-2xl font-extrabold text-red-500">${retiros.filter(r => r.estado === 'pendiente').reduce((acc, r) => acc + (r.monto || 0), 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-xs text-gray-400 mt-1">MXN por enviar</p></div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">Haz la transferencia SPEI a la CLABE indicada y marca como completado. Si hay algún problema, recházalo y el saldo se reintegra automáticamente.</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">Haz la transferencia SPEI a la CLABE indicada y marca como completado.</p></div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
                 <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
