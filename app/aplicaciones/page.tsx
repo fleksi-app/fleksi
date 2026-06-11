@@ -13,6 +13,19 @@ function AplicacionesContent() {
   const [procesando, setProcesando] = useState('');
   const [usuario, setUsuario] = useState<any>(null);
 
+  // Eliminar
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState('');
+  const [eliminando, setEliminando] = useState(false);
+
+  // Editar
+  const [editandoServicio, setEditandoServicio] = useState<any>(null);
+  const [editTitulo, setEditTitulo] = useState('');
+  const [editFecha, setEditFecha] = useState('');
+  const [editHora, setEditHora] = useState('');
+  const [editDireccion, setEditDireccion] = useState('');
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [exitoEdicion, setExitoEdicion] = useState('');
+
   useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
@@ -55,6 +68,60 @@ function AplicacionesContent() {
     }
   };
 
+  const handleEliminar = async (servicioId: string) => {
+    setEliminando(true);
+    try {
+      // Cancelar aplicaciones pendientes
+      await supabase.from('aplicaciones')
+        .update({ estado: 'rechazado' })
+        .eq('servicio_id', servicioId)
+        .eq('estado', 'pendiente');
+      // Marcar como cancelado
+      await supabase.from('servicios')
+        .update({ estado: 'cancelado' })
+        .eq('id', servicioId);
+      setConfirmandoEliminar('');
+      setServicioActivo(null);
+      await cargarDatos();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const abrirEdicion = (svc: any) => {
+    setEditandoServicio(svc);
+    setEditTitulo(svc.titulo || '');
+    setEditFecha(svc.fecha || '');
+    setEditHora(svc.hora || '');
+    setEditDireccion(svc.direccion || '');
+    setExitoEdicion('');
+  };
+
+  const guardarEdicion = async () => {
+    if (!editandoServicio) return;
+    setGuardandoEdicion(true);
+    try {
+      await supabase.from('servicios').update({
+        titulo: editTitulo.trim(),
+        fecha: editFecha,
+        hora: editHora || null,
+        direccion: editDireccion.trim() || null,
+      }).eq('id', editandoServicio.id);
+      setExitoEdicion('✅ Cambios guardados');
+      await cargarDatos();
+      setTimeout(() => {
+        setEditandoServicio(null);
+        setExitoEdicion('');
+      }, 1500);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  };
+
   const iniciarChat = async (prestadorId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !servicioActivo) return;
@@ -65,7 +132,7 @@ function AplicacionesContent() {
         servicio_id: servicioActivo.id,
         remitente_id: user.id,
         destinatario_id: prestadorId,
-        contenido: `Hola, te contacto por el trabajo: ${servicioActivo.titulo}`,
+        contenido: 'Hola, te contacto por el trabajo: ' + servicioActivo.titulo,
       });
     }
     window.location.href = '/chat';
@@ -85,7 +152,6 @@ function AplicacionesContent() {
 
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
-
   const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const btnGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
@@ -93,6 +159,7 @@ function AplicacionesContent() {
   const chatBorder = esEmpresa ? 'border-blue-200 text-blue-700 hover:bg-blue-50' : 'border-purple-200 text-purple-600 hover:bg-purple-50';
   const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
   const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
+  const hoyStr = new Date().toISOString().split('T')[0];
 
   if (cargando) {
     return (
@@ -105,9 +172,83 @@ function AplicacionesContent() {
     );
   }
 
+  // ── MODAL EDITAR ──
+  if (editandoServicio) {
+    return (
+      <main className={`min-h-screen ${bgFondo} pb-32`}>
+        <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm`}>
+          <div className="max-w-md mx-auto flex items-center gap-4">
+            <button onClick={() => setEditandoServicio(null)}
+              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">←</button>
+            <div>
+              <h1 className="font-extrabold text-white text-lg">Editar solicitud</h1>
+              <p className="text-white/70 text-xs">Modifica los detalles de tu publicación</p>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-md mx-auto px-6 py-6 flex flex-col gap-4">
+          {exitoEdicion && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold text-center">{exitoEdicion}</div>
+          )}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">📋 Título</label>
+            <input
+              type="text"
+              value={editTitulo}
+              onChange={(e) => setEditTitulo(e.target.value)}
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 Fecha</label>
+            <input
+              type="date"
+              value={editFecha}
+              min={hoyStr}
+              onChange={(e) => setEditFecha(e.target.value)}
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">🕐 Hora <span className="text-gray-400 font-normal">(opcional)</span></label>
+            <input
+              type="time"
+              value={editHora}
+              onChange={(e) => setEditHora(e.target.value)}
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección <span className="text-gray-400 font-normal">(opcional)</span></label>
+            <input
+              type="text"
+              value={editDireccion}
+              onChange={(e) => setEditDireccion(e.target.value)}
+              placeholder="Ej. Calle Reforma 123, Col. Centro"
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 transition"/>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
+            <p className="text-amber-700 text-xs font-semibold">⚠️ Los Fleksers que ya aplicaron verán los cambios automáticamente.</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => setEditandoServicio(null)}
+              className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-gray-400 transition">
+              Cancelar
+            </button>
+            <button onClick={guardarEdicion} disabled={guardandoEdicion || !editTitulo.trim() || !editFecha}
+              className={`flex-1 py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold disabled:opacity-50 transition`}>
+              {guardandoEdicion ? 'Guardando...' : 'Guardar cambios ✓'}
+            </button>
+          </div>
+        </div>
+        <Nav activo="inicio" />
+      </main>
+    );
+  }
+
   if (servicioActivo) {
     const prestadorTermino = aplicaciones.some(a => a.checkout_at);
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
+    const tieneAceptado = aplicaciones.some(a => a.estado === 'aceptado');
+    const puedeEliminar = servicioActivo.estado === 'activo' && !tieneAceptado;
+    const puedeEditar = servicioActivo.estado === 'activo';
 
     const hace7dias = new Date();
     hace7dias.setDate(hace7dias.getDate() - 7);
@@ -120,15 +261,19 @@ function AplicacionesContent() {
           <div className="max-w-md mx-auto">
             <div className="flex items-center gap-4 mb-2">
               <button onClick={() => setServicioActivo(null)}
-                className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
-                ←
-              </button>
+                className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">←</button>
               <div className="flex-1">
                 <h1 className="font-extrabold text-white text-lg">Aplicaciones recibidas</h1>
                 <p className="text-white/70 text-xs truncate max-w-xs">{servicioActivo.titulo}</p>
               </div>
+              {puedeEditar && (
+                <button onClick={() => abrirEdicion(servicioActivo)}
+                  className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition text-sm">
+                  ✏️
+                </button>
+              )}
             </div>
-            <div className="flex gap-3 mt-3">
+            <div className="flex gap-3 mt-3 flex-wrap">
               <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
                 <span className="text-white/70 text-xs">👁️ Total</span>
                 <span className="text-white font-extrabold text-sm">{servicioActivo.visitas || 0}</span>
@@ -162,10 +307,52 @@ function AplicacionesContent() {
           )}
 
           {puedeConfirmar && (
-            <a href={`/confirmar?id=${servicioActivo.id}`}
+            <a href={'/confirmar?id=' + servicioActivo.id}
               className={`block w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-extrabold text-lg text-center shadow-lg hover:opacity-90 transition mb-4`}>
               🎉 Confirmar trabajo y liberar pago
             </a>
+          )}
+
+          {/* ── ACCIONES EDITAR / ELIMINAR ── */}
+          {(puedeEditar || puedeEliminar) && (
+            <div className="flex gap-2 mb-4">
+              {puedeEditar && (
+                <button onClick={() => abrirEdicion(servicioActivo)}
+                  className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-sm hover:border-purple-400 hover:text-purple-600 transition flex items-center justify-center gap-2">
+                  ✏️ Editar
+                </button>
+              )}
+              {puedeEliminar && (
+                <button onClick={() => setConfirmandoEliminar(servicioActivo.id)}
+                  className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-50 transition flex items-center justify-center gap-2">
+                  🗑️ Cancelar solicitud
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Modal confirmar eliminar */}
+          {confirmandoEliminar === servicioActivo.id && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
+              <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar esta solicitud?</p>
+              <p className="text-red-600 text-xs mb-3">Se rechazarán automáticamente todas las aplicaciones pendientes. Esta acción no se puede deshacer.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmandoEliminar('')}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
+                  No, mantener
+                </button>
+                <button onClick={() => handleEliminar(servicioActivo.id)} disabled={eliminando}
+                  className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                  {eliminando ? 'Cancelando...' : 'Sí, cancelar'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!puedeEliminar && servicioActivo.estado === 'activo' && tieneAceptado && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4">
+              <p className="text-amber-700 text-xs font-semibold">⚠️ No puedes cancelar esta solicitud porque ya tienes un Flekser aceptado.</p>
+            </div>
           )}
 
           {aplicaciones.length === 0 ? (
@@ -193,7 +380,7 @@ function AplicacionesContent() {
                         <p className="text-xs text-gray-400">· {app.usuarios?.trabajos_completados || 0} trabajos</p>
                       </div>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoColor[app.estado] || 'bg-gray-100 text-gray-600'}`}>
+                    <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (estadoColor[app.estado] || 'bg-gray-100 text-gray-600')}>
                       {estadoLabel[app.estado] || app.estado}
                     </span>
                   </div>
@@ -209,7 +396,7 @@ function AplicacionesContent() {
                   <div className="bg-gray-50 rounded-xl p-3 mb-4">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-gray-500">Precio ofrecido</span>
-                      <span className={`font-extrabold ${precioColor}`}>${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
+                      <span className={'font-extrabold ' + precioColor}>${app.precio_ofrecido || servicioActivo.presupuesto} MXN</span>
                     </div>
                     {servicioActivo.seguro && (
                       <div className="flex justify-between items-center">
@@ -240,8 +427,8 @@ function AplicacionesContent() {
                           className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-red-400 hover:text-red-500 transition disabled:opacity-50">
                           ❌ Rechazar
                         </button>
-                        <button onClick={() => window.location.href = `/pago?aplicacion=${app.id}`}
-                          className={`flex-1 py-3 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition`}>
+                        <button onClick={() => window.location.href = '/pago?aplicacion=' + app.id}
+                          className={'flex-1 py-3 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition'}>
                           ✅ Aceptar y pagar
                         </button>
                       </div>
@@ -257,7 +444,7 @@ function AplicacionesContent() {
                         </p>
                       </div>
                       <button onClick={() => iniciarChat(app.usuarios?.id)}
-                        className={`w-full py-3 border-2 ${chatBorder} rounded-2xl font-bold transition flex items-center justify-center gap-2`}>
+                        className={'w-full py-3 border-2 ' + chatBorder + ' rounded-2xl font-bold transition flex items-center justify-center gap-2'}>
                         💬 Enviar mensaje
                       </button>
                     </div>
@@ -284,7 +471,7 @@ function AplicacionesContent() {
 
       <div className="max-w-md mx-auto px-6 py-4">
         <a href="/publicar"
-          className={`block w-full py-4 bg-gradient-to-r ${btnGradient} text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition mb-4`}>
+          className={'block w-full py-4 bg-gradient-to-r ' + btnGradient + ' text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition mb-4'}>
           + Publicar nueva solicitud
         </a>
 
@@ -301,42 +488,75 @@ function AplicacionesContent() {
               hace7dias.setDate(hace7dias.getDate() - 7);
               const visitasSemana = (svc.visitas_semana || [])
                 .filter((v: string) => new Date(v) > hace7dias).length;
+              const puedeEditar = svc.estado === 'activo';
               return (
-                <button key={svc.id} onClick={() => verAplicaciones(svc)}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left w-full active:scale-95 transition">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
-                      svc.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
-                      svc.estado === 'en_proceso' ? 'bg-purple-100 text-purple-600' :
-                      svc.estado === 'completado' ? 'bg-orange-100 text-orange-600' :
-                      svc.estado === 'pagado' ? 'bg-green-100 text-green-600' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {svc.estado === 'activo' ? '🟢 Activo' :
-                       svc.estado === 'en_proceso' ? '🔄 En proceso' :
-                       svc.estado === 'completado' ? '⏳ Por confirmar' :
-                       svc.estado === 'pagado' ? '💰 Pagado' : svc.estado}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
-                    <p className={`font-extrabold ${precioColor} text-sm`}>${svc.presupuesto} MXN</p>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    {svc.visitas > 0 && (
-                      <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''} totales</span>
+                <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button onClick={() => verAplicaciones(svc)}
+                    className="w-full p-4 text-left active:scale-95 transition">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{svc.titulo}</h3>
+                      <span className={'text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ' + (
+                        svc.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
+                        svc.estado === 'en_proceso' ? 'bg-purple-100 text-purple-600' :
+                        svc.estado === 'completado' ? 'bg-orange-100 text-orange-600' :
+                        svc.estado === 'pagado' ? 'bg-green-100 text-green-600' :
+                        svc.estado === 'cancelado' ? 'bg-red-100 text-red-500' :
+                        'bg-gray-100 text-gray-600'
+                      )}>
+                        {svc.estado === 'activo' ? '🟢 Activo' :
+                         svc.estado === 'en_proceso' ? '🔄 En proceso' :
+                         svc.estado === 'completado' ? '⏳ Por confirmar' :
+                         svc.estado === 'pagado' ? '💰 Pagado' :
+                         svc.estado === 'cancelado' ? '❌ Cancelado' : svc.estado}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs text-gray-400">📅 {svc.fecha}</p>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      {svc.visitas > 0 && (
+                        <span className="text-xs text-gray-400">👁️ {svc.visitas} vista{svc.visitas !== 1 ? 's' : ''}</span>
+                      )}
+                      {visitasSemana > 0 && (
+                        <span className="text-xs text-purple-500 font-semibold">📅 {visitasSemana} esta semana</span>
+                      )}
+                    </div>
+                    {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
+                      <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
+                        <p className="text-orange-600 text-xs font-bold">⏳ Toca para ver y confirmar el trabajo</p>
+                      </div>
                     )}
-                    {visitasSemana > 0 && (
-                      <span className="text-xs text-purple-500 font-semibold">📅 {visitasSemana} esta semana</span>
-                    )}
-                  </div>
-                  {svc.pago_retenido && (svc.estado === 'en_proceso' || svc.estado === 'completado') && (
-                    <div className="mt-2 bg-orange-50 rounded-xl p-2 text-center">
-                      <p className="text-orange-600 text-xs font-bold">⏳ Toca para ver y confirmar el trabajo</p>
+                  </button>
+                  {puedeEditar && (
+                    <div className="flex border-t border-gray-100">
+                      <button onClick={() => abrirEdicion(svc)}
+                        className="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-50 transition flex items-center justify-center gap-1">
+                        ✏️ Editar
+                      </button>
+                      <div className="w-px bg-gray-100"/>
+                      <button onClick={() => setConfirmandoEliminar(svc.id)}
+                        className="flex-1 py-2.5 text-xs font-bold text-red-400 hover:bg-red-50 transition flex items-center justify-center gap-1">
+                        🗑️ Cancelar
+                      </button>
                     </div>
                   )}
-                </button>
+                  {confirmandoEliminar === svc.id && (
+                    <div className="bg-red-50 border-t border-red-200 p-4">
+                      <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar esta solicitud?</p>
+                      <p className="text-red-600 text-xs mb-3">Se rechazarán las aplicaciones pendientes.</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setConfirmandoEliminar('')}
+                          className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold text-xs">
+                          No, mantener
+                        </button>
+                        <button onClick={() => handleEliminar(svc.id)} disabled={eliminando}
+                          className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold text-xs disabled:opacity-50">
+                          {eliminando ? 'Cancelando...' : 'Sí, cancelar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
