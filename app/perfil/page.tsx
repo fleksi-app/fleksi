@@ -66,6 +66,13 @@ function calcularProgresoPerfil(usuario: any, documentos: any[], rol: string) {
   return Math.min(puntos, 100);
 }
 
+type FotoPortafolio = {
+  foto: string;
+  titulo: string;
+  id: string;
+  esManual: boolean;
+};
+
 export default function Perfil() {
   const [usuario, setUsuario] = useState<any>(null);
   const [editando, setEditando] = useState(false);
@@ -121,7 +128,6 @@ export default function Perfil() {
   const [mostrarEliminar, setMostrarEliminar] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState('');
 
-  // Portafolio manual
   const [subiendoPortafolio, setSubiendoPortafolio] = useState(false);
   const [tituloNuevoPortafolio, setTituloNuevoPortafolio] = useState('');
   const [eliminandoFoto, setEliminandoFoto] = useState('');
@@ -215,16 +221,12 @@ export default function Perfil() {
       setPortafolioTrabajos(fotosTrabajos);
       setTotalGanado(total);
 
-      // Cargar portafolio manual
-      const { data: { user: u2 } } = await supabase.auth.getUser();
-      if (u2) {
-        const { data: portData } = await supabase
-          .from('portafolio_fotos')
-          .select('*')
-          .eq('usuario_id', u2.id)
-          .order('created_at', { ascending: false });
-        setPortafolioManual(portData || []);
-      }
+      const { data: portData } = await supabase
+        .from('portafolio_fotos')
+        .select('*')
+        .eq('usuario_id', user.id)
+        .order('created_at', { ascending: false });
+      setPortafolioManual(portData || []);
 
       const { data: verifData } = await supabase
         .from('verificaciones').select('*').eq('usuario_id', user.id).single();
@@ -262,7 +264,6 @@ export default function Perfil() {
       });
       setTituloNuevoPortafolio('');
       setMostrarAgregarFoto(false);
-      // Recargar portafolio
       const { data: portData } = await supabase
         .from('portafolio_fotos')
         .select('*')
@@ -280,14 +281,13 @@ export default function Perfil() {
   const eliminarFotoPortafolio = async (foto: any) => {
     setEliminandoFoto(foto.id);
     try {
-      // Extraer path del URL
       const url = foto.foto_url;
       const partes = url.split('/portafolio/');
       if (partes.length > 1) {
         await supabase.storage.from('portafolio').remove([partes[1]]);
       }
       await supabase.from('portafolio_fotos').delete().eq('id', foto.id);
-      setPortafolioManual(prev => prev.filter(f => f.id !== foto.id));
+      setPortafolioManual(prev => prev.filter((f: any) => f.id !== foto.id));
     } catch (err: any) {
       alert('Error al eliminar: ' + err.message);
     } finally {
@@ -490,7 +490,10 @@ export default function Perfil() {
   const verif = verificacionInfo();
   const perfilCompleto = progresoPerfil === 100;
   const faltantes = pasosFaltantes();
-  const todasLasFotos = [...portafolioManual.map((f: any) => ({ foto: f.foto_url, titulo: f.titulo || 'Mi trabajo', id: f.id, esManual: true })), ...portafolioTrabajos.map(f => ({ ...f, esManual: false }))];
+  const todasLasFotos: FotoPortafolio[] = [
+    ...portafolioManual.map((f: any) => ({ foto: f.foto_url, titulo: f.titulo || 'Mi trabajo', id: f.id as string, esManual: true })),
+    ...portafolioTrabajos.map(f => ({ foto: f.foto, titulo: f.titulo, id: '', esManual: false })),
+  ];
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
@@ -821,7 +824,7 @@ export default function Perfil() {
                 {subiendoPortafolio ? (
                   <><div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"/> Subiendo...</>
                 ) : (
-                  <> 📷 Seleccionar foto</>
+                  <>📷 Seleccionar foto</>
                 )}
               </button>
               <button
@@ -851,7 +854,7 @@ export default function Perfil() {
                   </button>
                   {item.esManual && (
                     <button
-                      onClick={() => eliminarFotoPortafolio(item)}
+                      onClick={() => eliminarFotoPortafolio({ id: item.id, foto_url: item.foto })}
                       disabled={eliminandoFoto === item.id}
                       className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
                       {eliminandoFoto === item.id ? '⏳' : '✕'}
