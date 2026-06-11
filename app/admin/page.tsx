@@ -436,7 +436,7 @@ export default function Admin() {
       });
       setPagosDispersion(procesados);
     } catch (e) { console.error(e); }
-    finally { setCargandoDispersion(false)); }
+    finally { setCargandoDispersion(false); }
   };
 
   const marcarDispersado = async (appId: string, nota: string) => {
