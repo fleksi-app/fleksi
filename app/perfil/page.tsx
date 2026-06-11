@@ -1149,4 +1149,4 @@ export default function Perfil() {
       <Nav activo="perfil" />
     </main>
   );
-}
+}// portafolio fix
