@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import TourInicial from '@/components/TourInicial';
 import { cacheGet, cacheSet, cacheInvalidate, TTL } from '@/lib/cache';
+import { ESTADOS, getCiudades, formatearUbicacion } from '@/lib/ciudades';
 
 const categorias = ['Todos', 'Hogar', 'Limpieza', 'Eventos', 'Mudanza', 'Ejecutivo', 'Cocina', 'Jardinería', 'Mecánica', 'Cerrajería', 'Estética', 'Envíos', 'Mascotas', 'Súper', 'Otro'];
 
@@ -44,12 +45,19 @@ export default function HomeWorker() {
   const [ciudadActiva, setCiudadActiva] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
   const [mostrarSelectorCiudad, setMostrarSelectorCiudad] = useState(false);
-  const [inputCiudad, setInputCiudad] = useState('');
+
+  // Modal ubicación obligatoria
+  const [mostrarUbicacionObligatoria, setMostrarUbicacionObligatoria] = useState(false);
+  const [estadoSel, setEstadoSel] = useState('');
+  const [ciudadSel, setCiudadSel] = useState('');
+  const [guardandoUbicacion, setGuardandoUbicacion] = useState(false);
+
+  // Selector ciudad opcional (cambiar ubicación)
+  const [estadoSelectorOpc, setEstadoSelectorOpc] = useState('');
+  const [ciudadSelectorOpc, setCiudadSelectorOpc] = useState('');
   const [guardandoCiudad, setGuardandoCiudad] = useState(false);
 
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  const [filtroPresupuestoMin, setFiltroPresupuestoMin] = useState('');
-  const [filtroPresupuestoMax, setFiltroPresupuestoMax] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroUrgente, setFiltroUrgente] = useState(false);
   const [filtroSeguro, setFiltroSeguro] = useState(false);
@@ -92,10 +100,15 @@ export default function HomeWorker() {
     }
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
+
     const ciudadUsuario = perfil?.ciudad || '';
     setCiudadActiva(ciudadUsuario);
-    setInputCiudad(ciudadUsuario);
     setCiudadesVisitadas(perfil?.ciudades_visitadas || []);
+
+    // Si no tiene ciudad guardada, mostrar modal obligatorio
+    if (!ciudadUsuario) {
+      setMostrarUbicacionObligatoria(true);
+    }
 
     let servicios = cacheGet<any[]>('servicios_activos');
     if (!servicios) {
@@ -145,22 +158,45 @@ export default function HomeWorker() {
     }
   };
 
-  const aplicarCiudad = async (nuevaCiudad: string) => {
-    if (!usuario) return;
-    setGuardandoCiudad(true);
+  const guardarUbicacionObligatoria = async () => {
+    if (!usuario || !estadoSel || !ciudadSel) return;
+    setGuardandoUbicacion(true);
     try {
+      const ubicacion = formatearUbicacion(estadoSel, ciudadSel);
       const ciudadesActualizadas = [...(ciudadesVisitadas || [])];
-      if (nuevaCiudad.trim() && !ciudadesActualizadas.includes(nuevaCiudad.trim())) {
-        ciudadesActualizadas.push(nuevaCiudad.trim());
-      }
+      if (!ciudadesActualizadas.includes(ubicacion)) ciudadesActualizadas.push(ubicacion);
       await supabase.from('usuarios').update({
-        ciudad: nuevaCiudad.trim() || usuario.ciudad_base || usuario.ciudad || '',
+        ciudad: ubicacion,
+        estado: estadoSel,
+        ciudad_base: ubicacion,
         ciudades_visitadas: ciudadesActualizadas,
       }).eq('id', usuario.id);
       cacheInvalidate('perfil_' + usuario.id);
-      setCiudadActiva(nuevaCiudad.trim());
+      setCiudadActiva(ubicacion);
+      setCiudadesVisitadas(ciudadesActualizadas);
+      setMostrarUbicacionObligatoria(false);
+    } finally {
+      setGuardandoUbicacion(false);
+    }
+  };
+
+  const aplicarCiudadOpcional = async () => {
+    if (!usuario || !estadoSelectorOpc || !ciudadSelectorOpc) return;
+    setGuardandoCiudad(true);
+    try {
+      const ubicacion = formatearUbicacion(estadoSelectorOpc, ciudadSelectorOpc);
+      const ciudadesActualizadas = [...(ciudadesVisitadas || [])];
+      if (!ciudadesActualizadas.includes(ubicacion)) ciudadesActualizadas.push(ubicacion);
+      await supabase.from('usuarios').update({
+        ciudad: ubicacion,
+        ciudades_visitadas: ciudadesActualizadas,
+      }).eq('id', usuario.id);
+      cacheInvalidate('perfil_' + usuario.id);
+      setCiudadActiva(ubicacion);
       setCiudadesVisitadas(ciudadesActualizadas);
       setMostrarSelectorCiudad(false);
+      setEstadoSelectorOpc('');
+      setCiudadSelectorOpc('');
     } finally {
       setGuardandoCiudad(false);
     }
@@ -218,12 +254,11 @@ export default function HomeWorker() {
   };
 
   const limpiarFiltros = () => {
-    setFiltroPresupuestoMin(''); setFiltroPresupuestoMax('');
     setFiltroFecha(''); setFiltroUrgente(false); setFiltroSeguro(false);
     setCategoriaActiva('Todos');
   };
 
-  const filtrosActivos = [filtroPresupuestoMin, filtroPresupuestoMax, filtroFecha, filtroUrgente, filtroSeguro, categoriaActiva !== 'Todos'].filter(Boolean).length;
+  const filtrosActivos = [filtroFecha, filtroUrgente, filtroSeguro, categoriaActiva !== 'Todos'].filter(Boolean).length;
 
   const categoriaEmoji: any = {
     hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
@@ -244,13 +279,12 @@ export default function HomeWorker() {
       const matchBusqueda = t.titulo?.toLowerCase().includes(busqueda.toLowerCase()) || t.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
       const matchCiudad = !ciudadActiva ||
         t.usuarios?.ciudad?.toLowerCase().includes(ciudadActiva.toLowerCase()) ||
+        ciudadActiva.toLowerCase().includes((t.usuarios?.ciudad || '').toLowerCase()) ||
         t.direccion?.toLowerCase().includes(ciudadActiva.toLowerCase());
-      const matchMin = !filtroPresupuestoMin || (t.presupuesto || 0) >= Number(filtroPresupuestoMin);
-      const matchMax = !filtroPresupuestoMax || (t.presupuesto || 0) <= Number(filtroPresupuestoMax);
       const matchFecha = !filtroFecha || t.fecha === filtroFecha;
       const matchUrgente = !filtroUrgente || t.urgente === true;
       const matchSeguro = !filtroSeguro || t.seguro === true;
-      return matchCat && matchBusqueda && matchCiudad && matchMin && matchMax && matchFecha && matchUrgente && matchSeguro;
+      return matchCat && matchBusqueda && matchCiudad && matchFecha && matchUrgente && matchSeguro;
     });
 
   const notifEmoji: any = { nueva_aplicacion: '✋', aplicacion_aceptada: '✅', aplicacion_rechazada: '❌', trabajo_completado: '🎉', nuevo_trabajo: '🔔', pago_liberado: '💰', mensaje_nuevo: '💬' };
@@ -271,6 +305,9 @@ export default function HomeWorker() {
     ...(ciudadesVisitadas || []),
     ...(usuario?.ciudad_base ? [usuario.ciudad_base] : []),
   ])).filter(Boolean);
+
+  const ciudadesDelEstadoOpc = getCiudades(estadoSelectorOpc);
+  const ciudadesDelEstadoModal = getCiudades(estadoSel);
 
   if (cargando) {
     return (
@@ -319,32 +356,20 @@ export default function HomeWorker() {
           </div>
 
           <button
-            onClick={() => { setInputCiudad(ciudadActiva); setMostrarSelectorCiudad(true); }}
+            onClick={() => { setEstadoSelectorOpc(usuario?.estado || ''); setCiudadSelectorOpc(''); setMostrarSelectorCiudad(true); }}
             className="w-full flex items-center justify-between bg-white/15 border border-white/25 rounded-2xl px-4 py-3 mb-4 hover:bg-white/25 transition group">
             <div className="flex items-center gap-2">
               <span className="text-lg">📍</span>
               <div className="text-left">
-                <p className="text-white/60 text-xs font-semibold">¿Dónde estás buscando?</p>
-                <p className="text-white font-extrabold text-sm">{ciudadActiva || 'Todo el país 🗺️'}</p>
+                <p className="text-white/60 text-xs font-semibold">Ubicación</p>
+                <p className="text-white font-extrabold text-sm">{ciudadActiva || 'Selecciona tu ciudad'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {ciudadActiva && (
-                <button onClick={(e) => { e.stopPropagation(); setCiudadActiva(''); }}
-                  className="text-white/50 hover:text-white text-xs font-bold bg-white/10 rounded-full px-2 py-0.5 transition">
-                  Ver todo
-                </button>
-              )}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="opacity-60 group-hover:opacity-100 transition"><path d="M9 18l6-6-6-6"/></svg>
-            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="opacity-60 group-hover:opacity-100 transition"><path d="M9 18l6-6-6-6"/></svg>
           </button>
 
-          {ciudadesSugeridas.length > 0 && (
+          {ciudadesSugeridas.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
-              <button onClick={() => setCiudadActiva('')}
-                className={'flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ' + (!ciudadActiva ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25')}>
-                🗺️ Todo
-              </button>
               {ciudadesSugeridas.map((c) => (
                 <button key={c} onClick={() => setCiudadActiva(c)}
                   className={'flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full border transition ' + (ciudadActiva === c ? 'bg-white text-purple-700 border-white' : 'bg-white/15 text-white border-white/25 hover:bg-white/25')}>
@@ -356,7 +381,7 @@ export default function HomeWorker() {
 
           <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4 border border-white/20">
             <p className="text-white/70 text-xs font-semibold mb-1">
-              {ciudadActiva ? '⚡ Trabajos en ' + ciudadActiva : '🗺️ Trabajos en todo el país'}
+              {ciudadActiva ? '⚡ Trabajos en ' + ciudadActiva : '🗺️ Trabajos disponibles'}
             </p>
             <div className="flex items-end gap-2">
               <p className="text-4xl font-extrabold text-white">{trabajosFiltrados.length}</p>
@@ -476,12 +501,6 @@ export default function HomeWorker() {
 
         {filtrosActivos > 0 && (
           <div className="flex gap-2 flex-wrap mb-4">
-            {(filtroPresupuestoMin || filtroPresupuestoMax) && (
-              <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
-                💰 ${filtroPresupuestoMin || '0'}-${filtroPresupuestoMax || '∞'}
-                <button onClick={() => { setFiltroPresupuestoMin(''); setFiltroPresupuestoMax(''); }} className="ml-1 text-purple-400">✕</button>
-              </span>
-            )}
             {filtroFecha && (
               <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">
                 📅 {filtroFecha}
@@ -506,7 +525,7 @@ export default function HomeWorker() {
 
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-extrabold text-gray-900">
-            {ciudadActiva ? 'Trabajos en ' + ciudadActiva : '🗺️ Trabajos en todo el país'}
+            {ciudadActiva ? 'Trabajos en ' + ciudadActiva : 'Trabajos disponibles'}
           </h2>
           <span className="text-sm text-gray-400">{trabajosFiltrados.length} disponibles</span>
         </div>
@@ -520,20 +539,12 @@ export default function HomeWorker() {
                 : filtrosActivos > 0 ? 'Prueba cambiando los filtros'
                 : 'Vuelve más tarde para ver nuevas solicitudes'}
             </p>
-            <div className="flex flex-col gap-2 items-center">
-              {ciudadActiva && (
-                <button onClick={() => setCiudadActiva('')}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
-                  🗺️ Ver todo el país
-                </button>
-              )}
-              {filtrosActivos > 0 && (
-                <button onClick={limpiarFiltros}
-                  className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-2xl font-bold text-sm">
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
+            {filtrosActivos > 0 && (
+              <button onClick={limpiarFiltros}
+                className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-2xl font-bold text-sm">
+                Limpiar filtros
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -578,46 +589,83 @@ export default function HomeWorker() {
         )}
       </div>
 
+      {/* ── MODAL UBICACIÓN OBLIGATORIA ── */}
+      {mostrarUbicacionObligatoria && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-6 text-center">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-3xl">📍</div>
+              <h2 className="text-white font-extrabold text-xl">¿Dónde estás?</h2>
+              <p className="text-white/80 text-sm mt-1">Para mostrarte trabajos cerca de ti</p>
+            </div>
+            <div className="px-6 py-5 flex flex-col gap-4">
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Estado</label>
+                <select value={estadoSel} onChange={(e) => { setEstadoSel(e.target.value); setCiudadSel(''); }}
+                  className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-white">
+                  <option value="">Selecciona...</option>
+                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+              {estadoSel && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Ciudad</label>
+                  <select value={ciudadSel} onChange={(e) => setCiudadSel(e.target.value)}
+                    className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 bg-white">
+                    <option value="">Selecciona...</option>
+                    {ciudadesDelEstadoModal.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={guardarUbicacionObligatoria} disabled={guardandoUbicacion || !estadoSel || !ciudadSel}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold disabled:opacity-50 transition">
+                {guardandoUbicacion ? 'Guardando...' : 'Confirmar ubicación ✓'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SELECTOR CIUDAD OPCIONAL ── */}
       {mostrarSelectorCiudad && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarSelectorCiudad(false)}>
           <div className="w-full bg-white rounded-t-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
               <div>
-                <h3 className="font-extrabold text-gray-900 text-lg">¿Dónde estás buscando?</h3>
-                <p className="text-gray-400 text-xs mt-0.5">Cambia la ciudad para ver trabajos en otro lugar</p>
+                <h3 className="font-extrabold text-gray-900 text-lg">Cambiar ubicación</h3>
+                <p className="text-gray-400 text-xs mt-0.5">Verás trabajos en la ciudad que elijas</p>
               </div>
               <button onClick={() => setMostrarSelectorCiudad(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-5">
               <div>
-                <label className="text-sm font-extrabold text-gray-900 mb-2 block">Escribe una ciudad</label>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="Ej. Guadalajara, Monterrey, CDMX..."
-                    value={inputCiudad} onChange={(e) => setInputCiudad(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && inputCiudad.trim()) aplicarCiudad(inputCiudad); }}
-                    className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm" autoFocus/>
-                  <button onClick={() => inputCiudad.trim() && aplicarCiudad(inputCiudad)}
-                    disabled={guardandoCiudad || !inputCiudad.trim()}
-                    className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm disabled:opacity-40 transition">
-                    {guardandoCiudad ? '...' : 'Ir'}
-                  </button>
-                </div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">Estado</label>
+                <select value={estadoSelectorOpc} onChange={(e) => { setEstadoSelectorOpc(e.target.value); setCiudadSelectorOpc(''); }}
+                  className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm bg-white">
+                  <option value="">Selecciona...</option>
+                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
               </div>
-              <button onClick={() => { setCiudadActiva(''); setMostrarSelectorCiudad(false); }}
-                className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (!ciudadActiva ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">🗺️</div>
-                <div className="flex-1 text-left">
-                  <p className="font-extrabold text-gray-900">Todo el país</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Ver todos los trabajos disponibles en México</p>
+              {estadoSelectorOpc && (
+                <div>
+                  <label className="text-sm font-extrabold text-gray-900 mb-2 block">Ciudad</label>
+                  <select value={ciudadSelectorOpc} onChange={(e) => setCiudadSelectorOpc(e.target.value)}
+                    className="w-full p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm bg-white">
+                    <option value="">Selecciona...</option>
+                    {ciudadesDelEstadoOpc.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
-                {!ciudadActiva && <span className="text-purple-600 text-xs font-bold bg-purple-100 px-2 py-1 rounded-full">Activo</span>}
+              )}
+              <button onClick={aplicarCiudadOpcional} disabled={guardandoCiudad || !estadoSelectorOpc || !ciudadSelectorOpc}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition">
+                {guardandoCiudad ? 'Guardando...' : 'Aplicar ubicación'}
               </button>
               {ciudadesSugeridas.length > 0 && (
                 <div>
-                  <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades</p>
+                  <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades guardadas</p>
                   <div className="flex flex-col gap-2">
                     {ciudadesSugeridas.map((c) => (
-                      <button key={c} onClick={() => aplicarCiudad(c)}
+                      <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
                         className={'flex items-center gap-4 p-4 rounded-2xl border-2 transition ' + (ciudadActiva === c ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300')}>
                         <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
                         <div className="flex-1 text-left">
@@ -630,18 +678,8 @@ export default function HomeWorker() {
                   </div>
                 </div>
               )}
-              <div>
-                <p className="text-sm font-extrabold text-gray-900 mb-3">🔥 Ciudades populares</p>
-                <div className="flex flex-wrap gap-2">
-                  {['CDMX', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Cancún', 'Mérida', 'Querétaro', 'San Luis Potosí'].map((c) => (
-                    <button key={c} onClick={() => aplicarCiudad(c)}
-                      className={'text-sm px-4 py-2 rounded-full font-semibold border-2 transition ' + (ciudadActiva === c ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300')}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
+            <div className="pb-6"/>
           </div>
         </div>
       )}
