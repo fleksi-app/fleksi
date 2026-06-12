@@ -183,6 +183,10 @@ export default function Perfil() {
         const progreso = calcularProgresoPerfil({ ...data, id: user.id }, docs || [], rol);
         setProgresoPerfil(progreso);
 
+        try {
+          await supabase.from('usuarios').update({ progreso_perfil: progreso }).eq('id', user.id);
+        } catch (e) {}
+
         if (progreso === 100) {
           try {
             await supabase.from('badges').upsert({
@@ -1149,4 +1153,4 @@ export default function Perfil() {
       <Nav activo="perfil" />
     </main>
   );
-}// portafolio fix
+}

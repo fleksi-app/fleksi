@@ -37,9 +37,10 @@ export default function Catalogo() {
       if (!fleksersData) {
         const { data } = await supabase
           .from('usuarios')
-          .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas')
+          .select('id, nombre, foto_url, rol, ciudad, descripcion, calificacion, trabajos_completados, habilidades, verificado, ciudades_visitadas, progreso_perfil')
           .in('rol', ['flekser'])
           .neq('id', user.id)
+          .order('progreso_perfil', { ascending: false })
           .order('calificacion', { ascending: false });
         fleksersData = data || [];
         cacheSet('catalogo_fleksers', fleksersData, TTL.CATALOGO);
@@ -171,6 +172,9 @@ export default function Catalogo() {
                         <p className="font-extrabold text-gray-900">{f.nombre}</p>
                         {f.verificado && (
                           <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">✅</span>
+                        )}
+                        {f.progreso_perfil === 100 && (
+                          <span className="text-xs bg-purple-100 text-purple-600 font-bold px-2 py-0.5 rounded-full">🏆 100%</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
