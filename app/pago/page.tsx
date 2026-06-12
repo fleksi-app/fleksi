@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '@/lib/supabase';
 import { calcularPagoCliente, calcularPagoFlekser } from '@/lib/comisiones';
+import { notificarEvento } from '@/lib/notificaciones';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -76,11 +77,26 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
       }).eq('id', servicio.id);
 
       if (cuposLlenos) {
-        await supabase.from('aplicaciones')
+        const { data: rechazados } = await supabase.from('aplicaciones')
           .update({ estado: 'rechazado' })
           .eq('servicio_id', servicio.id)
           .eq('estado', 'pendiente')
-          .neq('id', aplicacionId);
+          .neq('id', aplicacionId)
+          .select('prestador_id');
+
+        if (rechazados && rechazados.length > 0) {
+          try {
+            await supabase.from('notificaciones').insert(
+              rechazados.map((r: any) => ({
+                usuario_id: r.prestador_id,
+                tipo: 'aplicacion_rechazada',
+                titulo: '❌ Tu aplicación fue rechazada',
+                mensaje: `El cliente eligió a otro Flekser para: ${servicio.titulo}.`,
+                link: '/home',
+              }))
+            );
+          } catch (e) {}
+        }
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -97,22 +113,14 @@ function PagoForm({ aplicacionId, servicio, aplicacion, usuario, onExito }: any)
       }
 
       try {
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'aplicacion_aceptada',
-            destinatario: aplicacion?.usuarios?.email || 'fernando.najera.nm@gmail.com',
-            datos: {
-              prestador: aplicacion?.usuarios?.nombre || 'Flekser',
-              prestador_id: aplicacion?.prestador_id,
-              cliente: usuario?.nombre || 'Cliente',
-              cliente_id: usuario?.id,
-              trabajo: servicio.titulo,
-              precio,
-              fecha: servicio.fecha,
-            },
-          }),
+        await notificarEvento('aplicacion_aceptada', aplicacion?.usuarios?.email || 'fernando.najera.nm@gmail.com', {
+          prestador: aplicacion?.usuarios?.nombre || 'Flekser',
+          prestador_id: aplicacion?.prestador_id,
+          cliente: usuario?.nombre || 'Cliente',
+          cliente_id: usuario?.id,
+          trabajo: servicio.titulo,
+          precio,
+          fecha: servicio.fecha,
         });
       } catch (e) {}
 
