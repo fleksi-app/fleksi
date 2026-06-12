@@ -4,6 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import { calcularPagoCliente, calcularPagoFlekser } from '@/lib/comisiones';
+import { notificarEvento } from '@/lib/notificaciones';
+import { evaluarCancelacion, calcularPenalizacion, PORCENTAJE_PENALIZACION } from '@/lib/cancelaciones';
 
 function AplicacionesContent() {
   const searchParams = useSearchParams();
@@ -16,6 +18,7 @@ function AplicacionesContent() {
 
   const [confirmandoEliminar, setConfirmandoEliminar] = useState('');
   const [eliminando, setEliminando] = useState(false);
+  const [errorCancelar, setErrorCancelar] = useState('');
 
   const [editandoServicio, setEditandoServicio] = useState<any>(null);
   const [editTitulo, setEditTitulo] = useState('');
@@ -61,6 +64,20 @@ function AplicacionesContent() {
     setProcesando(aplicacionId);
     try {
       await supabase.from('aplicaciones').update({ estado: 'rechazado' }).eq('id', aplicacionId);
+
+      const app = aplicaciones.find(a => a.id === aplicacionId);
+      if (app?.prestador_id) {
+        try {
+          await supabase.from('notificaciones').insert({
+            usuario_id: app.prestador_id,
+            tipo: 'aplicacion_rechazada',
+            titulo: '❌ Tu aplicación fue rechazada',
+            mensaje: `El cliente eligió a otro Flekser para: ${servicioActivo?.titulo || 'el servicio'}.`,
+            link: '/home',
+          });
+        } catch (e) {}
+      }
+
       await verAplicaciones(servicioActivo);
     } finally {
       setProcesando('');
@@ -69,19 +86,28 @@ function AplicacionesContent() {
 
   const handleEliminar = async (servicioId: string) => {
     setEliminando(true);
+    setErrorCancelar('');
     try {
-      await supabase.from('aplicaciones')
-        .update({ estado: 'rechazado' })
-        .eq('servicio_id', servicioId)
-        .eq('estado', 'pendiente');
-      await supabase.from('servicios')
-        .update({ estado: 'cancelado' })
-        .eq('id', servicioId);
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+
+      const res = await fetch('/api/cancelar-servicio', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ servicioId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorCancelar(data.error || 'No se pudo cancelar la solicitud.');
+        return;
+      }
       setConfirmandoEliminar('');
       setServicioActivo(null);
       await cargarDatos();
     } catch (e) {
       console.error(e);
+      setErrorCancelar('Hubo un error al cancelar. Intenta de nuevo.');
     } finally {
       setEliminando(false);
     }
@@ -228,9 +254,14 @@ function AplicacionesContent() {
   if (servicioActivo) {
     const prestadorTermino = aplicaciones.some(a => a.checkout_at);
     const puedeConfirmar = servicioActivo.pago_retenido && prestadorTermino;
-    const tieneAceptado = aplicaciones.some(a => a.estado === 'aceptado');
-    const puedeEliminar = servicioActivo.estado === 'activo' && !tieneAceptado;
+    const appAceptada = aplicaciones.find(a => a.estado === 'aceptado');
+    const tieneAceptado = !!appAceptada;
+    const puedeCancelar = ['activo', 'en_proceso'].includes(servicioActivo.estado);
     const puedeEditar = servicioActivo.estado === 'activo';
+
+    const precioAceptado = appAceptada?.precio_ofrecido || servicioActivo.presupuesto || 0;
+    const evaluacion = tieneAceptado ? evaluarCancelacion(servicioActivo.fecha, servicioActivo.hora) : null;
+    const montoPenalizacion = evaluacion?.aplicaPenalizacion ? calcularPenalizacion(precioAceptado) : 0;
 
     const hace7dias = new Date();
     hace7dias.setDate(hace7dias.getDate() - 7);
@@ -295,7 +326,7 @@ function AplicacionesContent() {
             </a>
           )}
 
-          {(puedeEditar || puedeEliminar) && (
+          {(puedeEditar || puedeCancelar) && (
             <div className="flex gap-2 mb-4">
               {puedeEditar && (
                 <button onClick={() => abrirEdicion(servicioActivo)}
@@ -303,7 +334,7 @@ function AplicacionesContent() {
                   ✏️ Editar
                 </button>
               )}
-              {puedeEliminar && (
+              {puedeCancelar && (
                 <button onClick={() => setConfirmandoEliminar(servicioActivo.id)}
                   className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-50 transition flex items-center justify-center gap-2">
                   🗑️ Cancelar solicitud
@@ -315,9 +346,35 @@ function AplicacionesContent() {
           {confirmandoEliminar === servicioActivo.id && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
               <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar esta solicitud?</p>
-              <p className="text-red-600 text-xs mb-3">Se rechazarán automáticamente todas las aplicaciones pendientes.</p>
+
+              {!tieneAceptado ? (
+                <p className="text-red-600 text-xs mb-3">Se rechazarán automáticamente todas las aplicaciones pendientes y se notificará a quienes aplicaron.</p>
+              ) : evaluacion?.aplicaPenalizacion ? (
+                <div className="bg-white border border-red-200 rounded-xl p-3 mb-3">
+                  <p className="text-red-700 text-xs font-bold mb-1">⚠️ Esta cancelación tiene penalización</p>
+                  <p className="text-red-600 text-xs leading-relaxed">{evaluacion.motivo}</p>
+                  <p className="text-red-600 text-xs mt-1">
+                    Se descontará el {Math.round(PORCENTAJE_PENALIZACION * 100)}% (${montoPenalizacion.toLocaleString('es-MX')} MXN) como compensación para el Flekser, y se acreditará a su wallet.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white border border-green-200 rounded-xl p-3 mb-3">
+                  <p className="text-green-700 text-xs font-semibold">✅ Sin penalización</p>
+                  <p className="text-green-600 text-xs mt-1">{evaluacion?.motivo}</p>
+                  {servicioActivo.pago_retenido && (
+                    <p className="text-green-600 text-xs mt-1">Tu pago será reembolsado.</p>
+                  )}
+                </div>
+              )}
+
+              {errorCancelar && (
+                <div className="bg-red-100 border border-red-200 rounded-xl p-2 mb-3">
+                  <p className="text-red-700 text-xs font-semibold">{errorCancelar}</p>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <button onClick={() => setConfirmandoEliminar('')}
+                <button onClick={() => { setConfirmandoEliminar(''); setErrorCancelar(''); }}
                   className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
                   No, mantener
                 </button>
@@ -326,12 +383,6 @@ function AplicacionesContent() {
                   {eliminando ? 'Cancelando...' : 'Sí, cancelar'}
                 </button>
               </div>
-            </div>
-          )}
-
-          {!puedeEliminar && servicioActivo.estado === 'activo' && tieneAceptado && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4">
-              <p className="text-amber-700 text-xs font-semibold">⚠️ No puedes cancelar esta solicitud porque ya tienes un Flekser aceptado.</p>
             </div>
           )}
 
@@ -490,6 +541,7 @@ function AplicacionesContent() {
               const visitasSemana = (svc.visitas_semana || [])
                 .filter((v: string) => new Date(v) > hace7dias).length;
               const puedeEditar = svc.estado === 'activo';
+              const puedeCancelar = ['activo', 'en_proceso'].includes(svc.estado);
               return (
                 <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                   <button onClick={() => verAplicaciones(svc)} className="w-full p-4 text-left active:scale-95 transition">
@@ -521,25 +573,40 @@ function AplicacionesContent() {
                       </div>
                     )}
                   </button>
-                  {puedeEditar && (
+                  {(puedeEditar || puedeCancelar) && (
                     <div className="flex border-t border-gray-100">
-                      <button onClick={() => abrirEdicion(svc)}
-                        className="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-50 transition flex items-center justify-center gap-1">
-                        ✏️ Editar
-                      </button>
-                      <div className="w-px bg-gray-100"/>
-                      <button onClick={() => setConfirmandoEliminar(svc.id)}
-                        className="flex-1 py-2.5 text-xs font-bold text-red-400 hover:bg-red-50 transition flex items-center justify-center gap-1">
-                        🗑️ Cancelar
-                      </button>
+                      {puedeEditar && (
+                        <button onClick={() => abrirEdicion(svc)}
+                          className="flex-1 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-50 transition flex items-center justify-center gap-1">
+                          ✏️ Editar
+                        </button>
+                      )}
+                      {puedeEditar && puedeCancelar && <div className="w-px bg-gray-100"/>}
+                      {puedeCancelar && (
+                        <button onClick={() => setConfirmandoEliminar(svc.id)}
+                          className="flex-1 py-2.5 text-xs font-bold text-red-400 hover:bg-red-50 transition flex items-center justify-center gap-1">
+                          🗑️ Cancelar
+                        </button>
+                      )}
                     </div>
                   )}
                   {confirmandoEliminar === svc.id && (
                     <div className="bg-red-50 border-t border-red-200 p-4">
                       <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar esta solicitud?</p>
-                      <p className="text-red-600 text-xs mb-3">Se rechazarán las aplicaciones pendientes.</p>
+                      {(() => {
+                        const tieneAceptadoLista = false; // no tenemos aplicaciones cargadas aquí; el endpoint valida penalización igual
+                        return null;
+                      })()}
+                      <p className="text-red-600 text-xs mb-3">
+                        Si ya tienes un Flekser aceptado y cancelas con poco tiempo de anticipación, puede aplicar una penalización del {Math.round(PORCENTAJE_PENALIZACION * 100)}%. Si no hay Flekser aceptado, solo se notificará a quienes aplicaron.
+                      </p>
+                      {errorCancelar && (
+                        <div className="bg-red-100 border border-red-200 rounded-xl p-2 mb-3">
+                          <p className="text-red-700 text-xs font-semibold">{errorCancelar}</p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
-                        <button onClick={() => setConfirmandoEliminar('')}
+                        <button onClick={() => { setConfirmandoEliminar(''); setErrorCancelar(''); }}
                           className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold text-xs">
                           No, mantener
                         </button>
