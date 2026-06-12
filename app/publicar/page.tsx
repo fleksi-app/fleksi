@@ -133,6 +133,7 @@ function PublicarForm() {
   const [horaMinima, setHoraMinima] = useState('');
   const [geocodificando, setGeocodificando] = useState(false);
   const [usuarioId, setUsuarioId] = useState('');
+  const [ciudadUsuario, setCiudadUsuario] = useState('');
 
   const hoyStr = new Date().toISOString().split('T')[0];
 
@@ -141,9 +142,10 @@ function PublicarForm() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUsuarioId(user.id);
-      const { data } = await supabase.from('usuarios').select('wallet_saldo, rol, rol_activo').eq('id', user.id).single();
+      const { data } = await supabase.from('usuarios').select('wallet_saldo, rol, rol_activo, ciudad').eq('id', user.id).single();
       setWalletSaldo(data?.wallet_saldo || 0);
       setRolUsuario(data?.rol_activo || data?.rol || 'flekser');
+      setCiudadUsuario(data?.ciudad || '');
       setCargandoWallet(false);
       if (paraId) {
         const { data: flekser } = await supabase.from('usuarios').select('id, nombre, foto_url, calificacion, habilidades').eq('id', paraId).single();
@@ -257,6 +259,49 @@ function PublicarForm() {
     }
   };
 
+  const notificarFleksersCercanos = async (servicioId: string, tituloFinal: string) => {
+    try {
+      if (!ciudadUsuario) return;
+
+      const { data: fleksers } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('ciudad', ciudadUsuario)
+        .neq('id', usuarioId)
+        .in('rol_activo', ['flekser']);
+
+      if (!fleksers || fleksers.length === 0) return;
+
+      const cat = categorias.find(c => c.id === categoriaSeleccionada);
+      const notifs = fleksers.map(f => ({
+        usuario_id: f.id,
+        tipo: 'nuevo_trabajo',
+        titulo: '🔔 Nuevo trabajo en ' + ciudadUsuario,
+        mensaje: (cat?.emoji || '✨') + ' ' + tituloFinal,
+        link: '/trabajo?id=' + servicioId,
+      }));
+
+      // Insertar en batch
+      await supabase.from('notificaciones').insert(notifs);
+
+      // Intentar push (falla silenciosamente si no hay PWA push o suscripciones)
+      fleksers.forEach(f => {
+        fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-cron-secret': '' },
+          body: JSON.stringify({
+            usuario_id: f.id,
+            titulo: '🔔 Nuevo trabajo en ' + ciudadUsuario,
+            mensaje: (cat?.emoji || '✨') + ' ' + tituloFinal,
+            link: '/trabajo?id=' + servicioId,
+          }),
+        }).catch(() => {});
+      });
+    } catch (e) {
+      // Silencioso: nunca debe romper la publicación
+    }
+  };
+
   const handlePublicar = async () => {
     const tituloFinal = titulo.trim() || generarTituloAutomatico();
     if (!tituloFinal || fechas.length === 0) { setError('Por favor completa el título y selecciona al menos una fecha'); return; }
@@ -311,6 +356,9 @@ function PublicarForm() {
             link: '/trabajo?id=' + servicioCreado.id,
           });
         } catch (e) {}
+      } else if (servicioCreado) {
+        // Notificar a Fleksers de la misma ciudad
+        notificarFleksersCercanos(servicioCreado.id, tituloFinal);
       }
       setPublicado(true);
     } catch (err: any) { setError(err.message || 'Ocurrió un error. Intenta de nuevo.'); }
