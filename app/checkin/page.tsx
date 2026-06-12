@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
+import { notificarEvento } from '@/lib/notificaciones';
 
 function calcularDistancia(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -195,19 +196,11 @@ export default function CheckIn() {
 
       if (clienteId) {
         try {
-          await fetch('/api/enviar-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tipo: 'trabajo_terminado',
-              destinatario: clienteEmail || 'fernando.najera.nm@gmail.com',
-              datos: {
-                cliente_id: clienteId,
-                prestador: usuario?.nombre || 'Flekser',
-                trabajo: tituloTrabajo,
-                servicio_id: servicioId,
-              },
-            }),
+          await notificarEvento('trabajo_terminado', clienteEmail || 'fernando.najera.nm@gmail.com', {
+            cliente_id: clienteId,
+            prestador: usuario?.nombre || 'Flekser',
+            trabajo: tituloTrabajo,
+            servicio_id: servicioId,
           });
         } catch (e) {}
 

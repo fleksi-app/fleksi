@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import { calcularPagoFlekser, calcularPagoCliente } from '@/lib/comisiones';
+import { notificarEvento } from '@/lib/notificaciones';
 
 function BotonCompartir({ trabajo }: { trabajo: any }) {
   const [copiado, setCopiado] = useState(false);
@@ -111,22 +112,14 @@ function DetalleTrabajoContent() {
       });
       if (dbError) throw dbError;
       try {
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'nueva_aplicacion',
-            destinatario: trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com',
-            datos: {
-              cliente: trabajo.usuarios?.nombre || 'Cliente',
-              cliente_id: trabajo.cliente_id,
-              prestador: usuario.nombre,
-              prestador_id: usuario.id,
-              trabajo: trabajo.titulo,
-              servicio_id: trabajo.id,
-              precio: miPrecio,
-            },
-          }),
+        await notificarEvento('nueva_aplicacion', trabajo.usuarios?.email || 'fernando.najera.nm@gmail.com', {
+          cliente: trabajo.usuarios?.nombre || 'Cliente',
+          cliente_id: trabajo.cliente_id,
+          prestador: usuario.nombre,
+          prestador_id: usuario.id,
+          trabajo: trabajo.titulo,
+          servicio_id: trabajo.id,
+          precio: miPrecio,
         });
       } catch (e) {}
       setAplicado(true); setYaAplico(true);

@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { calcularPagoCliente, calcularPagoFlekser } from '@/lib/comisiones';
+import { notificarEvento } from '@/lib/notificaciones';
 
 function ConfirmarContent() {
   const searchParams = useSearchParams();
@@ -103,22 +104,14 @@ function ConfirmarContent() {
       try { await supabase.rpc('incrementar_trabajos', { user_id: aplicacion.prestador_id }); } catch (e) {}
 
       try {
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'pago_completado',
-            destinatario: aplicacion?.usuarios?.email || 'fernando.najera.nm@gmail.com',
-            datos: {
-              nombre: aplicacion?.usuarios?.nombre || 'Prestador',
-              prestador_id: aplicacion?.prestador_id,
-              trabajo: servicio.titulo,
-              presupuesto: precio,
-              monto: desgloseFlekser.total,
-              monto_cliente: desgloseCliente.total,
-              es_efectivo: esEfectivo,
-            },
-          }),
+        await notificarEvento('pago_completado', aplicacion?.usuarios?.email || 'fernando.najera.nm@gmail.com', {
+          nombre: aplicacion?.usuarios?.nombre || 'Prestador',
+          prestador_id: aplicacion?.prestador_id,
+          trabajo: servicio.titulo,
+          presupuesto: precio,
+          monto: desgloseFlekser.total,
+          monto_cliente: desgloseCliente.total,
+          es_efectivo: esEfectivo,
         });
       } catch (e) {}
 
@@ -149,20 +142,12 @@ function ConfirmarContent() {
       });
 
       try {
-        await fetch('/api/enviar-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'disputa',
-            destinatario: 'fernando.najera.nm@gmail.com',
-            datos: {
-              cliente: usuario?.nombre,
-              trabajo: servicio.titulo,
-              servicio_id: servicio.id,
-              descripcion: descripcionProblema.trim(),
-              monto: (aplicacion?.precio_ofrecido || servicio.presupuesto),
-            },
-          }),
+        await notificarEvento('disputa', 'fernando.najera.nm@gmail.com', {
+          cliente: usuario?.nombre,
+          trabajo: servicio.titulo,
+          servicio_id: servicio.id,
+          descripcion: descripcionProblema.trim(),
+          monto: (aplicacion?.precio_ofrecido || servicio.presupuesto),
         });
       } catch (e) {}
 
