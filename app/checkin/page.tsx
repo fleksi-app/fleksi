@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import { notificarEvento } from '@/lib/notificaciones';
+import { evaluarCancelacion, calcularPenalizacion, PORCENTAJE_PENALIZACION } from '@/lib/cancelaciones';
 
 function calcularDistancia(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -42,6 +43,9 @@ export default function CheckIn() {
   const [verificandoGeo, setVerificandoGeo] = useState<{ [key: string]: boolean }>({});
   const inputAntesRef = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const inputDespuesRef = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const [confirmandoCancelar, setConfirmandoCancelar] = useState('');
+  const [cancelando, setCancelando] = useState(false);
+  const [errorCancelar, setErrorCancelar] = useState<{ [key: string]: string }>({});
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -227,6 +231,35 @@ export default function CheckIn() {
   const getMapsUrl = (direccion: string) =>
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
 
+  const handleCancelar = async (app: any) => {
+    const servicioId = app.servicios?.id;
+    if (!servicioId) return;
+    setCancelando(true);
+    setErrorCancelar(prev => ({ ...prev, [app.id]: '' }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+
+      const res = await fetch('/api/cancelar-servicio', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ servicioId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorCancelar(prev => ({ ...prev, [app.id]: data.error || 'No se pudo cancelar el trabajo.' }));
+        return;
+      }
+      setConfirmandoCancelar('');
+      await cargarDatos();
+    } catch (e) {
+      setErrorCancelar(prev => ({ ...prev, [app.id]: 'Hubo un error al cancelar. Intenta de nuevo.' }));
+    } finally {
+      setCancelando(false);
+    }
+  };
+
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
 
@@ -368,6 +401,54 @@ export default function CheckIn() {
                           {procesando === app.id
                             ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...')
                             : '📍 Check-in — Llegué'}
+                        </button>
+                      )}
+
+                      {confirmandoCancelar === app.id ? (
+                        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mt-3">
+                          <p className="font-bold text-red-700 text-sm mb-1">⚠️ ¿Cancelar este trabajo?</p>
+                          {(() => {
+                            const evaluacion = evaluarCancelacion(app.servicios?.fecha, app.servicios?.hora);
+                            const precio = app.precio_ofrecido || app.servicios?.presupuesto || 0;
+                            const montoPenalizacion = evaluacion.aplicaPenalizacion ? calcularPenalizacion(precio) : 0;
+                            return evaluacion.aplicaPenalizacion ? (
+                              <div className="bg-white border border-red-200 rounded-xl p-3 mb-3">
+                                <p className="text-red-700 text-xs font-bold mb-1">⚠️ Esta cancelación tiene penalización</p>
+                                <p className="text-red-600 text-xs leading-relaxed">{evaluacion.motivo}</p>
+                                <p className="text-red-600 text-xs mt-1">
+                                  El cliente recibirá el reembolso completo de su pago, más un crédito adicional del {Math.round(PORCENTAJE_PENALIZACION * 100)}% (${montoPenalizacion.toLocaleString('es-MX')} MXN) en su wallet, como compensación.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="bg-white border border-green-200 rounded-xl p-3 mb-3">
+                                <p className="text-green-700 text-xs font-semibold">✅ Sin penalización adicional</p>
+                                <p className="text-green-600 text-xs mt-1">{evaluacion.motivo}</p>
+                                <p className="text-green-600 text-xs mt-1">El cliente recibirá el reembolso completo de su pago.</p>
+                              </div>
+                            );
+                          })()}
+
+                          {errorCancelar[app.id] && (
+                            <div className="bg-red-100 border border-red-200 rounded-xl p-2 mb-3">
+                              <p className="text-red-700 text-xs font-semibold">{errorCancelar[app.id]}</p>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            <button onClick={() => { setConfirmandoCancelar(''); setErrorCancelar(prev => ({ ...prev, [app.id]: '' })); }}
+                              className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">
+                              No, mantener
+                            </button>
+                            <button onClick={() => handleCancelar(app)} disabled={cancelando}
+                              className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                              {cancelando ? 'Cancelando...' : 'Sí, cancelar'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmandoCancelar(app.id)}
+                          className="w-full py-3 mt-3 border-2 border-red-200 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-50 transition">
+                          🗑️ Cancelar este trabajo
                         </button>
                       )}
                     </div>
