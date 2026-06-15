@@ -44,6 +44,7 @@ function DetalleTrabajoContent() {
   const [usuario, setUsuario] = useState<any>(null);
   const [sinSesion, setSinSesion] = useState(false);
   const [mostrarDesglose, setMostrarDesglose] = useState(false);
+  const [noDisponible, setNoDisponible] = useState(false);
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -60,7 +61,13 @@ function DetalleTrabajoContent() {
     }
 
     if (!user) {
-      if (servicio) { setTrabajo(servicio); setSinSesion(true); }
+      if (servicio) {
+        if (servicio.estado !== 'activo') {
+          setTrabajo(servicio); setSinSesion(true); setNoDisponible(true);
+        } else {
+          setTrabajo(servicio); setSinSesion(true);
+        }
+      }
       else window.location.href = '/login';
       setCargandoPagina(false);
       return;
@@ -80,6 +87,11 @@ function DetalleTrabajoContent() {
     if (servicio) {
       setTrabajo(servicio);
       if (servicio.cliente_id !== user.id) {
+        if (servicio.estado !== 'activo') {
+          setNoDisponible(true);
+          setCargandoPagina(false);
+          return;
+        }
         const { data: appExistente } = await supabase.from('aplicaciones').select('id')
           .eq('servicio_id', servicio.id).eq('prestador_id', user.id).single();
         if (appExistente) setYaAplico(true);
@@ -99,6 +111,7 @@ function DetalleTrabajoContent() {
 
   const handleAplicar = async () => {
     if (!trabajo || !usuario) return;
+    if (trabajo.estado !== 'activo') { setError('Esta solicitud ya no está disponible.'); return; }
     if (yaAplico) { setError('Ya aplicaste a este trabajo.'); return; }
     if (!miPrecio || Number(miPrecio) <= 0) { setError('Escribe el precio que cobrarás por este trabajo.'); return; }
     setCargando(true); setError('');
@@ -149,6 +162,17 @@ function DetalleTrabajoContent() {
         <p className="text-4xl mb-4">🔍</p>
         <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
         <p className="text-gray-400 text-sm mb-6">Vuelve más tarde</p>
+        <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">Volver al inicio</a>
+      </div>
+    </main>
+  );
+
+  if (noDisponible) return (
+    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="text-center max-w-sm">
+        <p className="text-4xl mb-4">🚫</p>
+        <p className="font-bold text-gray-900 mb-2">Esta solicitud ya no está disponible</p>
+        <p className="text-gray-400 text-sm mb-6">El cliente la canceló o ya no está activa. No es posible aplicar a este trabajo.</p>
         <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">Volver al inicio</a>
       </div>
     </main>
