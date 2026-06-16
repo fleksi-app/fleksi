@@ -118,6 +118,12 @@ export default function HomeWorker() {
       servicios = data || [];
       cacheSet('servicios_activos', servicios, TTL.SERVICIOS);
     }
+    const ahoraFiltro = new Date();
+    servicios = servicios.filter((s: any) => {
+      if (!s.fecha) return true;
+      const limite = new Date(s.fecha + 'T' + (s.hora || '23:59'));
+      return limite >= ahoraFiltro;
+    });
     setTrabajos(servicios);
 
     const { data: apps } = await supabase.from('aplicaciones').select('servicio_id, estado').eq('prestador_id', user.id);

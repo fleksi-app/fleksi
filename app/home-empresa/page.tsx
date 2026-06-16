@@ -83,8 +83,8 @@ export default function HomeEmpresa() {
     setCambiandoRol(false);
   };
 
-  const estadoColor = (estado: string) => ({ activo:'bg-blue-100 text-blue-700', publicado:'bg-blue-100 text-blue-700', en_proceso:'bg-amber-100 text-amber-700', completado:'bg-emerald-100 text-emerald-700', pagado:'bg-emerald-100 text-emerald-700', cancelado:'bg-red-100 text-red-700' }[estado] || 'bg-gray-100 text-gray-600');
-  const estadoLabel = (estado: string) => ({ activo:'● Activo', publicado:'● Publicado', en_proceso:'↻ En proceso', completado:'✓ Completado', pagado:'✓ Pagado', cancelado:'✕ Cancelado' }[estado] || estado);
+  const estadoColor = (estado: string) => ({ activo:'bg-blue-100 text-blue-700', publicado:'bg-blue-100 text-blue-700', en_proceso:'bg-amber-100 text-amber-700', completado:'bg-emerald-100 text-emerald-700', pagado:'bg-emerald-100 text-emerald-700', cancelado:'bg-red-100 text-red-700', vencido:'bg-gray-200 text-gray-600' }[estado] || 'bg-gray-100 text-gray-600');
+  const estadoLabel = (estado: string) => ({ activo:'● Activo', publicado:'● Publicado', en_proceso:'↻ En proceso', completado:'✓ Completado', pagado:'✓ Pagado', cancelado:'✕ Cancelado', vencido:'⏰ Vencido' }[estado] || estado);
 
   const rolInfo: any = {
     flekser: { emoji: '⚡', label: 'Flekser', color: 'from-blue-600 to-purple-600' },

@@ -45,6 +45,9 @@ function DetalleTrabajoContent() {
   const [sinSesion, setSinSesion] = useState(false);
   const [mostrarDesglose, setMostrarDesglose] = useState(false);
   const [noDisponible, setNoDisponible] = useState(false);
+  const [proponeOtraFecha, setProponeOtraFecha] = useState(false);
+  const [fechaPropuesta, setFechaPropuesta] = useState('');
+  const [horaPropuesta, setHoraPropuesta] = useState('');
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -62,7 +65,9 @@ function DetalleTrabajoContent() {
 
     if (!user) {
       if (servicio) {
-        if (servicio.estado !== 'activo') {
+        const vencidoAlVuelo = servicio.estado === 'activo' && servicio.fecha &&
+          new Date(servicio.fecha + 'T' + (servicio.hora || '23:59')) < new Date();
+        if (servicio.estado !== 'activo' || vencidoAlVuelo) {
           setTrabajo(servicio); setSinSesion(true); setNoDisponible(true);
         } else {
           setTrabajo(servicio); setSinSesion(true);
@@ -80,14 +85,21 @@ function DetalleTrabajoContent() {
       const { data } = await supabase.from('servicios')
         .select('*, usuarios!cliente_id(nombre, calificacion, foto_url, email)')
         .eq('estado', 'activo').neq('cliente_id', user.id)
-        .order('created_at', { ascending: false }).limit(1);
-      servicio = data?.[0] || null;
+        .order('created_at', { ascending: false }).limit(10);
+      const ahoraFiltro = new Date();
+      servicio = (data || []).find((s: any) => {
+        if (!s.fecha) return true;
+        const limite = new Date(s.fecha + 'T' + (s.hora || '23:59'));
+        return limite >= ahoraFiltro;
+      }) || null;
     }
 
     if (servicio) {
       setTrabajo(servicio);
       if (servicio.cliente_id !== user.id) {
-        if (servicio.estado !== 'activo') {
+        const vencidoAlVuelo = servicio.estado === 'activo' && servicio.fecha &&
+          new Date(servicio.fecha + 'T' + (servicio.hora || '23:59')) < new Date();
+        if (servicio.estado !== 'activo' || vencidoAlVuelo) {
           setNoDisponible(true);
           setCargandoPagina(false);
           return;
@@ -112,8 +124,13 @@ function DetalleTrabajoContent() {
   const handleAplicar = async () => {
     if (!trabajo || !usuario) return;
     if (trabajo.estado !== 'activo') { setError('Esta solicitud ya no está disponible.'); return; }
+    if (trabajo.fecha) {
+      const limite = new Date(trabajo.fecha + 'T' + (trabajo.hora || '23:59'));
+      if (limite < new Date()) { setError('Esta solicitud ya venció.'); return; }
+    }
     if (yaAplico) { setError('Ya aplicaste a este trabajo.'); return; }
     if (!miPrecio || Number(miPrecio) <= 0) { setError('Escribe el precio que cobrarás por este trabajo.'); return; }
+    if (proponeOtraFecha && (!fechaPropuesta || !horaPropuesta)) { setError('Indica la fecha y hora que propones.'); return; }
     setCargando(true); setError('');
     try {
       const { error: dbError } = await supabase.from('aplicaciones').insert({
@@ -122,6 +139,9 @@ function DetalleTrabajoContent() {
         precio_ofrecido: Number(miPrecio),
         mensaje: mensaje || null,
         estado: 'pendiente',
+        propone_otra_fecha: proponeOtraFecha,
+        fecha_propuesta: proponeOtraFecha ? fechaPropuesta : null,
+        hora_propuesta: proponeOtraFecha ? horaPropuesta : null,
       });
       if (dbError) throw dbError;
       try {
@@ -360,6 +380,37 @@ function DetalleTrabajoContent() {
                 onChange={(e) => setMensaje(e.target.value)}
                 rows={3}
                 className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 resize-none text-sm"/>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={proponeOtraFecha}
+                  onChange={(e) => setProponeOtraFecha(e.target.checked)}
+                  className="w-5 h-5 rounded accent-purple-600"/>
+                <span className="text-sm font-semibold text-gray-700">📅 No puedo en esa fecha/hora, propongo otra</span>
+              </label>
+              {proponeOtraFecha && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Fecha que propones</label>
+                    <input
+                      type="date"
+                      value={fechaPropuesta}
+                      onChange={(e) => setFechaPropuesta(e.target.value)}
+                      className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora que propones</label>
+                    <input
+                      type="time"
+                      value={horaPropuesta}
+                      onChange={(e) => setHoraPropuesta(e.target.value)}
+                      className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
