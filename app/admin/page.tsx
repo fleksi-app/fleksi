@@ -91,7 +91,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades'>('dashboard');
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -138,6 +138,9 @@ export default function Admin() {
   const [copiado, setCopiado] = useState<string | null>(null);
   const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
 
+  const [habilidadesPersonalizadas, setHabilidadesPersonalizadas] = useState<{ texto: string; count: number; fleksers: any[] }[]>([]);
+  const [cargandoHabilidades, setCargandoHabilidades] = useState(false);
+
   const [usuariosWA, setUsuariosWA] = useState<any[]>([]);
   const [cargandoWA, setCargandoWA] = useState(false);
   const [mensajesCopiados, setMensajesCopiados] = useState<Record<string, boolean>>({});
@@ -165,6 +168,7 @@ export default function Admin() {
   useEffect(() => { if (tab === 'retiros') cargarRetiros(); }, [tab]);
   useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
   useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
+  useEffect(() => { if (tab === 'habilidades') cargarHabilidadesPersonalizadas(); }, [tab]);
 
   const cargarMetricasMensajes = async () => {
     setCargandoMetricasMensajes(true);
@@ -188,6 +192,35 @@ export default function Admin() {
     } finally {
       setCargandoMetricasMensajes(false);
     }
+  };
+
+  const HABILIDADES_OFICIALES = [
+    '🧹 Limpieza del hogar', '🌿 Jardinería', '🎨 Pintura',
+    '🔧 Mantenimiento general', '⚡ Electricidad', '🚿 Plomería',
+    '🚚 Fletes y traslados', '🪑 Armado de muebles', '🔩 Mecánica básica',
+    '🔑 Cerrajería', '📺 Instalación TV/repisas/cortinas', '🪵 Carpintería ligera',
+    '📦 Mudanza ligera / Ayudante', '👔 Planchado / Lavandería', '💅 Uñas / Estética',
+    '🎪 Staff para eventos', '🍽️ Mesero', '🍳 Cocinero particular',
+    '🚗 Chofer ejecutivo', '🗣️ Intérprete / Traductor',
+  ];
+
+  const cargarHabilidadesPersonalizadas = async () => {
+    setCargandoHabilidades(true);
+    try {
+      const { data } = await supabase.from('usuarios').select('id, nombre, email, habilidades').eq('rol', 'flekser');
+      const grupos: Record<string, any[]> = {};
+      (data || []).forEach((u: any) => {
+        (u.habilidades || []).forEach((h: string) => {
+          if (HABILIDADES_OFICIALES.includes(h)) return;
+          if (!grupos[h]) grupos[h] = [];
+          grupos[h].push({ id: u.id, nombre: u.nombre, email: u.email });
+        });
+      });
+      const lista = Object.entries(grupos).map(([texto, fleksers]) => ({ texto, count: fleksers.length, fleksers }))
+        .sort((a, b) => b.count - a.count);
+      setHabilidadesPersonalizadas(lista);
+    } catch (e) { console.error(e); }
+    finally { setCargandoHabilidades(false); }
   };
 
   const cargarTrabajos = async () => {
@@ -670,6 +703,7 @@ export default function Admin() {
           </button>
           <button onClick={() => setTab('comunicaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📢 Comunicaciones</button>
           <button onClick={() => setTab('trabajos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>⚡ Trabajos</button>
+          <button onClick={() => setTab('habilidades')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'habilidades' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>🛠️ Habilidades</button>
           <button onClick={() => setTab('dispersion')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
@@ -841,7 +875,6 @@ export default function Admin() {
             )}
           </div>
         )}
-
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
@@ -1042,6 +1075,40 @@ export default function Admin() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4"><p className="text-amber-800 text-xs font-semibold">⚠️ Este mensaje llegará a todos los usuarios del segmento como notificación en la app.</p></div>
                 {mensajeMasivoEnviado && <div className={'rounded-xl p-3 mb-4 text-sm font-semibold ' + (mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700')}>{mensajeMasivoEnviado}</div>}
                 <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'habilidades' && (
+          <div>
+            <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-5">
+              <p className="text-purple-800 text-sm font-bold mb-1">🛠️ Habilidades personalizadas</p>
+              <p className="text-purple-700 text-xs leading-relaxed">Textos que los Fleksers escribieron porque su habilidad no estaba en la lista oficial. Aparecen agrupados en la categoría "✨ Otros / Sin definir" del catálogo. Si una se repite mucho, considera agregarla como categoría oficial.</p>
+            </div>
+            {cargandoHabilidades ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : habilidadesPersonalizadas.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                <p className="text-4xl mb-3">✨</p>
+                <p className="font-bold text-gray-900">Sin habilidades personalizadas aún</p>
+                <p className="text-gray-400 text-sm mt-1">Todos los Fleksers usan las categorías oficiales</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {habilidadesPersonalizadas.map((h) => (
+                  <div key={h.texto} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-extrabold text-gray-900 text-sm">{h.texto}</p>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 flex-shrink-0">{h.count} flekser{h.count !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {h.fleksers.map((f: any) => (
+                        <span key={f.id} className="text-xs bg-gray-50 text-gray-600 font-semibold px-2 py-1 rounded-lg border border-gray-100">{f.nombre}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1480,4 +1547,4 @@ export default function Admin() {
 
     </main>
   );
-}
+  }

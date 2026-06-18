@@ -14,14 +14,28 @@ const habilidadesOpciones = [
   '🚗 Chofer ejecutivo', '🗣️ Intérprete / Traductor',
 ];
 
+const CATEGORIA_OTROS = '✨ Otros / Sin definir';
+
+function quitarEmoji(texto: string) {
+  return texto.replace(/^\S+\s/, '');
+}
+
+function esHabilidadPersonalizada(h: string) {
+  return !habilidadesOpciones.includes(h);
+}
+
+function tieneSoloPersonalizadas(f: any) {
+  const habs: string[] = f.habilidades || [];
+  if (habs.length === 0) return true;
+  return habs.every((h) => esHabilidadPersonalizada(h));
+}
+
 export default function Catalogo() {
   const [fleksers, setFleksers] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [busqueda, setBusqueda] = useState('');
+  const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
   const [ciudadFiltro, setCiudadFiltro] = useState('');
-  const [habilidadFiltro, setHabilidadFiltro] = useState('');
   const [soloVerificados, setSoloVerificados] = useState(false);
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
 
   useEffect(() => { cargar(); }, []);
@@ -53,35 +67,45 @@ export default function Catalogo() {
     }
   };
 
-  const fleksersFiltrados = fleksers.filter(f => {
-    const matchBusqueda = !busqueda ||
-      f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      f.descripcion?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      f.habilidades?.some((h: string) => h.toLowerCase().includes(busqueda.toLowerCase()));
+  const conteoPorCategoria = (h: string) => {
+    if (h === CATEGORIA_OTROS) return fleksers.filter(tieneSoloPersonalizadas).length;
+    return fleksers.filter(f => f.habilidades?.includes(h)).length;
+  };
+
+  const fleksersDeCategoria = categoriaActiva
+    ? categoriaActiva === CATEGORIA_OTROS
+      ? fleksers.filter(tieneSoloPersonalizadas)
+      : fleksers.filter(f => f.habilidades?.includes(categoriaActiva))
+    : [];
+
+  const fleksersFiltrados = fleksersDeCategoria.filter(f => {
     const matchCiudad = !ciudadFiltro ||
       f.ciudad?.toLowerCase().includes(ciudadFiltro.toLowerCase()) ||
       f.ciudades_visitadas?.some((c: string) => c.toLowerCase().includes(ciudadFiltro.toLowerCase()));
-    const matchHabilidad = !habilidadFiltro ||
-      f.habilidades?.some((h: string) => h.includes(habilidadFiltro));
     const matchVerificado = !soloVerificados || f.verificado;
-    return matchBusqueda && matchCiudad && matchHabilidad && matchVerificado;
+    return matchCiudad && matchVerificado;
+  }).sort((a, b) => {
+    const progresoA = a.progreso_perfil || 0;
+    const progresoB = b.progreso_perfil || 0;
+    if (progresoB !== progresoA) return progresoB - progresoA;
+    const calA = a.calificacion || 0;
+    const calB = b.calificacion || 0;
+    if (calB !== calA) return calB - calA;
+    if (!!b.verificado !== !!a.verificado) return (b.verificado ? 1 : 0) - (a.verificado ? 1 : 0);
+    return (b.trabajos_completados || 0) - (a.trabajos_completados || 0);
   });
 
   const limpiarFiltros = () => {
     setCiudadFiltro('');
-    setHabilidadFiltro('');
     setSoloVerificados(false);
-    setMostrarFiltros(false);
   };
 
-  const hayFiltros = ciudadFiltro || habilidadFiltro || soloVerificados;
+  const hayFiltros = ciudadFiltro || soloVerificados;
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
 
   const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const filtroActivoColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
-  const btnFiltroActivo = esEmpresa ? 'text-blue-800' : 'text-purple-600';
-  const habilidadActivaBg = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const habilidadFiltroColor = esEmpresa ? 'focus:border-blue-700' : 'focus:border-purple-400';
   const solicitudGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
   const habilidadTagBg = esEmpresa ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100';
@@ -101,52 +125,92 @@ export default function Catalogo() {
     );
   }
 
+  // ── VISTA: GRID DE CATEGORÍAS ──
+  if (!categoriaActiva) {
+    return (
+      <main className={`min-h-screen ${bgFondo} pb-32`}>
+        <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-8`}>
+          <div className="max-w-md mx-auto">
+            <h1 className="text-white font-extrabold text-xl mb-1">Catálogo de Fleksers</h1>
+            <p className="text-white/70 text-sm">Elige una categoría para ver a los profesionales disponibles</p>
+          </div>
+        </div>
+
+        <div className="max-w-md mx-auto px-6 mt-5">
+          <div className="grid grid-cols-2 gap-3">
+            {habilidadesOpciones.map((h) => {
+              const conteo = conteoPorCategoria(h);
+              const partes = h.split(' ');
+              const emoji = partes[0];
+              const nombre = quitarEmoji(h);
+              return (
+                <button key={h} onClick={() => setCategoriaActiva(h)}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left hover:border-purple-300 hover:shadow-md transition active:scale-95">
+                  <span className="text-3xl mb-2 block">{emoji}</span>
+                  <p className="font-bold text-gray-900 text-sm leading-tight mb-2">{nombre}</p>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${conteo > 0 ? habilidadTagBg : 'bg-gray-100 text-gray-400'}`}>
+                    {conteo} flekser{conteo !== 1 ? 's' : ''}
+                  </span>
+                </button>
+              );
+            })}
+            <button onClick={() => setCategoriaActiva(CATEGORIA_OTROS)}
+              className="bg-gray-50 rounded-2xl p-4 shadow-sm border border-dashed border-gray-300 text-left hover:border-purple-300 hover:shadow-md transition active:scale-95">
+              <span className="text-3xl mb-2 block">✨</span>
+              <p className="font-bold text-gray-900 text-sm leading-tight mb-2">Otros / Sin definir</p>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${conteoPorCategoria(CATEGORIA_OTROS) > 0 ? habilidadTagBg : 'bg-gray-100 text-gray-400'}`}>
+                {conteoPorCategoria(CATEGORIA_OTROS)} flekser{conteoPorCategoria(CATEGORIA_OTROS) !== 1 ? 's' : ''}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <Nav activo="catalogo" />
+      </main>
+    );
+  }
+
+  // ── VISTA: LISTADO DE FLEKSERS DE LA CATEGORÍA ──
   return (
     <main className={`min-h-screen ${bgFondo} pb-32`}>
-
       <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-8`}>
         <div className="max-w-md mx-auto">
-          <h1 className="text-white font-extrabold text-xl mb-1">Catálogo de Fleksers</h1>
-          <p className="text-white/70 text-sm mb-4">Encuentra al profesional ideal para tu trabajo</p>
-
-          <div className="relative mb-3">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">🔍</span>
-            <input
-              type="text"
-              placeholder="Buscar por nombre o habilidad..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white placeholder-white/50 outline-none focus:bg-white/25 transition"/>
-          </div>
-
-          <button
-            onClick={() => setMostrarFiltros(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition ${
-              hayFiltros ? `bg-white ${btnFiltroActivo}` : 'bg-white/15 text-white border border-white/25'
-            }`}>
-            ⚙️ Filtros {hayFiltros && `(${[ciudadFiltro, habilidadFiltro, soloVerificados].filter(Boolean).length})`}
+          <button onClick={() => setCategoriaActiva(null)}
+            className="flex items-center gap-2 text-white/80 text-sm font-semibold mb-3 hover:text-white transition">
+            ← Volver a categorías
           </button>
+          <h1 className="text-white font-extrabold text-xl mb-1">{quitarEmoji(categoriaActiva)}</h1>
+          <p className="text-white/70 text-sm">{fleksersFiltrados.length} flekser{fleksersFiltrados.length !== 1 ? 's' : ''} disponible{fleksersFiltrados.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
       <div className="max-w-md mx-auto px-6 mt-5">
-
-        <div className="flex items-center justify-between mb-4">
-          <p className="font-extrabold text-gray-900">
-            {fleksersFiltrados.length} flekser{fleksersFiltrados.length !== 1 ? 's' : ''} disponible{fleksersFiltrados.length !== 1 ? 's' : ''}
-          </p>
-          {hayFiltros && (
-            <button onClick={limpiarFiltros} className={`text-xs ${filtroActivoColor} font-bold hover:underline`}>
-              Limpiar filtros ✕
-            </button>
-          )}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="📍 Filtrar por ciudad..."
+            value={ciudadFiltro}
+            onChange={(e) => setCiudadFiltro(e.target.value)}
+            className={`flex-1 p-3 rounded-xl border-2 border-gray-200 ${habilidadFiltroColor} outline-none text-gray-900 text-sm transition`}/>
+          <button onClick={() => setSoloVerificados(!soloVerificados)}
+            className={`px-3 rounded-xl text-xs font-bold border-2 transition whitespace-nowrap ${
+              soloVerificados ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500'
+            }`}>
+            ✅ Verificados
+          </button>
         </div>
+
+        {hayFiltros && (
+          <button onClick={limpiarFiltros} className={`text-xs ${filtroActivoColor} font-bold hover:underline mb-3 block`}>
+            Limpiar filtros ✕
+          </button>
+        )}
 
         {fleksersFiltrados.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="font-bold text-gray-900 mb-1">Sin resultados</p>
-            <p className="text-gray-400 text-sm">Intenta con otros filtros o una búsqueda diferente</p>
+            <p className="font-bold text-gray-900 mb-1">Sin Fleksers en esta categoría</p>
+            <p className="text-gray-400 text-sm">Intenta con otra categoría o quita los filtros</p>
             {hayFiltros && (
               <button onClick={limpiarFiltros}
                 className={`mt-4 px-6 py-2 bg-gradient-to-r ${ctaGradient} text-white rounded-2xl font-bold text-sm`}>
@@ -193,10 +257,12 @@ export default function Catalogo() {
                     <p className="text-xs text-gray-500 mb-2 leading-relaxed line-clamp-2">{f.descripcion}</p>
                   )}
 
-                  {f.habilidades?.length > 0 && (
+                  {f.habilidades?.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {f.habilidades.slice(0, 4).map((h: string) => (
-                        <span key={h} className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${habilidadTagBg}`}>
+                        <span key={h} className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                          h === categoriaActiva ? `bg-gradient-to-r ${avatarGradient} text-white border-transparent` : habilidadTagBg
+                        }`}>
                           {h}
                         </span>
                       ))}
@@ -206,6 +272,8 @@ export default function Catalogo() {
                         </span>
                       )}
                     </div>
+                  ) : categoriaActiva === CATEGORIA_OTROS && (
+                    <p className="text-xs text-gray-400 italic mb-3">Aún no definió sus habilidades en su perfil</p>
                   )}
                 </a>
 
@@ -224,70 +292,6 @@ export default function Catalogo() {
           </div>
         )}
       </div>
-
-      {mostrarFiltros && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setMostrarFiltros(false)}>
-          <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"/>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-extrabold text-gray-900 text-lg">Filtros</h3>
-              {hayFiltros && (
-                <button onClick={limpiarFiltros} className={`text-sm ${filtroActivoColor} font-bold`}>Limpiar todo</button>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-5">
-              <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">📍 Ciudad</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Guadalajara, CDMX, Monterrey..."
-                  value={ciudadFiltro}
-                  onChange={(e) => setCiudadFiltro(e.target.value)}
-                  className={`w-full p-3 rounded-xl border-2 border-gray-200 ${habilidadFiltroColor} outline-none text-gray-900 text-sm transition`}/>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">🛠️ Habilidad</label>
-                <div className="flex flex-wrap gap-2">
-                  {habilidadesOpciones.map((h) => (
-                    <button key={h} onClick={() => setHabilidadFiltro(habilidadFiltro === h ? '' : h)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
-                        habilidadFiltro === h
-                          ? `bg-gradient-to-r ${habilidadActivaBg} text-white border-transparent`
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}>
-                      {h}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div onClick={() => setSoloVerificados(!soloVerificados)}
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition ${
-                  soloVerificados ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-white'
-                }`}>
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">✅</span>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm">Solo verificados</p>
-                    <p className="text-xs text-gray-400">Fleksers con identidad confirmada</p>
-                  </div>
-                </div>
-                <div className={`w-12 h-6 rounded-full transition-all ${soloVerificados ? 'bg-green-500' : 'bg-gray-300'}`}>
-                  <div className={`w-6 h-6 bg-white rounded-full shadow transition-all ${soloVerificados ? 'translate-x-6' : 'translate-x-0'}`}/>
-                </div>
-              </div>
-            </div>
-
-            <button onClick={() => setMostrarFiltros(false)}
-              className={`w-full mt-6 py-4 bg-gradient-to-r ${ctaGradient} text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition`}>
-              Ver {fleksersFiltrados.length} resultado{fleksersFiltrados.length !== 1 ? 's' : ''}
-            </button>
-          </div>
-        </div>
-      )}
 
       <Nav activo="catalogo" />
     </main>

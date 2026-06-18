@@ -34,6 +34,10 @@ const intenciones = [
   { id: 'ambos', emoji: '⚡', titulo: 'Ambos', desc: 'Trabajo y también contrato', color: 'border-green-400 bg-green-50', texto: 'text-green-700' },
 ];
 
+function quitarEmojiTexto(texto: string): string {
+  return texto.replace(/^\S+\s/, '');
+}
+
 function generarCodigo(nombre: string): string {
   const base = nombre.trim().toUpperCase().replace(/\s+/g, '').slice(0, 4).padEnd(4, 'X');
   const aleatorio = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -97,6 +101,7 @@ export default function Perfil() {
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [progresoPerfil, setProgresoPerfil] = useState(0);
+  const [posicionCategoria, setPosicionCategoria] = useState<{ posicion: number; total: number; categoria: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
 
   const [mostrarBannerIntencion, setMostrarBannerIntencion] = useState(false);
@@ -194,6 +199,10 @@ export default function Perfil() {
             }, { onConflict: 'usuario_id,tipo' });
           } catch (e) {}
         }
+
+        if (rol === 'flekser' && data.habilidades?.length > 0) {
+          calcularPosicionCategoria(user.id, data.habilidades);
+        }
       }
 
       const { data: badgesData } = await supabase.from('badges').select('*').eq('usuario_id', user.id);
@@ -246,6 +255,42 @@ export default function Perfil() {
       console.error(err);
     } finally {
       setCargando(false);
+    }
+  };
+
+  const calcularPosicionCategoria = async (userId: string, misHabilidades: string[]) => {
+    try {
+      const { data: otros } = await supabase
+        .from('usuarios')
+        .select('id, habilidades, progreso_perfil, calificacion, verificado, trabajos_completados')
+        .eq('rol', 'flekser');
+      if (!otros) return;
+
+      // Elige la categoría con más competencia (más Fleksers) entre las del usuario, para mostrar el escenario más representativo
+      let mejorCategoria = misHabilidades[0];
+      let mejorConteo = -1;
+      misHabilidades.forEach((h) => {
+        const conteo = otros.filter((o: any) => o.habilidades?.includes(h)).length;
+        if (conteo > mejorConteo) { mejorConteo = conteo; mejorCategoria = h; }
+      });
+
+      const grupo = otros.filter((o: any) => o.habilidades?.includes(mejorCategoria));
+      grupo.sort((a: any, b: any) => {
+        const progresoA = a.progreso_perfil || 0;
+        const progresoB = b.progreso_perfil || 0;
+        if (progresoB !== progresoA) return progresoB - progresoA;
+        const calA = a.calificacion || 0;
+        const calB = b.calificacion || 0;
+        if (calB !== calA) return calB - calA;
+        if (!!b.verificado !== !!a.verificado) return (b.verificado ? 1 : 0) - (a.verificado ? 1 : 0);
+        return (b.trabajos_completados || 0) - (a.trabajos_completados || 0);
+      });
+
+      const indice = grupo.findIndex((o: any) => o.id === userId);
+      if (indice === -1) return;
+      setPosicionCategoria({ posicion: indice + 1, total: grupo.length, categoria: mejorCategoria });
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -620,6 +665,22 @@ export default function Perfil() {
                   {faltantes.length > 3 && (
                     <p className="text-xs text-purple-500 font-semibold ml-3.5">+{faltantes.length - 3} más</p>
                   )}
+                </div>
+              )}
+              {(usuario?.rol_activo || usuario?.rol) === 'flekser' && (
+                <div className="mt-3 pt-3 border-t border-gray-200 flex items-start gap-2">
+                  <span className="text-base flex-shrink-0">⚡</span>
+                  <div>
+                    <p className="text-xs text-amber-700 font-semibold leading-relaxed">
+                      Los Fleksers con perfil al 100% aparecen primero en cada categoría del catálogo y reciben más solicitudes.
+                    </p>
+                    {posicionCategoria && (
+                      <p className="text-xs text-gray-600 font-bold mt-1.5">
+                        📊 Apareces en el lugar {posicionCategoria.posicion} de {posicionCategoria.total} en "{quitarEmojiTexto(posicionCategoria.categoria)}"
+                        {posicionCategoria.posicion > 1 && progresoPerfil < 100 && ' — completa tu perfil para subir de posición'}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
