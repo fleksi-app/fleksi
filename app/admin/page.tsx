@@ -115,6 +115,9 @@ export default function Admin() {
   const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
   const [cargandoModal, setCargandoModal] = useState(false);
 
+  const [modalServicios, setModalServicios] = useState<{ visible: boolean; estado: string; lista: any[] }>({ visible: false, estado: '', lista: [] });
+  const [cargandoModalServicios, setCargandoModalServicios] = useState(false);
+
   const [busquedaUsuario, setBusquedaUsuario] = useState('');
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<any>(null);
@@ -421,6 +424,23 @@ export default function Admin() {
       setModalUsuarios({ visible: true, rol, lista: data || [] });
     } catch (e) { console.error(e); }
     finally { setCargandoModal(false); }
+  };
+
+  const abrirModalServicios = async (estado: 'activos' | 'completados' | 'cancelados') => {
+    setCargandoModalServicios(true);
+    setModalServicios({ visible: true, estado, lista: [] });
+    try {
+      let query = supabase
+        .from('servicios')
+        .select('id, titulo, categoria, estado, presupuesto, fecha, hora, created_at, completado_at, usuarios!cliente_id(nombre, foto_url, telefono, email)')
+        .order('created_at', { ascending: false });
+      if (estado === 'activos') query = query.in('estado', ['activo', 'publicado', 'en_proceso']);
+      else if (estado === 'completados') query = query.in('estado', ['completado', 'pagado']);
+      else if (estado === 'cancelados') query = query.eq('estado', 'cancelado');
+      const { data } = await query;
+      setModalServicios({ visible: true, estado, lista: data || [] });
+    } catch (e) { console.error(e); }
+    finally { setCargandoModalServicios(false); }
   };
 
   const cargarRetiros = async () => {
@@ -1174,9 +1194,9 @@ export default function Admin() {
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>⚡</span> Servicios</h2>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center"><p className="text-2xl font-extrabold text-blue-700">{metrics.serviciosPublicados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Activos</p></div>
-                    <div className="bg-green-50 rounded-xl p-4 border border-green-100 text-center"><p className="text-2xl font-extrabold text-green-700">{metrics.serviciosCompletados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Completados</p></div>
-                    <div className="bg-red-50 rounded-xl p-4 border border-red-100 text-center"><p className="text-2xl font-extrabold text-red-600">{metrics.serviciosCancelados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Cancelados</p></div>
+                    <button onClick={() => abrirModalServicios('activos')} className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center hover:border-blue-300 hover:bg-blue-100 transition active:scale-95"><p className="text-2xl font-extrabold text-blue-700">{metrics.serviciosPublicados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Activos →</p></button>
+                    <button onClick={() => abrirModalServicios('completados')} className="bg-green-50 rounded-xl p-4 border border-green-100 text-center hover:border-green-300 hover:bg-green-100 transition active:scale-95"><p className="text-2xl font-extrabold text-green-700">{metrics.serviciosCompletados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Completados →</p></button>
+                    <button onClick={() => abrirModalServicios('cancelados')} className="bg-red-50 rounded-xl p-4 border border-red-100 text-center hover:border-red-300 hover:bg-red-100 transition active:scale-95"><p className="text-2xl font-extrabold text-red-600">{metrics.serviciosCancelados}</p><p className="text-xs text-gray-500 mt-1 font-semibold">Cancelados →</p></button>
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -1544,6 +1564,50 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {modalServicios.visible && (() => {
+        const tituloModal = modalServicios.estado === 'activos' ? '⚡ Servicios activos' : modalServicios.estado === 'completados' ? '✅ Servicios completados' : '❌ Servicios cancelados';
+        const categoriaEmoji: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨' };
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })}>
+            <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-extrabold text-gray-900 text-lg">{tituloModal}</h3>
+                <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
+              </div>
+              {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios en esta categoría</p></div>
+              : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
+                  {modalServicios.lista.map((s: any) => (
+                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-gray-900 text-sm truncate">{s.titulo}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{s.usuarios?.nombre || 'Cliente'} · {new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          </div>
+                        </div>
+                        {s.presupuesto > 0 && <span className="text-xs font-bold text-gray-700 flex-shrink-0">${s.presupuesto.toLocaleString('es-MX')} MXN</span>}
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
+                        {s.fecha && <span>📅 {s.fecha}{s.hora ? ' ' + s.hora.slice(0,5) : ''}</span>}
+                        {s.usuarios?.telefono && <span>📱 {s.usuarios.telefono}</span>}
+                      </div>
+                      {s.completado_at && (
+                        <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
     </main>
   );
