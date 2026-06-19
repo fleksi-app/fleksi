@@ -262,16 +262,13 @@ function PublicarForm() {
   const notificarFleksersCercanos = async (servicioId: string, tituloFinal: string) => {
     try {
       if (!ciudadUsuario) return;
-
       const { data: fleksers } = await supabase
         .from('usuarios')
         .select('id')
         .eq('ciudad', ciudadUsuario)
         .neq('id', usuarioId)
         .in('rol_activo', ['flekser']);
-
       if (!fleksers || fleksers.length === 0) return;
-
       const cat = categorias.find(c => c.id === categoriaSeleccionada);
       const notifs = fleksers.map(f => ({
         usuario_id: f.id,
@@ -280,11 +277,7 @@ function PublicarForm() {
         mensaje: (cat?.emoji || '✨') + ' ' + tituloFinal,
         link: '/trabajo?id=' + servicioId,
       }));
-
-      // Insertar en batch
       await supabase.from('notificaciones').insert(notifs);
-
-      // Intentar push (falla silenciosamente si no hay PWA push o suscripciones)
       fleksers.forEach(f => {
         fetch('/api/push', {
           method: 'POST',
@@ -297,25 +290,19 @@ function PublicarForm() {
           }),
         }).catch(() => {});
       });
-    } catch (e) {
-      // Silencioso: nunca debe romper la publicación
-    }
+    } catch (e) {}
   };
 
   const handlePublicar = async () => {
     const tituloFinal = titulo.trim() || generarTituloAutomatico();
-    if (!tituloFinal || fechas.length === 0) { setError('Por favor completa el título y selecciona al menos una fecha'); return; }
+    if (!tituloFinal) { setError('Por favor completa el título'); return; }
+    if (!urgente && fechas.length === 0) { setError('Por favor selecciona al menos una fecha'); return; }
     setCargando(true); setError('');
-    const fechaPrincipal = fechas[0];
+    const fechaPrincipal = fechas[0] || null;
     const ahora = new Date();
-    const fechaSeleccionada = new Date(fechaPrincipal + 'T' + (hora || '23:59'));
-    if (fechaSeleccionada < ahora) { setError('La fecha y hora del trabajo no puede ser en el pasado'); setCargando(false); return; }
-    if (urgente) {
-      const tresHoras = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
-      if (fechaSeleccionada < tresHoras) {
-        setError('Para trabajos urgentes necesitas al menos 3 horas de anticipación.');
-        setCargando(false); return;
-      }
+    if (!urgente && fechaPrincipal) {
+      const fechaSeleccionada = new Date(fechaPrincipal + 'T' + (hora || '23:59'));
+      if (fechaSeleccionada < ahora) { setError('La fecha y hora del trabajo no puede ser en el pasado'); setCargando(false); return; }
     }
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -328,9 +315,9 @@ function PublicarForm() {
         titulo: tituloFinal,
         descripcion: descripcionFinal,
         categoria: categoriaSeleccionada,
-        fecha: fechaPrincipal,
-        fechas_multiples: fechas.length > 1 ? fechas : null,
-        hora: hora || null,
+        fecha: urgente ? null : fechaPrincipal,
+        fechas_multiples: (!urgente && fechas.length > 1) ? fechas : null,
+        hora: urgente ? null : (hora || null),
         presupuesto: null,
         direccion: direccion || null,
         lat: coords?.lat || null, lng: coords?.lng || null,
@@ -357,7 +344,6 @@ function PublicarForm() {
           });
         } catch (e) {}
       } else if (servicioCreado) {
-        // Notificar a Fleksers de la misma ciudad
         notificarFleksersCercanos(servicioCreado.id, tituloFinal);
       }
       setPublicado(true);
@@ -399,7 +385,7 @@ function PublicarForm() {
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
               <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
-                {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
+                {urgente ? '🔴 Urgente' : fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
               </span>
             </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
@@ -420,11 +406,7 @@ function PublicarForm() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={handleAtras}
-              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
-              ←
-            </button>
+            <button onClick={handleAtras} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</button>
             <div>
               <h1 className="font-extrabold text-gray-900 text-lg">Publicar solicitud</h1>
               <p className="text-gray-400 text-xs">Paso {paso} de 3</p>
@@ -519,6 +501,17 @@ function PublicarForm() {
               </div>
 
               {/* ── SELECTOR DE FECHAS MÚLTIPLES ── */}
+              {urgente ? (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">🔴</span>
+                    <div>
+                      <p className="font-extrabold text-red-800 text-sm mb-1">Solicitud urgente — sin fecha fija</p>
+                      <p className="text-red-700 text-xs leading-relaxed">Los Fleksers interesados te indicarán en cuánto tiempo pueden llegar (ej. "en 30 min", "en 1 hora"). Tú eliges a quién aceptar según tu urgencia.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📅 ¿Para cuándo lo necesitas?</label>
                 <p className="text-xs text-gray-400 mb-3">Puedes seleccionar varios días si necesitas el servicio más de una vez</p>
@@ -548,6 +541,7 @@ function PublicarForm() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Modo de cobro para múltiples días */}
               {esMutipleDias && (
@@ -580,6 +574,7 @@ function PublicarForm() {
               )}
 
               {/* Hora */}
+              {!urgente && (
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">
                   🕐 Hora preferida <span className="text-gray-400 font-normal">(opcional)</span>
@@ -594,6 +589,7 @@ function PublicarForm() {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Cupos empresa */}
               {esEmpresa && (
@@ -649,7 +645,7 @@ function PublicarForm() {
                   <span className="text-xl">🔴</span>
                   <div>
                     <p className="font-semibold text-gray-900">Marcar como urgente</p>
-                    <p className="text-xs text-gray-400">Mínimo 3 horas de anticipación · Aparece primero</p>
+                    <p className="text-xs text-gray-400">Sin fecha fija · Los Fleksers indican cuándo pueden llegar</p>
                   </div>
                 </div>
                 <div className={'w-12 h-6 rounded-full transition-all ' + (urgente ? 'bg-red-500' : 'bg-gray-300')}>
@@ -689,7 +685,9 @@ function PublicarForm() {
                 <div className="flex justify-between items-start">
                   <span className="text-gray-400 text-sm flex-shrink-0">Fecha{fechas.length > 1 ? 's' : ''}</span>
                   <div className="text-right ml-4">
-                    {fechas.length === 1 ? (
+                    {urgente ? (
+                      <span className="font-semibold text-sm text-red-600">🔴 Urgente — sin fecha fija</span>
+                    ) : fechas.length === 1 ? (
                       <span className="font-semibold text-sm text-gray-900">{fechas[0]} {hora || ''}</span>
                     ) : (
                       <div className="flex flex-wrap gap-1 justify-end">
@@ -698,7 +696,7 @@ function PublicarForm() {
                     )}
                   </div>
                 </div>
-                {hora && <div className="flex justify-between"><span className="text-gray-400 text-sm">Hora</span><span className="font-semibold text-sm text-gray-900">{hora}</span></div>}
+                {!urgente && hora && <div className="flex justify-between"><span className="text-gray-400 text-sm">Hora</span><span className="font-semibold text-sm text-gray-900">{hora}</span></div>}
                 {direccion && <div className="flex justify-between items-start"><span className="text-gray-400 text-sm flex-shrink-0">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right ml-4">{direccion}</span></div>}
                 {esEmpresa && cupos > 1 && <div className="flex justify-between"><span className="text-gray-400 text-sm">Personas</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
                 <div className="flex justify-between"><span className="text-gray-400 text-sm">Método de pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span></div>
@@ -762,7 +760,7 @@ function PublicarForm() {
           ) : (
             <button
               onClick={handlePublicar}
-              disabled={cargando || geocodificando || subiendoFoto || fechas.length === 0}
+              disabled={cargando || geocodificando || subiendoFoto || (!urgente && fechas.length === 0)}
               className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
               {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
             </button>

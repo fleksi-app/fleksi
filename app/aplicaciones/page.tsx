@@ -256,6 +256,11 @@ function AplicacionesContent() {
               )}
             </div>
             <div className="flex gap-3 mt-3 flex-wrap">
+              {servicioActivo.urgente && (
+                <div className="bg-red-500/80 rounded-xl px-3 py-2 flex items-center gap-2">
+                  <span className="text-white font-extrabold text-xs">🔴 Urgente — sin fecha fija</span>
+                </div>
+              )}
               <div className="bg-white/15 rounded-xl px-3 py-2 flex items-center gap-2">
                 <span className="text-white/70 text-xs">👁️ Total</span>
                 <span className="text-white font-extrabold text-sm">{servicioActivo.visitas || 0}</span>
@@ -399,6 +404,12 @@ function AplicacionesContent() {
                             <p className="text-sm text-amber-800 font-semibold">
                               {app.fecha_propuesta || '—'}{app.hora_propuesta ? ' a las ' + app.hora_propuesta : ''}
                             </p>
+                          </div>
+                        )}
+                        {servicioActivo?.urgente && app.hora_propuesta && (
+                          <div className="px-4 py-3 border-t border-gray-100 bg-red-50">
+                            <p className="text-xs text-red-700 font-bold mb-0.5">⏱️ Tiempo de llegada:</p>
+                            <p className="text-sm text-red-800 font-extrabold">🔴 {app.hora_propuesta}</p>
                           </div>
                         )}
                         {app.mensaje && (

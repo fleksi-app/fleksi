@@ -130,7 +130,8 @@ function DetalleTrabajoContent() {
     }
     if (yaAplico) { setError('Ya aplicaste a este trabajo.'); return; }
     if (!miPrecio || Number(miPrecio) <= 0) { setError('Escribe el precio que cobrarás por este trabajo.'); return; }
-    if (proponeOtraFecha && (!fechaPropuesta || !horaPropuesta)) { setError('Indica la fecha y hora que propones.'); return; }
+    if (trabajo.urgente && !horaPropuesta.trim()) { setError('Indica en cuánto tiempo puedes llegar.'); return; }
+    if (!trabajo.urgente && proponeOtraFecha && (!fechaPropuesta || !horaPropuesta)) { setError('Indica la fecha y hora que propones.'); return; }
     setCargando(true); setError('');
     try {
       const { error: dbError } = await supabase.from('aplicaciones').insert({
@@ -139,9 +140,9 @@ function DetalleTrabajoContent() {
         precio_ofrecido: Number(miPrecio),
         mensaje: mensaje || null,
         estado: 'pendiente',
-        propone_otra_fecha: proponeOtraFecha,
-        fecha_propuesta: proponeOtraFecha ? fechaPropuesta : null,
-        hora_propuesta: proponeOtraFecha ? horaPropuesta : null,
+        propone_otra_fecha: trabajo.urgente ? false : proponeOtraFecha,
+        fecha_propuesta: (!trabajo.urgente && proponeOtraFecha) ? fechaPropuesta : null,
+        hora_propuesta: trabajo.urgente ? horaPropuesta : (proponeOtraFecha ? horaPropuesta : null),
       });
       if (dbError) throw dbError;
       try {
@@ -383,32 +384,41 @@ function DetalleTrabajoContent() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={proponeOtraFecha}
-                  onChange={(e) => setProponeOtraFecha(e.target.checked)}
-                  className="w-5 h-5 rounded accent-purple-600"/>
-                <span className="text-sm font-semibold text-gray-700">📅 No puedo en esa fecha/hora, propongo otra</span>
-              </label>
-              {proponeOtraFecha && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Fecha que propones</label>
-                    <input
-                      type="date"
-                      value={fechaPropuesta}
-                      onChange={(e) => setFechaPropuesta(e.target.value)}
-                      className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
+              {trabajo.urgente ? (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">⏱️ ¿En cuánto tiempo puedes llegar?</label>
+                  <p className="text-xs text-gray-400 mb-3">El cliente elegirá según quién pueda llegar más rápido</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {['En 15 min', 'En 30 min', 'En 1 hora', 'En 2 horas'].map((opcion) => (
+                      <button key={opcion} onClick={() => setHoraPropuesta(horaPropuesta === opcion ? '' : opcion)}
+                        className={'py-2.5 rounded-xl text-sm font-bold transition border-2 ' + (horaPropuesta === opcion ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600 hover:border-red-300')}>
+                        🔴 {opcion}
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora que propones</label>
-                    <input
-                      type="time"
-                      value={horaPropuesta}
-                      onChange={(e) => setHoraPropuesta(e.target.value)}
-                      className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
-                  </div>
+                  <input type="text" placeholder="O escribe otro tiempo... ej. En 45 min"
+                    value={['En 15 min','En 30 min','En 1 hora','En 2 horas'].includes(horaPropuesta) ? '' : horaPropuesta}
+                    onChange={(e) => setHoraPropuesta(e.target.value)}
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-red-400 outline-none text-gray-900 text-sm transition"/>
+                </div>
+              ) : (
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={proponeOtraFecha} onChange={(e) => setProponeOtraFecha(e.target.checked)} className="w-5 h-5 rounded accent-purple-600"/>
+                    <span className="text-sm font-semibold text-gray-700">📅 No puedo en esa fecha/hora, propongo otra</span>
+                  </label>
+                  {proponeOtraFecha && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Fecha que propones</label>
+                        <input type="date" value={fechaPropuesta} onChange={(e) => setFechaPropuesta(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora que propones</label>
+                        <input type="time" value={horaPropuesta} onChange={(e) => setHoraPropuesta(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
