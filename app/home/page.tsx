@@ -91,6 +91,7 @@ export default function HomeWorker() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { window.location.href = '/login'; return; }
+    if (user.email === 'fernando.najera.nm@gmail.com') { window.location.href = '/admin'; return; }
 
     let perfil = cacheGet<any>('perfil_' + user.id);
     if (!perfil) {
