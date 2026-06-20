@@ -109,6 +109,12 @@ export default function Admin() {
   const [fleksersDisponibles, setFleksersDisponibles] = useState<any[]>([]);
   const [busquedaFlekser, setBusquedaFlekser] = useState<Record<string, string>>({});
   const [waCopiado, setWaCopiado] = useState<string | null>(null);
+
+  // ── INTERVENCIÓN ADMIN ──
+  const [editandoSolicitud, setEditandoSolicitud] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ titulo: string; descripcion: string; fecha: string; hora: string }>({ titulo: '', descripcion: '', hora: '', fecha: '' });
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
+  const [procesandoApp, setProcesandoApp] = useState<string | null>(null);
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -280,6 +286,75 @@ export default function Admin() {
     navigator.clipboard.writeText(mensaje);
     setWaCopiado(key);
     setTimeout(() => setWaCopiado(null), 2000);
+  };
+
+  const iniciarEdicion = (svc: any) => {
+    setEditandoSolicitud(svc.id);
+    setEditForm({
+      titulo: svc.titulo || '',
+      descripcion: svc.descripcion || '',
+      fecha: svc.fecha || '',
+      hora: svc.hora || '',
+    });
+  };
+
+  const guardarEdicion = async (svcId: string) => {
+    setGuardandoEdit(true);
+    try {
+      await supabase.from('servicios').update({
+        titulo: editForm.titulo.trim(),
+        descripcion: editForm.descripcion.trim() || null,
+        fecha: editForm.fecha || null,
+        hora: editForm.hora || null,
+      }).eq('id', svcId);
+      setEditandoSolicitud(null);
+      await cargarSolicitudesActivas();
+    } catch (e) { console.error(e); }
+    finally { setGuardandoEdit(false); }
+  };
+
+  const aceptarAplicacion = async (appId: string, svcId: string, flekserNombre: string) => {
+    if (!confirm('¿Aceptar la propuesta de ' + flekserNombre + ' en nombre del cliente?')) return;
+    setProcesandoApp(appId);
+    try {
+      // Rechazar las otras aplicaciones pendientes del mismo servicio
+      const { data: otrasApps } = await supabase
+        .from('aplicaciones')
+        .select('id, usuario_id')
+        .eq('servicio_id', svcId)
+        .eq('estado', 'pendiente')
+        .neq('id', appId);
+      if (otrasApps && otrasApps.length > 0) {
+        await supabase.from('aplicaciones').update({ estado: 'rechazado' }).in('id', otrasApps.map((a: any) => a.id));
+      }
+      // Aceptar la aplicación elegida
+      await supabase.from('aplicaciones').update({ estado: 'aceptado' }).eq('id', appId);
+      // Cambiar el servicio a en_proceso
+      await supabase.from('servicios').update({ estado: 'en_proceso' }).eq('id', svcId);
+      // Notificar al Flekser aceptado
+      const { data: app } = await supabase.from('aplicaciones').select('prestador_id').eq('id', appId).single();
+      if (app?.prestador_id) {
+        await supabase.from('notificaciones').insert({
+          usuario_id: app.prestador_id,
+          tipo: 'aplicacion_aceptada',
+          titulo: '🎉 ¡Tu propuesta fue aceptada!',
+          mensaje: 'El equipo de Fleksi confirmó tu propuesta. Coordina con el cliente.',
+          link: '/mis-trabajos',
+        }).catch(() => {});
+      }
+      await cargarSolicitudesActivas();
+    } catch (e) { console.error(e); }
+    finally { setProcesandoApp(null); }
+  };
+
+  const rechazarAplicacion = async (appId: string, flekserNombre: string) => {
+    if (!confirm('¿Rechazar la propuesta de ' + flekserNombre + '?')) return;
+    setProcesandoApp(appId);
+    try {
+      await supabase.from('aplicaciones').update({ estado: 'rechazado' }).eq('id', appId);
+      await cargarSolicitudesActivas();
+    } catch (e) { console.error(e); }
+    finally { setProcesandoApp(null); }
   };
 
   const cargarMetricasMensajes = async () => {
@@ -1166,7 +1241,8 @@ export default function Admin() {
                     carpinteria: ['🪵 Carpintería ligera'],
                   };
                   const habilidadesCat = svc.categoria ? (categoriaAHabilidades[svc.categoria] || []) : [];
-                   // Por defecto muestra Fleksers de la categoría; el buscador refina o amplía
+
+                  // Por defecto muestra Fleksers de la categoría; el buscador refina o amplía
                   const fleksersFilt = fleksersDisponibles.filter(f => {
                     const matchBusqueda = busqueda.length >= 2
                       ? f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || f.ciudad?.toLowerCase().includes(busqueda.toLowerCase())
@@ -1262,11 +1338,67 @@ export default function Admin() {
                                     {app.mensaje && <p className="text-xs text-gray-500 italic mt-0.5">"{app.mensaje}"</p>}
                                     {svc.urgente && app.hora_propuesta && <p className="text-xs font-bold text-red-600 mt-0.5">⏱️ Puede llegar: {app.hora_propuesta}</p>}
                                     {!svc.urgente && app.propone_otra_fecha && app.fecha_propuesta && <p className="text-xs text-amber-700 font-semibold mt-0.5">📅 Propone: {app.fecha_propuesta}{app.hora_propuesta ? ' a las ' + app.hora_propuesta : ''}</p>}
+                                    {/* Botones de intervención por aplicación */}
+                                    {app.estado === 'pendiente' && (
+                                      <div className="flex gap-2 mt-2">
+                                        <button
+                                          onClick={() => rechazarAplicacion(app.id, app.usuarios?.nombre || 'este Flekser')}
+                                          disabled={procesandoApp === app.id}
+                                          className="flex-1 py-1.5 border border-red-200 text-red-500 rounded-lg font-bold text-xs hover:bg-red-50 transition disabled:opacity-50">
+                                          ❌ Rechazar
+                                        </button>
+                                        <button
+                                          onClick={() => aceptarAplicacion(app.id, svc.id, app.usuarios?.nombre || 'este Flekser')}
+                                          disabled={procesandoApp === app.id}
+                                          className="flex-1 py-1.5 bg-green-500 text-white rounded-lg font-bold text-xs hover:bg-green-600 transition disabled:opacity-50">
+                                          {procesandoApp === app.id ? '...' : '✅ Aceptar en nombre del cliente'}
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
+
+                          {/* ── EDITAR SOLICITUD ── */}
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                            {editandoSolicitud === svc.id ? (
+                              <div className="flex flex-col gap-3">
+                                <p className="text-xs font-bold text-amber-800 mb-1">✏️ Editando solicitud</p>
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Título</label>
+                                  <input type="text" value={editForm.titulo} onChange={e => setEditForm(p => ({ ...p, titulo: e.target.value }))} className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-amber-400 outline-none text-gray-900 text-xs"/>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Descripción</label>
+                                  <textarea value={editForm.descripcion} onChange={e => setEditForm(p => ({ ...p, descripcion: e.target.value }))} rows={3} className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-amber-400 outline-none text-gray-900 text-xs resize-none"/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Fecha</label>
+                                    <input type="date" value={editForm.fecha} onChange={e => setEditForm(p => ({ ...p, fecha: e.target.value }))} className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-amber-400 outline-none text-gray-900 text-xs"/>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Hora</label>
+                                    <input type="time" value={editForm.hora} onChange={e => setEditForm(p => ({ ...p, hora: e.target.value }))} className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-amber-400 outline-none text-gray-900 text-xs"/>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => setEditandoSolicitud(null)} className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-lg font-bold text-xs">Cancelar</button>
+                                  <button onClick={() => guardarEdicion(svc.id)} disabled={guardandoEdit || !editForm.titulo.trim()} className="flex-1 py-2 bg-amber-500 text-white rounded-lg font-bold text-xs hover:bg-amber-600 transition disabled:opacity-50">{guardandoEdit ? 'Guardando...' : '💾 Guardar'}</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold text-amber-800">🛠️ Intervención admin</p>
+                                  <p className="text-xs text-amber-700 mt-0.5">Edita la solicitud o acepta/rechaza propuestas arriba</p>
+                                </div>
+                                <button onClick={() => iniciarEdicion(svc)} className="px-3 py-2 bg-amber-500 text-white rounded-lg font-bold text-xs hover:bg-amber-600 transition">✏️ Editar</button>
+                              </div>
+                            )}
+                          </div>
 
                           <div>
                             <div className="flex items-center justify-between mb-2">
