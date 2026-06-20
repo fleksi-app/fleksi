@@ -715,6 +715,281 @@ export default function Admin() {
     } finally { setGenerandoReporte(''); }
   };
 
+  const descargarPDFMercado = async () => {
+    setGenerandoReporte('mercado');
+    try {
+      const periodo = PERIODOS.find(p => p.key === periodoReporte)!;
+      const [anio, mes] = (() => { const d = new Date(); d.setMonth(d.getMonth() - periodo.meses); return [d.getFullYear(), d.getMonth()]; })();
+      const desde = new Date(anio, mes, 1).toISOString();
+      const fechaGen = new Date().toLocaleDateString('es-MX');
+
+      // Traer servicios con aplicaciones aceptadas
+      const { data: servicios } = await supabase
+        .from('servicios')
+        .select('id, categoria, estado, presupuesto, urgente, created_at')
+        .gte('created_at', desde);
+
+      const { data: aplicaciones } = await supabase
+        .from('aplicaciones')
+        .select('servicio_id, precio_ofrecido, estado, usuario_id, usuarios(id, nombre, trabajos_completados)')
+        .in('estado', ['aceptado', 'completado'])
+        .gte('created_at', desde);
+
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('id, rol, trabajos_completados, nombre')
+        .gte('created_at', desde);
+
+      const svcs = servicios || [];
+      const apps = aplicaciones || [];
+      const usrs = usuarios || [];
+
+      const NOMBRES_CAT: Record<string, string> = {
+        hogar: '🔧 Hogar y reparaciones', limpieza: '🧹 Limpieza', eventos: '🍽️ Eventos',
+        mudanza: '🚚 Mudanza', ejecutivo: '🚗 Chofer ejecutivo', interprete: '🗣️ Intérprete',
+        cocina: '🍳 Cocina', jardineria: '🌿 Jardinería', mecanica: '🔩 Mecánica',
+        cerrajeria: '🔑 Cerrajería', estetica: '💅 Estética', envios: '🛵 Envíos',
+        mascotas: '🐾 Mascotas', super: '🛒 Súper', otro: '✨ Otro',
+      };
+
+      // ── 1. Categorías más demandadas
+      const catCount: Record<string, { total: number; completados: number; cancelados: number; precios: number[] }> = {};
+      svcs.forEach(s => {
+        const cat = s.categoria || 'otro';
+        if (!catCount[cat]) catCount[cat] = { total: 0, completados: 0, cancelados: 0, precios: [] };
+        catCount[cat].total++;
+        if (s.estado === 'completado' || s.estado === 'pagado') catCount[cat].completados++;
+        if (s.estado === 'cancelado' || s.estado === 'vencido') catCount[cat].cancelados++;
+      });
+
+      // ── 2. Precios aceptados por categoría
+      apps.forEach(a => {
+        const svc = svcs.find(s => s.id === a.servicio_id);
+        if (svc && a.precio_ofrecido > 0) {
+          const cat = svc.categoria || 'otro';
+          if (!catCount[cat]) catCount[cat] = { total: 0, completados: 0, cancelados: 0, precios: [] };
+          catCount[cat].precios.push(a.precio_ofrecido);
+        }
+      });
+
+      const categorias = Object.entries(catCount)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([cat, d]) => {
+          const precios = d.precios;
+          const promedio = precios.length > 0 ? Math.round(precios.reduce((a, b) => a + b, 0) / precios.length) : 0;
+          const minPrecio = precios.length > 0 ? Math.min(...precios) : 0;
+          const maxPrecio = precios.length > 0 ? Math.max(...precios) : 0;
+          const tasaCierre = d.total > 0 ? Math.round((d.completados / d.total) * 100) : 0;
+          const pct = svcs.length > 0 ? Math.round((d.total / svcs.length) * 100) : 0;
+          return { cat, nombre: NOMBRES_CAT[cat] || cat, ...d, promedio, minPrecio, maxPrecio, tasaCierre, pct };
+        });
+
+      // ── 3. Urgentes vs programadas
+      const urgentes = svcs.filter(s => s.urgente).length;
+      const programadas = svcs.length - urgentes;
+      const pctUrgentes = svcs.length > 0 ? Math.round((urgentes / svcs.length) * 100) : 0;
+
+      // ── 4. Día de la semana con más solicitudes
+      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const porDia: Record<number, number> = {};
+      svcs.forEach(s => { const d = new Date(s.created_at).getDay(); porDia[d] = (porDia[d] || 0) + 1; });
+      const diaMasActivo = Object.entries(porDia).sort((a, b) => b[1] - a[1])[0];
+
+      // ── 5. Top Fleksers
+      const flekserMap: Record<string, { nombre: string; completados: number }> = {};
+      apps.forEach(a => {
+        if (!a.usuario_id) return;
+        const u = a.usuarios as any;
+        if (!flekserMap[a.usuario_id]) flekserMap[a.usuario_id] = { nombre: u?.nombre || '—', completados: 0 };
+        if (a.estado === 'completado') flekserMap[a.usuario_id].completados++;
+      });
+      const topFleksers = Object.values(flekserMap).sort((a, b) => b.completados - a.completados).slice(0, 5);
+
+      // ── 6. Ratio clientes / Fleksers
+      const totalFleksers = usrs.filter(u => u.rol === 'flekser').length || 1;
+      const totalClientes = usrs.filter(u => u.rol !== 'flekser').length;
+      const ratio = (totalClientes / totalFleksers).toFixed(1);
+
+      // ── 7. Tasa global de cierre
+      const tasaGlobal = svcs.length > 0 ? Math.round((svcs.filter(s => s.estado === 'completado' || s.estado === 'pagado').length / svcs.length) * 100) : 0;
+
+      // ── 8. Precio promedio global
+      const todosPrecios = apps.map(a => a.precio_ofrecido).filter(p => p > 0);
+      const precioGlobal = todosPrecios.length > 0 ? Math.round(todosPrecios.reduce((a, b) => a + b, 0) / todosPrecios.length) : 0;
+
+      // ── Generar HTML ──
+      const catRows = categorias.map((c, i) => `
+        <tr style="background:${i % 2 === 0 ? '#F8FAFC' : 'white'}">
+          <td style="padding:10px 12px;font-weight:700;font-size:13px;">${c.nombre}</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:800;color:#2563EB;">${c.total}</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#6B7280;">${c.pct}%</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:${c.tasaCierre >= 60 ? '#059669' : c.tasaCierre >= 30 ? '#D97706' : '#DC2626'};">${c.tasaCierre}%</td>
+          <td style="padding:10px 12px;text-align:center;font-weight:800;color:#7C3AED;">${c.promedio > 0 ? '$' + c.promedio.toLocaleString('es-MX') : '—'}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:12px;color:#6B7280;">${c.minPrecio > 0 ? '$' + c.minPrecio.toLocaleString('es-MX') + ' – $' + c.maxPrecio.toLocaleString('es-MX') : '—'}</td>
+        </tr>
+      `).join('');
+
+      const topFleksersRows = topFleksers.length > 0 ? topFleksers.map((f, i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F1F5F9;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:${i === 0 ? 'linear-gradient(135deg,#F59E0B,#EF4444)' : 'linear-gradient(135deg,#2563EB,#7C3AED)'};display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:13px;">${i + 1}</div>
+            <span style="font-weight:700;font-size:14px;">${f.nombre}</span>
+          </div>
+          <span style="font-weight:800;color:#059669;font-size:14px;">${f.completados} trabajo${f.completados !== 1 ? 's' : ''}</span>
+        </div>
+      `).join('') : '<p style="color:#9CA3AF;font-size:13px;text-align:center;padding:16px;">Sin datos suficientes aún</p>';
+
+      const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Análisis de Mercado — Fleksi</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:Arial,sans-serif;background:#F8FAFC;color:#0F172A;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+        .page{max-width:820px;margin:0 auto;padding:32px;background:white;}
+        .header{background:linear-gradient(135deg,#7C3AED 0%,#2563EB 100%);border-radius:16px;padding:28px 32px;margin-bottom:28px;}
+        .header h1{color:white;font-size:24px;font-weight:900;}
+        .header h2{color:rgba(255,255,255,0.9);font-size:16px;font-weight:700;margin-top:4px;}
+        .header p{color:rgba(255,255,255,0.65);font-size:12px;margin-top:6px;}
+        .seccion{margin-bottom:28px;}
+        .seccion-titulo{font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+        .divider{height:1.5px;background:#F1F5F9;margin-bottom:14px;}
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+        .kpi{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px;text-align:center;}
+        .kpi .valor{font-size:26px;font-weight:900;line-height:1;color:#2563EB;}
+        .kpi .label{font-size:10px;color:#94A3B8;font-weight:600;margin-top:5px;text-transform:uppercase;letter-spacing:0.5px;}
+        .kpi.verde .valor{color:#059669;}
+        .kpi.purpura .valor{color:#7C3AED;}
+        .kpi.naranja .valor{color:#D97706;}
+        .kpi.rojo .valor{color:#DC2626;}
+        table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;border:1.5px solid #E2E8F0;}
+        thead{background:linear-gradient(135deg,#7C3AED,#2563EB);}
+        thead th{color:white;padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+        thead th:not(:first-child){text-align:center;}
+        .insight{background:linear-gradient(135deg,#EEF2FF,#F0FDF4);border:1.5px solid #C7D2FE;border-radius:12px;padding:16px;margin-top:12px;}
+        .insight p{font-size:13px;color:#374151;line-height:1.6;}
+        .insight strong{color:#4F46E5;}
+        .dos-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+        .caja{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px;}
+        .caja h4{font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;margin-bottom:12px;}
+        .barra-wrap{margin-bottom:8px;}
+        .barra-label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:3px;}
+        .barra{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;}
+        .barra-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#2563EB);}
+        .footer{margin-top:32px;padding-top:16px;border-top:1.5px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;}
+        .footer-logo{font-size:16px;font-weight:900;color:#7C3AED;}
+        .footer-info{font-size:10px;color:#CBD5E1;text-align:right;}
+        @media print{body{background:white;}.page{padding:20px;max-width:100%;}}
+      </style></head><body><div class="page">
+
+        <div class="header">
+          <h1>📊 Análisis de Mercado</h1>
+          <h2>⚡ Fleksi — Irapuato, Guanajuato</h2>
+          <p>Período: ${periodo.label} · ${new Date(desde).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} — ${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} · Generado el ${fechaGen}</p>
+        </div>
+
+        <div class="seccion">
+          <div class="seccion-titulo">📌 Resumen ejecutivo</div>
+          <div class="divider"></div>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="valor">${svcs.length}</div><div class="label">Solicitudes totales</div></div>
+            <div class="kpi verde"><div class="valor">${tasaGlobal}%</div><div class="label">Tasa de cierre</div></div>
+            <div class="kpi purpura"><div class="valor">${precioGlobal > 0 ? '$' + precioGlobal.toLocaleString('es-MX') : '—'}</div><div class="label">Precio promedio aceptado</div></div>
+            <div class="kpi naranja"><div class="valor">${pctUrgentes}%</div><div class="label">Solicitudes urgentes</div></div>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="kpi"><div class="valor">${totalFleksers}</div><div class="label">Fleksers activos</div></div>
+            <div class="kpi"><div class="valor">${ratio}</div><div class="label">Clientes por Flekser</div></div>
+            <div class="kpi verde"><div class="valor">${diaMasActivo ? dias[Number(diaMasActivo[0])] : '—'}</div><div class="label">Día más activo</div></div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <div class="seccion-titulo">📂 Categorías — Demanda, cierre y precios</div>
+          <div class="divider"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Solicitudes</th>
+                <th>% del total</th>
+                <th>Tasa cierre</th>
+                <th>Precio promedio</th>
+                <th>Rango de precios</th>
+              </tr>
+            </thead>
+            <tbody>${catRows}</tbody>
+          </table>
+        </div>
+
+        <div class="seccion">
+          <div class="dos-cols">
+            <div class="caja">
+              <h4>🔴 Urgentes vs Programadas</h4>
+              <div class="barra-wrap">
+                <div class="barra-label"><span>🔴 Urgentes</span><span>${urgentes} (${pctUrgentes}%)</span></div>
+                <div class="barra"><div class="barra-fill" style="width:${pctUrgentes}%;background:linear-gradient(90deg,#EF4444,#F97316);"></div></div>
+              </div>
+              <div class="barra-wrap" style="margin-top:8px;">
+                <div class="barra-label"><span>📅 Programadas</span><span>${programadas} (${100 - pctUrgentes}%)</span></div>
+                <div class="barra"><div class="barra-fill" style="width:${100 - pctUrgentes}%;"></div></div>
+              </div>
+              <p style="font-size:11px;color:#9CA3AF;margin-top:12px;">
+                ${pctUrgentes > 40 ? '⚠️ Alta demanda urgente. Considera promover más Fleksers disponibles al momento.' : pctUrgentes > 20 ? '✅ Proporción normal de urgentes.' : '📅 Mercado mayormente planificado.'}
+              </p>
+            </div>
+            <div class="caja">
+              <h4>📅 Actividad por día de la semana</h4>
+              ${dias.map((d, i) => {
+                const count = porDia[i] || 0;
+                const maxDia = Math.max(...Object.values(porDia), 1);
+                const pctDia = Math.round((count / maxDia) * 100);
+                return `<div class="barra-wrap"><div class="barra-label"><span style="font-size:11px;">${d}</span><span style="font-size:11px;">${count}</span></div><div class="barra"><div class="barra-fill" style="width:${pctDia}%;"></div></div></div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <div class="seccion-titulo">🏆 Top Fleksers del período</div>
+          <div class="divider"></div>
+          <div class="caja">
+            <h4>Por trabajos completados</h4>
+            ${topFleksersRows}
+          </div>
+        </div>
+
+        <div class="seccion">
+          <div class="seccion-titulo">💡 Insights y recomendaciones</div>
+          <div class="divider"></div>
+          <div class="insight">
+            <p>
+              ${categorias.length > 0 ? `• La categoría <strong>${categorias[0].nombre}</strong> es la más demandada con <strong>${categorias[0].total} solicitudes</strong> (${categorias[0].pct}% del total).` : ''}
+              ${categorias.length > 0 && categorias[0].tasaCierre < 50 ? ` Su tasa de cierre es <strong>${categorias[0].tasaCierre}%</strong> — considera reclutar más Fleksers en esta área.` : ''}
+            </p>
+            <p style="margin-top:8px;">
+              ${precioGlobal > 0 ? `• El precio promedio aceptado es <strong>$${precioGlobal.toLocaleString('es-MX')} MXN</strong>.` : ''}
+              ${categorias.find(c => c.promedio > 0 && c.promedio === Math.max(...categorias.map(x => x.promedio))) ? ` La categoría mejor pagada es <strong>${categorias.find(c => c.promedio === Math.max(...categorias.map(x => x.promedio)))?.nombre}</strong> con promedio de <strong>$${Math.max(...categorias.map(x => x.promedio)).toLocaleString('es-MX')} MXN</strong>.` : ''}
+            </p>
+            <p style="margin-top:8px;">
+              • Hay <strong>${ratio} clientes por cada Flekser</strong> registrado.
+              ${Number(ratio) > 3 ? ' Hay buena demanda relativa — prioriza captar más Fleksers.' : Number(ratio) < 1 ? ' Hay más Fleksers que clientes — enfoca campañas en captar clientes.' : ' Proporción equilibrada.'}
+            </p>
+            <p style="margin-top:8px;">
+              ${diaMasActivo ? `• El día con más solicitudes es <strong>${dias[Number(diaMasActivo[0])]}</strong> con ${diaMasActivo[1]} solicitudes. Programa campañas de activación para ese día.` : ''}
+            </p>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="footer-logo">⚡ fleksi</div>
+          <div class="footer-info">Análisis de Mercado · Irapuato, Guanajuato · México<br/>Generado el ${fechaGen}</div>
+        </div>
+
+      </div><script>window.onload=function(){setTimeout(function(){window.print();},600);};<\/script></body></html>`;
+
+      const ventana = window.open('', '_blank', 'width=950,height=800');
+      if (ventana) { ventana.document.write(html); ventana.document.close(); }
+    } finally { setGenerandoReporte(''); }
+  };
+
   const verDocumento = async (url: string, usuarioId: string, tipo: string) => {
     if (url.includes('token=')) { window.open(url, '_blank'); return; }
     try {
@@ -891,8 +1166,7 @@ export default function Admin() {
                     carpinteria: ['🪵 Carpintería ligera'],
                   };
                   const habilidadesCat = svc.categoria ? (categoriaAHabilidades[svc.categoria] || []) : [];
-
-                  // Por defecto muestra Fleksers de la categoría; el buscador refina o amplía
+                   // Por defecto muestra Fleksers de la categoría; el buscador refina o amplía
                   const fleksersFilt = fleksersDisponibles.filter(f => {
                     const matchBusqueda = busqueda.length >= 2
                       ? f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || f.ciudad?.toLowerCase().includes(busqueda.toLowerCase())
@@ -1028,7 +1302,7 @@ export default function Admin() {
                               }
                             </div>
                           </div>
-                                                  </div>
+                        </div>
                       )}
                     </div>
                   );
@@ -1745,6 +2019,9 @@ export default function Admin() {
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">{generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel</button>
                     <button onClick={descargarPDF} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF</button>
                   </div>
+                  <button onClick={descargarPDFMercado} disabled={!!generandoReporte} className="w-full mt-3 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
+                    {generandoReporte === 'mercado' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '🔍'} Análisis de mercado
+                  </button>
                 </div>
                 <p className="text-xs text-gray-400 text-center">Última actualización: {new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
               </div>
