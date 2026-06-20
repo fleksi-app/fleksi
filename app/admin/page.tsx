@@ -91,7 +91,16 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes' | 'historial'>('dashboard');
+
+  // ── HISTORIAL ──
+  const [historial, setHistorial] = useState<any[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [mesHistorial, setMesHistorial] = useState(() => {
+    const hoy = new Date();
+    return hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+  });
+  const [historialExpandido, setHistorialExpandido] = useState<string | null>(null);
 
   // ── SOLICITUDES ACTIVAS ──
   const [solicitudesActivas, setSolicitudesActivas] = useState<any[]>([]);
@@ -181,6 +190,47 @@ export default function Admin() {
   useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
   useEffect(() => { if (tab === 'habilidades') cargarHabilidadesPersonalizadas(); }, [tab]);
   useEffect(() => { if (tab === 'solicitudes') cargarSolicitudesActivas(); }, [tab]);
+  useEffect(() => { if (tab === 'historial') cargarHistorial(); }, [tab, mesHistorial]);
+
+  const cargarHistorial = async () => {
+    setCargandoHistorial(true);
+    try {
+      // Solicitudes completadas/canceladas en el mes seleccionado
+      const [anio, mes] = mesHistorial.split('-').map(Number);
+      const inicio = new Date(anio, mes - 1, 1).toISOString();
+      const fin = new Date(anio, mes, 1).toISOString();
+
+      const { data: servicios } = await supabase
+        .from('servicios')
+        .select('*, usuarios!cliente_id(id, nombre, telefono, foto_url)')
+        .in('estado', ['completado', 'cancelado', 'pagado', 'vencido'])
+        .gte('created_at', inicio)
+        .lt('created_at', fin)
+        .order('created_at', { ascending: false });
+
+      if (!servicios || servicios.length === 0) { setHistorial([]); return; }
+
+      const ids = servicios.map((s: any) => s.id);
+      const { data: apps } = await supabase
+        .from('aplicaciones')
+        .select('*, usuarios(id, nombre, foto_url, telefono, calificacion)')
+        .in('servicio_id', ids)
+        .order('created_at', { ascending: true });
+
+      const appsMap: Record<string, any[]> = {};
+      (apps || []).forEach((a: any) => {
+        if (!appsMap[a.servicio_id]) appsMap[a.servicio_id] = [];
+        appsMap[a.servicio_id].push(a);
+      });
+
+      setHistorial(servicios.map((s: any) => ({
+        ...s,
+        aplicaciones: appsMap[s.id] || [],
+        aceptada: (appsMap[s.id] || []).find((a: any) => a.estado === 'aceptado' || a.estado === 'completado'),
+      })));
+    } catch (e) { console.error(e); }
+    finally { setCargandoHistorial(false); }
+  };
 
   const cargarSolicitudesActivas = async () => {
     setCargandoSolicitudes(true);
@@ -780,6 +830,7 @@ export default function Admin() {
           <button onClick={() => setTab('solicitudes')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'solicitudes' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Solicitudes {solicitudesActivas.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{solicitudesActivas.length}</span>}
           </button>
+          <button onClick={() => setTab('historial')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'historial' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Historial</button>
           <button onClick={() => setTab('acciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
@@ -928,7 +979,7 @@ export default function Admin() {
                                   <div key={app.id} className={'rounded-xl p-3 border ' + (app.estado === 'rechazado' ? 'bg-red-50 border-red-100 opacity-60' : 'bg-white border-gray-200')}>
                                     <div className="flex items-center justify-between mb-1">
                                       <div className="flex items-center gap-2">
-                                                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
                                         <div><p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>{app.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {app.usuarios.telefono}</p>}</div>
                                       </div>
                                       <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (app.estado === 'rechazado' ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-700')}>{app.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
@@ -977,6 +1028,152 @@ export default function Admin() {
                               }
                             </div>
                           </div>
+                                                  </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'historial' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-extrabold text-gray-900">📊 Historial de solicitudes</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Solicitudes resueltas — quién aplicó, quién fue elegido y por qué precio</p>
+              </div>
+              <button onClick={cargarHistorial} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl hover:bg-purple-100 transition">🔄</button>
+            </div>
+
+            {/* Selector de mes */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
+              <label className="text-xs font-bold text-gray-500 mb-2 block">📅 Mes a consultar</label>
+              <input
+                type="month"
+                value={mesHistorial}
+                onChange={(e) => setMesHistorial(e.target.value)}
+                className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"
+              />
+            </div>
+
+            {cargandoHistorial ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : historial.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100">
+                <p className="text-4xl mb-3">📭</p>
+                <p className="font-bold text-gray-900 mb-1">Sin solicitudes en este mes</p>
+                <p className="text-gray-400 text-sm">Prueba seleccionando otro mes</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {/* Resumen del mes */}
+                <div className="grid grid-cols-3 gap-3 mb-2">
+                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
+                    <p className="text-2xl font-extrabold text-blue-600">{historial.length}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Total</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
+                    <p className="text-2xl font-extrabold text-green-600">{historial.filter(s => s.estado === 'completado' || s.estado === 'pagado').length}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Completadas</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
+                    <p className="text-2xl font-extrabold text-red-500">{historial.filter(s => s.estado === 'cancelado' || s.estado === 'vencido').length}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Canceladas</p>
+                  </div>
+                </div>
+
+                {historial.map((svc) => {
+                  const expandido = historialExpandido === svc.id;
+                  const apps = svc.aplicaciones || [];
+                  const aceptada = svc.aceptada;
+                  const categoriaEmojis: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨' };
+                  const completada = svc.estado === 'completado' || svc.estado === 'pagado';
+
+                  return (
+                    <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <button onClick={() => setHistorialExpandido(expandido ? null : svc.id)} className="w-full p-4 text-left hover:bg-gray-50 transition">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <span className="text-xl flex-shrink-0 mt-0.5">{categoriaEmojis[svc.categoria] || '✨'}</span>
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-gray-900 text-sm">{svc.titulo}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">👤 {svc.usuarios?.nombre || 'Cliente'}</p>
+                              <p className="text-xs text-gray-400">{new Date(svc.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (completada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+                              {completada ? '✅ Completada' : svc.estado === 'vencido' ? '⏰ Vencida' : '❌ Cancelada'}
+                            </span>
+                            {aceptada?.precio_ofrecido > 0 && (
+                              <span className="text-xs font-bold text-gray-700">${aceptada.precio_ofrecido.toLocaleString('es-MX')} MXN</span>
+                            )}
+                            <span className="text-xs text-gray-400">{apps.length} postulante{apps.length !== 1 ? 's' : ''}</span>
+                            <span className="text-xs font-bold text-gray-400">{expandido ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+                      </button>
+
+                      {expandido && (
+                        <div className="border-t border-gray-100 p-4 flex flex-col gap-4">
+
+                          {/* Flekser elegido */}
+                          {aceptada ? (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                              <p className="text-xs font-bold text-green-800 mb-2">✅ Flekser elegido</p>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {aceptada.usuarios?.foto_url ? <img src={aceptada.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{aceptada.usuarios?.nombre?.charAt(0) || '?'}</span>}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-extrabold text-gray-900 text-sm">{aceptada.usuarios?.nombre || '—'}</p>
+                                  {aceptada.usuarios?.telefono && <p className="text-xs text-gray-500">📱 {aceptada.usuarios.telefono}</p>}
+                                  {aceptada.precio_ofrecido > 0 && <p className="text-xs font-bold text-green-700 mt-0.5">💰 ${aceptada.precio_ofrecido.toLocaleString('es-MX')} MXN</p>}
+                                  {aceptada.mensaje && <p className="text-xs text-gray-500 italic mt-0.5">"{aceptada.mensaje}"</p>}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 rounded-xl p-3">
+                              <p className="text-xs text-gray-400 font-semibold">Sin Flekser aceptado — solicitud {svc.estado}</p>
+                            </div>
+                          )}
+
+                          {/* Todos los postulantes */}
+                          {apps.length > 0 && (
+                            <div>
+                              <p className="text-xs font-bold text-gray-500 mb-2">✋ Todos los postulantes ({apps.length})</p>
+                              <div className="flex flex-col gap-2">
+                                {apps.map((app: any) => {
+                                  const esElegido = app.id === aceptada?.id;
+                                  return (
+                                    <div key={app.id} className={'rounded-xl p-3 border ' + (esElegido ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100')}>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            {app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}
+                                          </div>
+                                          <p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>
+                                        </div>
+                                        <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (esElegido ? 'bg-green-200 text-green-800' : app.estado === 'rechazado' ? 'bg-red-100 text-red-500' : 'bg-gray-200 text-gray-500')}>
+                                          {esElegido ? '✅ Elegido' : app.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}
+                                        </span>
+                                      </div>
+                                      {app.precio_ofrecido > 0 && <p className="text-xs text-gray-600 font-semibold">💰 ${app.precio_ofrecido.toLocaleString('es-MX')} MXN</p>}
+                                      {app.mensaje && <p className="text-xs text-gray-400 italic">"{app.mensaje}"</p>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {apps.length === 0 && (
+                            <p className="text-xs text-gray-400 text-center py-2">Nadie aplicó a esta solicitud</p>
+                          )}
                         </div>
                       )}
                     </div>
