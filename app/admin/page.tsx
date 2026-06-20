@@ -821,12 +821,57 @@ export default function Admin() {
                   const pendientes = apps.filter((a: any) => a.estado === 'pendiente');
                   const rechazadas = apps.filter((a: any) => a.estado === 'rechazado');
                   const busqueda = busquedaFlekser[svc.id] || '';
-                  const fleksersFilt = fleksersDisponibles.filter(f =>
-                    busqueda.length < 2 ? true :
-                    f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-                    f.ciudad?.toLowerCase().includes(busqueda.toLowerCase())
-                  ).slice(0, 5);
                   const categoriaEmojis: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨' };
+
+                  // Mapeo de categoria → habilidades oficiales relacionadas
+                  const categoriaAHabilidades: Record<string, string[]> = {
+                    hogar: ['🔧 Mantenimiento general', '⚡ Electricidad', '🚿 Plomería', '🔑 Cerrajería', '📺 Instalación TV/repisas/cortinas', '🪵 Carpintería ligera'],
+                    limpieza: ['🧹 Limpieza del hogar', '👔 Planchado / Lavandería'],
+                    eventos: ['🎪 Staff para eventos', '🍽️ Mesero', '🍳 Cocinero particular'],
+                    mudanza: ['🚚 Fletes y traslados', '📦 Mudanza ligera / Ayudante', '🪑 Armado de muebles'],
+                    ejecutivo: ['🚗 Chofer ejecutivo'],
+                    interprete: ['🗣️ Intérprete / Traductor'],
+                    cocina: ['🍳 Cocinero particular'],
+                    jardineria: ['🌿 Jardinería'],
+                    mecanica: ['🔩 Mecánica básica'],
+                    cerrajeria: ['🔑 Cerrajería'],
+                    estetica: ['💅 Uñas / Estética'],
+                    pintura: ['🎨 Pintura'],
+                    carpinteria: ['🪵 Carpintería ligera'],
+                  };
+                  const habilidadesCat = svc.categoria ? (categoriaAHabilidades[svc.categoria] || []) : [];
+
+                  // Por defecto muestra Fleksers de la categoría; el buscador refina o amplía
+                  const fleksersFilt = fleksersDisponibles.filter(f => {
+                    const matchBusqueda = busqueda.length >= 2
+                      ? f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || f.ciudad?.toLowerCase().includes(busqueda.toLowerCase())
+                      : true;
+                    const matchCategoria = habilidadesCat.length === 0
+                      ? true
+                      : f.habilidades?.some((h: string) => habilidadesCat.includes(h));
+                    return matchBusqueda && (busqueda.length >= 2 ? true : matchCategoria);
+                  }).slice(0, 8);
+
+                  // Mensaje al cliente avisando que tiene postulantes
+                  const generarMensajeCliente = () => {
+                    const nombre = svc.usuarios?.nombre?.split(' ')[0] || 'cliente';
+                    const count = pendientes.length;
+                    const link = 'https://fleksi.vercel.app/aplicaciones';
+                    return [
+                      '¡Hola ' + nombre + '! 👋',
+                      '',
+                      'Te escribimos del equipo de *Fleksi*. Ya tienes *' + count + ' Flekser' + (count !== 1 ? 's' : '') + ' interesado' + (count !== 1 ? 's' : '') + '* en tu solicitud de *' + svc.titulo + '*.',
+                      '',
+                      'Puedes ver sus propuestas de precio y elegir al que más te convenga aquí 👇',
+                      link,
+                      '',
+                      '¡Cualquier duda aquí estamos! 🙌',
+                      '— Fleksi',
+                    ].join('\n');
+                  };
+                  const keyCliente = svc.id + '_cliente';
+                  const telCliente = svc.usuarios?.telefono?.replace(/\D/g, '');
+
                   return (
                     <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                       <button onClick={() => setSolicitudExpandida(expandido ? null : svc.id)} className="w-full p-4 text-left hover:bg-gray-50 transition">
@@ -857,6 +902,24 @@ export default function Admin() {
                             {svc.direccion && <p className="text-xs text-gray-500">📍 {svc.direccion}</p>}
                             <p className="text-xs text-gray-400 mt-1">Publicado: {new Date(svc.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                           </div>
+
+                          {/* Avisar al cliente si tiene postulantes */}
+                          {pendientes.length > 0 && telCliente && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                              <p className="text-xs font-bold text-blue-800 mb-2">📣 Avisar al cliente que tiene propuestas</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => copiarMensajeWASolicitud(keyCliente, generarMensajeCliente())}
+                                  className={'flex-1 py-2 rounded-xl font-bold text-xs transition ' + (waCopiado === keyCliente ? 'bg-blue-500 text-white' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50')}>
+                                  {waCopiado === keyCliente ? '✅ Copiado' : '📋 Copiar mensaje'}
+                                </button>
+                                <a href={'https://wa.me/' + telCliente + '?text=' + encodeURIComponent(generarMensajeCliente())} target="_blank"
+                                  className="flex-1 py-2 bg-blue-500 text-white rounded-xl font-bold text-xs text-center hover:bg-blue-600 transition">
+                                  💬 Abrir en WA
+                                </a>
+                              </div>
+                            </div>
+                          )}
+
                           {apps.length > 0 && (
                             <div>
                               <p className="text-xs font-bold text-gray-500 mb-2">✋ Postulantes ({apps.length})</p>
@@ -865,7 +928,7 @@ export default function Admin() {
                                   <div key={app.id} className={'rounded-xl p-3 border ' + (app.estado === 'rechazado' ? 'bg-red-50 border-red-100 opacity-60' : 'bg-white border-gray-200')}>
                                     <div className="flex items-center justify-between mb-1">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
+                                                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
                                         <div><p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>{app.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {app.usuarios.telefono}</p>}</div>
                                       </div>
                                       <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (app.estado === 'rechazado' ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-700')}>{app.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
@@ -879,12 +942,17 @@ export default function Admin() {
                               </div>
                             </div>
                           )}
+
                           <div>
-                            <p className="text-xs font-bold text-gray-500 mb-2">💬 Activar un Flekser por WhatsApp</p>
-                            <input type="text" placeholder="Buscar Flekser por nombre o ciudad..." value={busqueda} onChange={(e) => setBusquedaFlekser(prev => ({ ...prev, [svc.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition mb-2"/>
-                            {busqueda.length >= 2 && (
-                              <div className="flex flex-col gap-2">
-                                {fleksersFilt.length === 0 ? <p className="text-xs text-gray-400 text-center py-2">Sin resultados</p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-bold text-gray-500">💬 Activar un Flekser por WhatsApp</p>
+                              {habilidadesCat.length > 0 && <span className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded-full">Mostrando de {svc.categoria}</span>}
+                              {habilidadesCat.length === 0 && <span className="text-xs text-gray-400 font-semibold">Mostrando todos</span>}
+                            </div>
+                            <input type="text" placeholder="Filtrar por nombre o ciudad..." value={busqueda} onChange={(e) => setBusquedaFlekser(prev => ({ ...prev, [svc.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition mb-2"/>
+                            <div className="flex flex-col gap-2">
+                              {fleksersFilt.length === 0
+                                ? <p className="text-xs text-gray-400 text-center py-2">Sin Fleksers en esta categoría</p>
                                 : fleksersFilt.map((f) => {
                                   const msg = generarMensajeWASolicitud(f, svc);
                                   const key = svc.id + '_' + f.id;
@@ -905,9 +973,9 @@ export default function Admin() {
                                       </div>
                                     </div>
                                   );
-                                })}
-                              </div>
-                            )}
+                                })
+                              }
+                            </div>
                           </div>
                         </div>
                       )}
