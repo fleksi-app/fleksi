@@ -17,6 +17,7 @@ export default function Home() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          if (session.user.email === 'fernando.najera.nm@gmail.com') { window.location.href = '/admin'; return; }
           const { data: usuario } = await supabase
             .from('usuarios').select('rol, rol_activo').eq('id', session.user.id).single();
           const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
