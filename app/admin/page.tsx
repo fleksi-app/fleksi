@@ -91,7 +91,15 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes'>('dashboard');
+
+  // ── SOLICITUDES ACTIVAS ──
+  const [solicitudesActivas, setSolicitudesActivas] = useState<any[]>([]);
+  const [cargandoSolicitudes, setCargandoSolicitudes] = useState(false);
+  const [solicitudExpandida, setSolicitudExpandida] = useState<string | null>(null);
+  const [fleksersDisponibles, setFleksersDisponibles] = useState<any[]>([]);
+  const [busquedaFlekser, setBusquedaFlekser] = useState<Record<string, string>>({});
+  const [waCopiado, setWaCopiado] = useState<string | null>(null);
   const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
   const [rechazandoDoc, setRechazandoDoc] = useState('');
   const [motivoDoc, setMotivoDoc] = useState('');
@@ -172,6 +180,57 @@ export default function Admin() {
   useEffect(() => { if (tab === 'acciones') cargarAcciones(); }, [tab]);
   useEffect(() => { if (tab === 'trabajos') cargarTrabajos(); }, [tab, periodoTrabajos]);
   useEffect(() => { if (tab === 'habilidades') cargarHabilidadesPersonalizadas(); }, [tab]);
+  useEffect(() => { if (tab === 'solicitudes') cargarSolicitudesActivas(); }, [tab]);
+
+  const cargarSolicitudesActivas = async () => {
+    setCargandoSolicitudes(true);
+    try {
+      const { data: servicios } = await supabase
+        .from('servicios')
+        .select('*, usuarios!cliente_id(id, nombre, telefono, foto_url, email)')
+        .eq('estado', 'activo')
+        .order('created_at', { ascending: false });
+      const ids = (servicios || []).map((s: any) => s.id);
+      let appsMap: Record<string, any[]> = {};
+      if (ids.length > 0) {
+        const { data: apps } = await supabase
+          .from('aplicaciones')
+          .select('*, usuarios(id, nombre, foto_url, telefono, calificacion, trabajos_completados)')
+          .in('servicio_id', ids)
+          .order('created_at', { ascending: true });
+        (apps || []).forEach((a: any) => {
+          if (!appsMap[a.servicio_id]) appsMap[a.servicio_id] = [];
+          appsMap[a.servicio_id].push(a);
+        });
+      }
+      const sinAceptar = (servicios || []).filter((s: any) => {
+        const apps = appsMap[s.id] || [];
+        return !apps.some((a: any) => a.estado === 'aceptado');
+      }).map((s: any) => ({ ...s, aplicaciones: appsMap[s.id] || [] }));
+      setSolicitudesActivas(sinAceptar);
+      const { data: fleksers } = await supabase
+        .from('usuarios')
+        .select('id, nombre, telefono, foto_url, habilidades, ciudad')
+        .eq('rol', 'flekser')
+        .order('nombre');
+      setFleksersDisponibles(fleksers || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoSolicitudes(false); }
+  };
+
+  const generarMensajeWASolicitud = (flekser: any, servicio: any): string => {
+    const nombre = flekser.nombre?.split(' ')[0] || 'Flekser';
+    const cat = servicio.categoria || 'servicio';
+    const link = 'https://fleksi.vercel.app/trabajo?id=' + servicio.id;
+    const fecha = servicio.urgente ? '🔴 Urgente (sin fecha fija)' : (servicio.fecha || '') + (servicio.hora ? ' a las ' + servicio.hora.slice(0,5) : '');
+    return ['Hola ' + nombre + '! 👋', '', 'Soy Fernando de *Fleksi*. Hay un trabajo de *' + cat + '* disponible que podría interesarte:', '', '📋 *' + servicio.titulo + '*', '📅 ' + fecha, '', '¿Te interesa aplicar? Entra aquí 👇', link, '', '¡Cualquier duda aquí estamos! 🙌'].join('\n');
+  };
+
+  const copiarMensajeWASolicitud = (key: string, mensaje: string) => {
+    navigator.clipboard.writeText(mensaje);
+    setWaCopiado(key);
+    setTimeout(() => setWaCopiado(null), 2000);
+  };
 
   const cargarMetricasMensajes = async () => {
     setCargandoMetricasMensajes(true);
@@ -718,6 +777,9 @@ export default function Admin() {
       <div className="max-w-2xl mx-auto px-6 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           <button onClick={() => setTab('dashboard')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Dashboard</button>
+          <button onClick={() => setTab('solicitudes')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'solicitudes' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+            📋 Solicitudes {solicitudesActivas.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{solicitudesActivas.length}</span>}
+          </button>
           <button onClick={() => setTab('acciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
@@ -737,6 +799,125 @@ export default function Admin() {
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
+
+        {tab === 'solicitudes' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-extrabold text-gray-900">📋 Solicitudes sin Flekser aceptado</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Ve postulantes y activa Fleksers por WhatsApp</p>
+              </div>
+              <button onClick={cargarSolicitudesActivas} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl hover:bg-purple-100 transition">🔄</button>
+            </div>
+            {cargandoSolicitudes ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : solicitudesActivas.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">🎉</p><p className="font-bold text-gray-900 mb-1">¡Todo en orden!</p><p className="text-gray-400 text-sm">Todas las solicitudes activas tienen Flekser aceptado</p></div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {solicitudesActivas.map((svc) => {
+                  const expandido = solicitudExpandida === svc.id;
+                  const apps = svc.aplicaciones || [];
+                  const pendientes = apps.filter((a: any) => a.estado === 'pendiente');
+                  const rechazadas = apps.filter((a: any) => a.estado === 'rechazado');
+                  const busqueda = busquedaFlekser[svc.id] || '';
+                  const fleksersFilt = fleksersDisponibles.filter(f =>
+                    busqueda.length < 2 ? true :
+                    f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+                    f.ciudad?.toLowerCase().includes(busqueda.toLowerCase())
+                  ).slice(0, 5);
+                  const categoriaEmojis: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨' };
+                  return (
+                    <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <button onClick={() => setSolicitudExpandida(expandido ? null : svc.id)} className="w-full p-4 text-left hover:bg-gray-50 transition">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <span className="text-xl flex-shrink-0 mt-0.5">{categoriaEmojis[svc.categoria] || '✨'}</span>
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-gray-900 text-sm">{svc.titulo}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">👤 {svc.usuarios?.nombre || 'Cliente'}{svc.usuarios?.telefono ? ' · 📱 ' + svc.usuarios.telefono : ''}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            {svc.urgente ? <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">🔴 Urgente</span> : <span className="text-xs text-gray-400">{svc.fecha}{svc.hora ? ' ' + svc.hora.slice(0,5) : ''}</span>}
+                            <span className="text-xs font-bold text-gray-500">{expandido ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (pendientes.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500')}>✋ {pendientes.length} postulante{pendientes.length !== 1 ? 's' : ''}</span>
+                          {rechazadas.length > 0 && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-400">❌ {rechazadas.length} rechazado{rechazadas.length !== 1 ? 's' : ''}</span>}
+                          {apps.length === 0 && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Sin postulantes aún</span>}
+                        </div>
+                      </button>
+                      {expandido && (
+                        <div className="border-t border-gray-100 p-4 flex flex-col gap-4">
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs font-bold text-gray-500 mb-2">📋 Detalle</p>
+                            {svc.descripcion && <p className="text-xs text-gray-600 leading-relaxed mb-1">{svc.descripcion.slice(0, 200)}{svc.descripcion.length > 200 ? '...' : ''}</p>}
+                            {svc.direccion && <p className="text-xs text-gray-500">📍 {svc.direccion}</p>}
+                            <p className="text-xs text-gray-400 mt-1">Publicado: {new Date(svc.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          {apps.length > 0 && (
+                            <div>
+                              <p className="text-xs font-bold text-gray-500 mb-2">✋ Postulantes ({apps.length})</p>
+                              <div className="flex flex-col gap-2">
+                                {apps.map((app: any) => (
+                                  <div key={app.id} className={'rounded-xl p-3 border ' + (app.estado === 'rechazado' ? 'bg-red-50 border-red-100 opacity-60' : 'bg-white border-gray-200')}>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
+                                        <div><p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>{app.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {app.usuarios.telefono}</p>}</div>
+                                      </div>
+                                      <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (app.estado === 'rechazado' ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-700')}>{app.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
+                                    </div>
+                                    {app.precio_ofrecido > 0 && <p className="text-xs font-bold text-gray-700">💰 ${app.precio_ofrecido.toLocaleString('es-MX')} MXN</p>}
+                                    {app.mensaje && <p className="text-xs text-gray-500 italic mt-0.5">"{app.mensaje}"</p>}
+                                    {svc.urgente && app.hora_propuesta && <p className="text-xs font-bold text-red-600 mt-0.5">⏱️ Puede llegar: {app.hora_propuesta}</p>}
+                                    {!svc.urgente && app.propone_otra_fecha && app.fecha_propuesta && <p className="text-xs text-amber-700 font-semibold mt-0.5">📅 Propone: {app.fecha_propuesta}{app.hora_propuesta ? ' a las ' + app.hora_propuesta : ''}</p>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-gray-500 mb-2">💬 Activar un Flekser por WhatsApp</p>
+                            <input type="text" placeholder="Buscar Flekser por nombre o ciudad..." value={busqueda} onChange={(e) => setBusquedaFlekser(prev => ({ ...prev, [svc.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition mb-2"/>
+                            {busqueda.length >= 2 && (
+                              <div className="flex flex-col gap-2">
+                                {fleksersFilt.length === 0 ? <p className="text-xs text-gray-400 text-center py-2">Sin resultados</p>
+                                : fleksersFilt.map((f) => {
+                                  const msg = generarMensajeWASolicitud(f, svc);
+                                  const key = svc.id + '_' + f.id;
+                                  const yaCopiado = waCopiado === key;
+                                  const tel = f.telefono?.replace(/\D/g, '');
+                                  return (
+                                    <div key={f.id} className="bg-green-50 border border-green-100 rounded-xl p-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{f.foto_url ? <img src={f.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{f.nombre?.charAt(0) || '?'}</span>}</div>
+                                          <div><p className="font-bold text-gray-900 text-xs">{f.nombre}</p>{f.ciudad && <p className="text-xs text-gray-400">📍 {f.ciudad}</p>}</div>
+                                        </div>
+                                        {f.telefono && <p className="text-xs text-gray-500">📱 {f.telefono}</p>}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button onClick={() => copiarMensajeWASolicitud(key, msg)} className={'flex-1 py-2 rounded-xl font-bold text-xs transition ' + (yaCopiado ? 'bg-green-500 text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50')}>{yaCopiado ? '✅ Copiado' : '📋 Copiar'}</button>
+                                        {tel && <a href={'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg)} target="_blank" className="flex-1 py-2 bg-green-500 text-white rounded-xl font-bold text-xs text-center hover:bg-green-600 transition">💬 Abrir en WA</a>}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {tab === 'trabajos' && (() => {
           const categoriaEmoji: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨' };
@@ -895,6 +1076,7 @@ export default function Admin() {
             )}
           </div>
         )}
+
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
@@ -1611,4 +1793,3 @@ export default function Admin() {
 
     </main>
   );
-  }
