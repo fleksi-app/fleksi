@@ -262,13 +262,16 @@ function PublicarForm() {
   const notificarFleksersCercanos = async (servicioId: string, tituloFinal: string) => {
     try {
       if (!ciudadUsuario) return;
+
       const { data: fleksers } = await supabase
         .from('usuarios')
         .select('id')
         .eq('ciudad', ciudadUsuario)
         .neq('id', usuarioId)
         .in('rol_activo', ['flekser']);
+
       if (!fleksers || fleksers.length === 0) return;
+
       const cat = categorias.find(c => c.id === categoriaSeleccionada);
       const notifs = fleksers.map(f => ({
         usuario_id: f.id,
@@ -277,7 +280,11 @@ function PublicarForm() {
         mensaje: (cat?.emoji || '✨') + ' ' + tituloFinal,
         link: '/trabajo?id=' + servicioId,
       }));
+
+      // Insertar en batch
       await supabase.from('notificaciones').insert(notifs);
+
+      // Intentar push (falla silenciosamente si no hay PWA push o suscripciones)
       fleksers.forEach(f => {
         fetch('/api/push', {
           method: 'POST',
@@ -290,7 +297,9 @@ function PublicarForm() {
           }),
         }).catch(() => {});
       });
-    } catch (e) {}
+    } catch (e) {
+      // Silencioso: nunca debe romper la publicación
+    }
   };
 
   const handlePublicar = async () => {
@@ -344,6 +353,7 @@ function PublicarForm() {
           });
         } catch (e) {}
       } else if (servicioCreado) {
+        // Notificar a Fleksers de la misma ciudad
         notificarFleksersCercanos(servicioCreado.id, tituloFinal);
       }
       setPublicado(true);
@@ -354,9 +364,9 @@ function PublicarForm() {
   if (publicado) {
     const tituloFinal = titulo.trim() || generarTituloAutomatico();
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <main className="min-h-screen flex items-center justify-center p-6" style={{background: '#F8FAFC'}}>
         <div className="max-w-md w-full text-center">
-          <div className="w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6" style={{background: '#7B2FE0'}}>
             <span className="text-4xl">{flekserSugerido ? '🎯' : '🎉'}</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
@@ -372,12 +382,12 @@ function PublicarForm() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4 text-left">
             {flekserSugerido && (
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0" style={{background: '#7B2FE0'}}>
                   {flekserSugerido.foto_url ? <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>}
                 </div>
                 <div>
                   <p className="font-bold text-gray-900 text-sm">{flekserSugerido.nombre}</p>
-                  <p className="text-xs text-purple-600 font-semibold">🎯 Solicitud directa enviada</p>
+                  <p className="text-xs font-semibold" style={{color: '#7B2FE0'}}>🎯 Solicitud directa enviada</p>
                 </div>
               </div>
             )}
@@ -385,8 +395,8 @@ function PublicarForm() {
             <div className="flex justify-between mb-2">
               <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
               <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
-                {urgente ? '🔴 Urgente' : fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
-              </span>
+                {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
+                              </span>
             </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
@@ -394,7 +404,7 @@ function PublicarForm() {
             {esMutipleDias && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Cobro</span><span className="font-semibold text-sm text-gray-900">{modoPago === 'por_dia' ? '📅 Por día' : '💰 Total al final'}</span></div>}
             <div className="flex justify-between"><span className="text-gray-400 text-sm">Estado</span><span className="font-semibold text-sm text-green-600">✅ Activo</span></div>
           </div>
-          <a href="/aplicaciones" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver propuestas</a>
+          <a href="/aplicaciones" className="block w-full py-4 text-white rounded-2xl font-bold text-lg shadow-sm mb-3" style={{background: '#7B2FE0'}}>Ver propuestas</a>
           <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">Volver al inicio</a>
         </div>
       </main>
@@ -402,8 +412,8 @@ function PublicarForm() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
-      <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
+    <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
             <button onClick={handleAtras} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</button>
@@ -413,7 +423,9 @@ function PublicarForm() {
             </div>
           </div>
           <div className="flex gap-2">
-            {[1,2,3].map((p) => (<div key={p} className={'h-1.5 flex-1 rounded-full transition-all ' + (p <= paso ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-200')}/>))}
+            {[1,2,3].map((p) => (
+              <div key={p} className="h-1.5 flex-1 rounded-full transition-all" style={{background: p <= paso ? '#7B2FE0' : '#E5E7EB'}}/>
+            ))}
           </div>
         </div>
       </div>
@@ -437,11 +449,12 @@ function PublicarForm() {
         {paso === 1 && (
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">¿Qué necesitas?</h2>
-            <p className="text-gray-400 mb-6 font-light">Elige la categoría que mejor describe tu solicitud</p>
+            <p className="text-gray-400 mb-6 text-sm">Elige la categoría que mejor describe tu solicitud</p>
             <div className="grid grid-cols-2 gap-3">
               {categorias.map((cat) => (
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
-                  className={'p-4 rounded-2xl border-2 text-left transition ' + (categoriaSeleccionada === cat.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300')}>
+                  className="p-4 rounded-2xl border-2 text-left transition"
+                  style={{borderColor: categoriaSeleccionada === cat.id ? '#7B2FE0' : '#F1F5F9', background: categoriaSeleccionada === cat.id ? '#F5F0FF' : 'white'}}>
                   <span className="text-2xl mb-2 block">{cat.emoji}</span>
                   <span className="text-sm font-semibold text-gray-900">{cat.nombre}</span>
                 </button>
@@ -645,7 +658,7 @@ function PublicarForm() {
                   <span className="text-xl">🔴</span>
                   <div>
                     <p className="font-semibold text-gray-900">Marcar como urgente</p>
-                    <p className="text-xs text-gray-400">Sin fecha fija · Los Fleksers indican cuándo pueden llegar</p>
+                    <p className="text-xs text-gray-400">Mínimo 3 horas de anticipación · Aparece primero</p>
                   </div>
                 </div>
                 <div className={'w-12 h-6 rounded-full transition-all ' + (urgente ? 'bg-red-500' : 'bg-gray-300')}>
@@ -685,9 +698,7 @@ function PublicarForm() {
                 <div className="flex justify-between items-start">
                   <span className="text-gray-400 text-sm flex-shrink-0">Fecha{fechas.length > 1 ? 's' : ''}</span>
                   <div className="text-right ml-4">
-                    {urgente ? (
-                      <span className="font-semibold text-sm text-red-600">🔴 Urgente — sin fecha fija</span>
-                    ) : fechas.length === 1 ? (
+                    {fechas.length === 1 ? (
                       <span className="font-semibold text-sm text-gray-900">{fechas[0]} {hora || ''}</span>
                     ) : (
                       <div className="flex flex-wrap gap-1 justify-end">
@@ -696,7 +707,7 @@ function PublicarForm() {
                     )}
                   </div>
                 </div>
-                {!urgente && hora && <div className="flex justify-between"><span className="text-gray-400 text-sm">Hora</span><span className="font-semibold text-sm text-gray-900">{hora}</span></div>}
+                {hora && <div className="flex justify-between"><span className="text-gray-400 text-sm">Hora</span><span className="font-semibold text-sm text-gray-900">{hora}</span></div>}
                 {direccion && <div className="flex justify-between items-start"><span className="text-gray-400 text-sm flex-shrink-0">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right ml-4">{direccion}</span></div>}
                 {esEmpresa && cupos > 1 && <div className="flex justify-between"><span className="text-gray-400 text-sm">Personas</span><span className="font-semibold text-sm text-gray-900">{cupos} personas</span></div>}
                 <div className="flex justify-between"><span className="text-gray-400 text-sm">Método de pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Tarjeta' : '💵 Efectivo'}</span></div>
@@ -743,7 +754,7 @@ function PublicarForm() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4">
         <div className="max-w-md mx-auto flex gap-3">
           {paso > 1 && (
             <button onClick={() => setPaso(paso - 1)} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold hover:border-purple-400 transition">
@@ -754,14 +765,16 @@ function PublicarForm() {
             <button
               onClick={() => { setError(''); setPaso(paso + 1); }}
               disabled={paso === 1 && !categoriaSeleccionada}
-              className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              className="flex-1 py-4 text-white rounded-2xl font-bold shadow-sm transition disabled:opacity-50"
+              style={{background: '#7B2FE0'}}>
               Continuar →
             </button>
           ) : (
             <button
               onClick={handlePublicar}
               disabled={cargando || geocodificando || subiendoFoto || (!urgente && fechas.length === 0)}
-              className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              className="flex-1 py-4 text-white rounded-2xl font-bold shadow-sm transition disabled:opacity-50"
+              style={{background: '#7B2FE0'}}>
               {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
             </button>
           )}
@@ -774,8 +787,8 @@ function PublicarForm() {
 export default function Publicar() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor: '#7B2FE0', borderTopColor: 'transparent'}}/>
       </main>
     }>
       <PublicarForm />
