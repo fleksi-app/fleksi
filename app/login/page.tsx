@@ -156,7 +156,7 @@ export default function Login() {
         <Logo />
 
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-          <h1 className="text-xl font-extrabold text-gray-900 mb-1">Bienvenido 👋</h1>
+          <h1 className="text-xl font-extrabold text-gray-900 mb-1">Bienvenido de nuevo 👋</h1>
           <p className="text-gray-400 text-sm mb-6">Inicia sesión para continuar</p>
 
           {error && <p className="text-red-500 text-xs bg-red-50 p-3 rounded-xl mb-4">{error}</p>}
