@@ -113,15 +113,43 @@ export default function Nav({ activo }: { activo: string }) {
   const esEmpresa = rol === 'empresa';
   const inicio = esEmpresa ? '/home-empresa' : '/home';
   const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
-  const colorActivo = esEmpresa ? 'text-blue-900' : 'text-purple-600';
-  const colorPlus = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
+  const MORADO = '#7B2FE0';
 
   const items = [
-    { href: inicio, emoji: '🏠', label: 'Inicio', id: 'inicio', clase: 'tour-home' },
-    { href: '/catalogo', emoji: '🔍', label: 'Catálogo', id: 'catalogo', clase: 'tour-catalogo' },
-    { href: null, emoji: '+', label: 'Nuevo', id: 'nuevo', clase: 'tour-nuevo' },
-    { href: '/chat', emoji: '💬', label: 'Chat', id: 'chat', badge: mensajesNoLeidos, clase: 'tour-chat' },
-    { href: perfil, emoji: '👤', label: 'Perfil', id: 'perfil', clase: 'tour-perfil' },
+    { href: inicio, label: 'Inicio', id: 'inicio', clase: 'tour-home',
+      icon: (activo: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={activo ? MORADO : '#94A3B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+          <path d="M9 21V12h6v9"/>
+        </svg>
+      )
+    },
+    { href: '/publicar', label: 'Publicar', id: 'publicar', clase: '',
+      icon: (activo: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={activo ? MORADO : '#94A3B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+          <path d="M11 8v6M8 11h6"/>
+        </svg>
+      )
+    },
+    { href: null, label: 'Nuevo', id: 'nuevo', clase: 'tour-nuevo', icon: null },
+    { href: '/mis-trabajos', label: 'Trabajos', id: 'trabajos', clase: '',
+      icon: (activo: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={activo ? MORADO : '#94A3B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+        </svg>
+      )
+    },
+    { href: '/aplicaciones', label: 'Solicitudes', id: 'solicitudes', clase: '',
+      icon: (activo: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={activo ? MORADO : '#94A3B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+        </svg>
+      )
+    },
   ];
 
   return (
@@ -133,17 +161,18 @@ export default function Nav({ activo }: { activo: string }) {
               <h3 className="font-extrabold text-gray-900 text-lg">Notificaciones</h3>
               <div className="flex items-center gap-2">
                 {noLeidas > 0 && (
-                  <button onClick={marcarLeidas} className="text-xs text-purple-600 font-semibold hover:underline">
+                  <button onClick={marcarLeidas} className="text-xs font-semibold hover:underline" style={{color: MORADO}}>
                     Marcar todas leídas
                   </button>
                 )}
                 <button onClick={() => setMostrarNotifs(false)}
-                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+                  className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 text-sm">✕</button>
               </div>
             </div>
             <div className="overflow-y-auto flex-1 px-6 py-3">
               {notificaciones.length === 0 ? (
                 <div className="text-center py-12">
+                  <p className="text-3xl mb-3">🔔</p>
                   <p className="font-bold text-gray-900 mb-1">Sin notificaciones</p>
                   <p className="text-gray-400 text-sm">Aquí verás tus actualizaciones</p>
                 </div>
@@ -151,8 +180,9 @@ export default function Nav({ activo }: { activo: string }) {
                 <div className="flex flex-col gap-2">
                   {notificaciones.map((n) => (
                     <a key={n.id} href={n.link || '#'} onClick={() => setMostrarNotifs(false)}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida ? 'bg-purple-50 border border-purple-100' : 'bg-gray-50'}`}>
-                      <span className="text-2xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo] || '🔔'}</span>
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition ${!n.leida ? 'border border-purple-100' : 'bg-gray-50'}`}
+                      style={!n.leida ? {backgroundColor: '#F5F0FF'} : {}}>
+                      <span className="text-xl flex-shrink-0 mt-0.5">{notifEmoji[n.tipo] || '🔔'}</span>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm">{n.titulo}</p>
                         {n.mensaje && <p className="text-xs text-gray-500 mt-0.5">{n.mensaje}</p>}
@@ -160,7 +190,7 @@ export default function Nav({ activo }: { activo: string }) {
                           {new Date(n.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                      {!n.leida && <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 mt-2"/>}
+                      {!n.leida && <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2" style={{backgroundColor: MORADO}}/>}
                     </a>
                   ))}
                 </div>
@@ -183,9 +213,8 @@ export default function Nav({ activo }: { activo: string }) {
                 const esActivo = rol === r;
                 return (
                   <button key={r} onClick={() => cambiarRolActivo(r)} disabled={cambiandoRol || esActivo}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${
-                      esActivo ? 'border-transparent bg-gradient-to-r ' + info.color + ' text-white' : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}>
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition ${esActivo ? 'border-transparent text-white' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                    style={esActivo ? {background: MORADO} : {}}>
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${esActivo ? 'bg-white/20' : 'bg-gray-100'}`}>
                       {info.emoji}
                     </div>
@@ -200,7 +229,7 @@ export default function Nav({ activo }: { activo: string }) {
                     ) : roles.includes(r) ? (
                       <span className="text-gray-400 text-xs font-bold">Cambiar →</span>
                     ) : (
-                      <span className="text-xs bg-purple-100 text-purple-600 font-bold px-2 py-1 rounded-full">+ Activar</span>
+                      <span className="text-xs font-bold px-2 py-1 rounded-full" style={{backgroundColor: '#F5F0FF', color: MORADO}}>+ Activar</span>
                     )}
                   </button>
                 );
@@ -218,7 +247,8 @@ export default function Nav({ activo }: { activo: string }) {
             <h3 className="font-extrabold text-gray-900 text-lg mb-4 text-center">¿Qué quieres hacer?</h3>
             <div className="flex flex-col gap-3">
               <a href="/publicar"
-                className={`flex items-center gap-4 p-4 bg-gradient-to-r ${colorPlus} text-white rounded-2xl font-bold`}>
+                className="flex items-center gap-4 p-4 text-white rounded-2xl font-bold"
+                style={{background: MORADO}}>
                 <span className="text-2xl">📋</span>
                 <div>
                   <p className="font-extrabold">Publicar solicitud</p>
@@ -269,16 +299,19 @@ export default function Nav({ activo }: { activo: string }) {
         </svg>
       </a>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 z-30">
-        <div className="max-w-md mx-auto flex justify-around items-center">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
+        <div className="max-w-md mx-auto flex justify-around items-end px-2 pt-2 pb-2">
           {items.map((item: any) => {
             const estaActivo = activo === item.id;
             if (item.href === null) {
               return (
                 <button key={item.id} onClick={() => setMostrarModal(true)}
                   className={`flex flex-col items-center gap-0.5 px-3 ${item.clase}`}>
-                  <div className={`bg-gradient-to-r ${colorPlus} rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14`}>
-                    <span className="text-white text-3xl font-bold leading-none">+</span>
+                  <div className="rounded-2xl flex items-center justify-center shadow-lg -mt-6 w-14 h-14 transition hover:opacity-90 active:scale-95"
+                    style={{background: MORADO}}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
                   </div>
                   <span className="text-xs text-gray-400 mt-1 font-semibold">{item.label}</span>
                 </button>
@@ -287,21 +320,19 @@ export default function Nav({ activo }: { activo: string }) {
             return (
               <a key={item.id} href={item.href}
                 className={`relative flex flex-col items-center gap-0.5 px-3 py-1 ${item.clase}`}>
-                {item.badge > 0 ? (
-                  <div className="relative">
-                    <span className="text-xl">{item.emoji}</span>
+                <div className="relative">
+                  {item.icon(estaActivo)}
+                  {item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-extrabold rounded-full flex items-center justify-center border border-white">
                       {item.badge > 9 ? '9+' : item.badge}
                     </span>
-                  </div>
-                ) : (
-                  <span className="text-xl">{item.emoji}</span>
-                )}
-                <span className={`text-xs font-semibold ${estaActivo ? colorActivo : 'text-gray-400'}`}>
+                  )}
+                </div>
+                <span className="text-xs font-semibold transition" style={{color: estaActivo ? MORADO : '#94A3B8'}}>
                   {item.label}
                 </span>
                 {estaActivo && (
-                  <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gradient-to-r ${colorPlus}`}/>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{backgroundColor: MORADO}}/>
                 )}
               </a>
             );
