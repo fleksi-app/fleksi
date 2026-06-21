@@ -363,18 +363,18 @@ export default function HomeWorker() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-extrabold text-gray-900">Categorías rápidas</h2>
-            <button onClick={() => setCategoriaActiva('')} className="text-sm font-bold" style={{color: MORADO}}>Ver todas</button>
+            <a href="/catalogo" className="text-sm font-bold" style={{color: MORADO}}>Ver todas</a>
           </div>
           <div className="grid grid-cols-4 gap-3">
             {categoriasDatos.slice(0, 8).map((cat) => (
-              <button key={cat.id} onClick={() => setCategoriaActiva(categoriaActiva === cat.id ? '' : cat.id)}
+              <a key={cat.id} href={'/catalogo?categoria=' + cat.id}
                 className="flex flex-col items-center gap-2 p-3 bg-white rounded-2xl border-2 transition shadow-sm active:scale-95"
-                style={{borderColor: categoriaActiva === cat.id ? MORADO : '#F1F5F9', backgroundColor: categoriaActiva === cat.id ? '#F5F0FF' : 'white'}}>
+                style={{borderColor: '#F1F5F9'}}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background: '#F5F0FF'}}>
                   {cat.icon}
                 </div>
-                <span className="text-xs font-semibold text-center leading-tight" style={{color: categoriaActiva === cat.id ? MORADO : '#6B7280'}}>{cat.label}</span>
-              </button>
+                <span className="text-xs font-semibold text-center leading-tight text-gray-500">{cat.label}</span>
+              </a>
             ))}
           </div>
         </div>
@@ -486,9 +486,8 @@ export default function HomeWorker() {
             <div className="flex-1 overflow-y-auto py-3">
               {[
                 { href: '/perfil', icon: '👤', label: 'Mi perfil' },
-                { href: '/perfil', icon: '⚙️', label: 'Configuración' },
-                { href: '/wallet', icon: '💳', label: 'Métodos de pago' },
-                { href: '/earnings', icon: '💰', label: 'Métodos de cobro' },
+                { href: '/metodos-pago', icon: '💳', label: 'Métodos de pago' },
+                { href: '/metodos-pago', icon: '💰', label: 'Métodos de cobro' },
                 { href: '/wallet', icon: '🔄', label: 'Pagos y reembolsos' },
                 { href: '/ayuda', icon: '❓', label: 'Ayuda y soporte' },
                 { href: '/terminos', icon: '📄', label: 'Términos y condiciones' },
