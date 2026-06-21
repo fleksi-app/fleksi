@@ -385,17 +385,9 @@ function AplicacionesContent() {
 
                     {/* ── BLOQUE DE PRECIOS ── */}
                     {precioFlekser > 0 && pagoCliente && pagoFlekser ? (
-                      <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 mb-4">
-                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">Precio del Flekser</span>
-                          <span className="font-bold text-gray-700 text-sm">${precioFlekser.toLocaleString('es-MX')} MXN</span>
-                        </div>
-                        <div className="flex justify-between items-center px-4 py-2.5 border-b border-gray-100">
-                          <span className="text-xs text-gray-500">Comisión de servicio (17.4%)</span>
-                          <span className="font-bold text-gray-500 text-sm">+${pagoCliente.comision.toLocaleString('es-MX')} MXN</span>
-                        </div>
-                        <div className="flex justify-between items-center px-4 py-3 bg-blue-50">
-                          <span className="text-sm font-extrabold text-blue-700">💳 Tú pagarías</span>
+                      <div className="bg-blue-50 rounded-2xl overflow-hidden border border-blue-100 mb-4">
+                        <div className="flex justify-between items-center px-4 py-3">
+                          <span className="text-sm font-extrabold text-blue-700">💳 Total a pagar</span>
                           <span className="text-xl font-extrabold text-blue-700">${pagoCliente.total.toLocaleString('es-MX')} MXN</span>
                         </div>
                         {app.propone_otra_fecha && (app.fecha_propuesta || app.hora_propuesta) && (

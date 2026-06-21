@@ -274,30 +274,18 @@ function ConfirmarContent() {
           )}
 
           <div className="flex flex-col gap-2">
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Precio del servicio</span>
-              <span className="font-semibold text-sm">${precio} MXN</span>
-            </div>
             {!esEfectivo && (
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Comisión de plataforma</span>
-                <span className="font-semibold text-sm">${desgloseCliente.comision} MXN</span>
+              <div className="border-t border-gray-100 pt-2 flex justify-between">
+                <span className="font-extrabold text-gray-900">Total pagado</span>
+                <span className="font-extrabold text-purple-600 text-lg">${desgloseCliente.total} MXN</span>
               </div>
             )}
             {esEfectivo && (
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Comisión efectivo (wallet)</span>
-                <span className="font-semibold text-sm text-orange-600">-${Math.round(precio * 0.05)} MXN</span>
+              <div className="border-t border-gray-100 pt-2 flex justify-between">
+                <span className="font-extrabold text-gray-900">Total en efectivo</span>
+                <span className="font-extrabold text-purple-600 text-lg">${precio} MXN</span>
               </div>
             )}
-            <div className="border-t border-gray-100 pt-2 flex justify-between">
-              <span className="font-extrabold text-gray-900">
-                {esEfectivo ? 'Total en efectivo' : 'Total pagado'}
-              </span>
-              <span className="font-extrabold text-purple-600 text-lg">
-                {esEfectivo ? `$${precio} MXN` : `$${desgloseCliente.total} MXN`}
-              </span>
-            </div>
           </div>
         </div>
 

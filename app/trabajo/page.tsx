@@ -226,10 +226,6 @@ function DetalleTrabajoContent() {
             <span className="text-gray-400 text-sm">Tu precio</span>
             <span className="font-bold text-sm text-gray-900">${Number(miPrecio).toLocaleString('es-MX')} MXN</span>
           </div>
-          <div className="flex justify-between mb-3 pb-3 border-b border-gray-100">
-            <span className="text-gray-400 text-sm">Comisión Fleksi</span>
-            <span className="font-bold text-sm text-red-500">-${ganancia?.comision.toLocaleString('es-MX')} MXN</span>
-          </div>
           <div className="flex justify-between">
             <span className="text-gray-700 text-sm font-bold">💰 Recibirás</span>
             <span className="font-extrabold text-green-600">${ganancia?.total.toLocaleString('es-MX')} MXN</span>
@@ -342,7 +338,7 @@ function DetalleTrabajoContent() {
         {!yaAplico && !esPropioServicio && tieneFoto && !sinSesion && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-1">💰 ¿Cuánto cobras por este trabajo?</h3>
-            <p className="text-xs text-gray-400 mb-4">El cliente verá tu precio. Tú recibirás eso menos la comisión de Fleksi.</p>
+            <p className="text-xs text-gray-400 mb-4">El cliente verá tu precio propuesto.</p>
 
             <div className="mb-4">
               <label className="text-sm font-semibold text-gray-700 mb-2 block">Tu precio (MXN)</label>
@@ -355,17 +351,9 @@ function DetalleTrabajoContent() {
             </div>
 
             {precioNum > 0 && ganancia && (
-              <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 mb-4">
-                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                  <span className="text-sm text-gray-500">Tu precio</span>
-                  <span className="font-bold text-gray-900">${precioNum.toLocaleString('es-MX')} MXN</span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-red-50">
-                  <span className="text-sm text-red-500">Comisión Fleksi (11.6%)</span>
-                  <span className="font-bold text-red-500">-${ganancia.comision.toLocaleString('es-MX')} MXN</span>
-                </div>
-                <div className="flex justify-between items-center px-4 py-4 bg-green-50">
-                  <span className="text-sm font-extrabold text-green-700">💰 Tú recibirás</span>
+              <div className="bg-green-50 rounded-2xl overflow-hidden border border-green-100 mb-4">
+                <div className="flex justify-between items-center px-4 py-4">
+                  <span className="text-sm font-extrabold text-green-700">💰 Recibirás</span>
                   <span className="text-2xl font-extrabold text-green-700">${ganancia.total.toLocaleString('es-MX')} MXN</span>
                 </div>
               </div>
