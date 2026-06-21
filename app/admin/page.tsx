@@ -334,14 +334,15 @@ export default function Admin() {
       // Notificar al Flekser aceptado
       const { data: app } = await supabase.from('aplicaciones').select('prestador_id').eq('id', appId).single();
       if (app?.prestador_id) {
-        await supabase.from('notificaciones').insert({
-          usuario_id: app.prestador_id,
-          tipo: 'aplicacion_aceptada',
-          titulo: '🎉 ¡Tu propuesta fue aceptada!',
-          mensaje: 'El equipo de Fleksi confirmó tu propuesta. Coordina con el cliente.',
-          link: '/mis-trabajos',
-        }).catch(() => {});
-      }
+try {
+          await supabase.from('notificaciones').insert({
+            usuario_id: app.prestador_id,
+            tipo: 'aplicacion_aceptada',
+            titulo: '🎉 ¡Tu propuesta fue aceptada!',
+            mensaje: 'El equipo de Fleksi confirmó tu propuesta. Coordina con el cliente.',
+            link: '/mis-trabajos',
+          });
+        } catch (e) {}      }
       await cargarSolicitudesActivas();
     } catch (e) { console.error(e); }
     finally { setProcesandoApp(null); }
