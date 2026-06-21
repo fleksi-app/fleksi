@@ -404,7 +404,7 @@ export default function Perfil() {
       setTimeout(() => setExitoCuenta(''), 3000);
     } catch (err: any) {
       setErrorCuenta('Error al guardar. Intenta de nuevo.');
-    } finally {
+          } finally {
       setGuardandoCuenta(false);
     }
   };
@@ -474,7 +474,7 @@ export default function Perfil() {
       bg: 'bg-gradient-to-r from-blue-50 to-purple-50', border: 'border-blue-100',
       emoji: '🪪', titulo: 'Verifica tu identidad',
       texto: 'Genera más confianza y aparece primero en búsquedas',
-      boton: 'Verificarme ahora', botonColor: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white',
+      boton: 'Verificarme ahora', botonColor: 'bg-purple-700 text-white',
     };
     const estados: { [key: string]: any } = {
       en_revision: { bg: 'bg-yellow-50', border: 'border-yellow-200', emoji: '🔍', titulo: 'Verificación en revisión', texto: 'Estamos revisando tus documentos. Te notificaremos pronto.', boton: 'Ver estado', botonColor: 'bg-yellow-100 text-yellow-700' },
@@ -545,25 +545,25 @@ export default function Perfil() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
+    <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
 
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-20">
+      <div className="bg-white px-6 pt-12 pb-4 border-b border-gray-100 shadow-sm">
         <div className="max-w-md mx-auto flex justify-between items-center">
-          <h1 className="text-white font-extrabold text-xl">Mi Perfil</h1>
+          <h1 className="font-extrabold text-gray-900 text-xl">Mi Perfil</h1>
           <div className="flex items-center gap-3">
             {usuario?.email === 'fernando.najera.nm@gmail.com' && (
-              <a href="/admin" className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-white/30 transition">
+              <a href="/admin" className="text-xs font-bold px-3 py-1.5 rounded-full transition" style={{background: '#F5F0FF', color: '#7B2FE0'}}>
                 ⚙️ Admin
               </a>
             )}
-            <button onClick={cerrarSesion} className="text-white/70 text-sm hover:text-white transition">
+            <button onClick={cerrarSesion} className="text-gray-400 text-sm hover:text-gray-600 transition">
               Cerrar sesión
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-12">
+      <div className="max-w-md mx-auto px-6 pt-4">
 
         {mostrarBannerIntencion && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-purple-200 mb-4">
@@ -582,7 +582,7 @@ export default function Perfil() {
                     <p className="text-xs text-gray-400">{i.desc}</p>
                   </div>
                   {intencionSeleccionada === i.id && (
-                    <div className="ml-auto w-5 h-5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <div className="ml-auto w-5 h-5 rounded-full bg-purple-700 flex items-center justify-center flex-shrink-0">
                       <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -592,7 +592,7 @@ export default function Perfil() {
               ))}
             </div>
             <button onClick={guardarIntencion} disabled={!intencionSeleccionada || guardandoIntencion}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 transition">
+              className="w-full py-3 text-white rounded-xl font-bold text-sm disabled:opacity-40 transition" style={{background: '#7B2FE0'}}>
               {guardandoIntencion ? 'Guardando...' : 'Guardar mi intención →'}
             </button>
           </div>
@@ -601,7 +601,7 @@ export default function Perfil() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-shrink-0">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center" style={{background: '#7B2FE0'}}>
                 {fotoUrl ? (
                   <img src={fotoUrl} alt="Foto de perfil" className="w-full h-full object-cover"/>
                 ) : (
@@ -723,7 +723,7 @@ export default function Perfil() {
                 Cancelar
               </button>
               <button onClick={guardarPerfil} disabled={guardando}
-                className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold disabled:opacity-50 transition">
+                className="flex-1 py-3 text-white rounded-2xl font-semibold disabled:opacity-50 transition" style={{background: '#7B2FE0'}}>
                 {guardando ? 'Guardando...' : 'Guardar ✓'}
               </button>
             </div>
@@ -808,8 +808,7 @@ export default function Perfil() {
             </div>
           </div>
         )}
-
-        {ciudadesVisitadas.length > 0 && (
+                {ciudadesVisitadas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde has trabajado</h3>
             <div className="flex flex-wrap gap-2">
@@ -862,7 +861,7 @@ export default function Perfil() {
             </div>
             <button
               onClick={() => setMostrarAgregarFoto(!mostrarAgregarFoto)}
-              className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 py-2 rounded-xl hover:opacity-90 transition">
+              className="flex items-center gap-1 bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl hover:opacity-90 transition">
               + Agregar
             </button>
           </div>
@@ -965,7 +964,7 @@ export default function Perfil() {
               {reseñas.map((r) => (
                 <div key={r.id} className="bg-gray-50 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-700 flex items-center justify-center flex-shrink-0">
                       <span className="text-white text-xs font-bold">{r.usuarios?.nombre?.charAt(0) || '?'}</span>
                     </div>
                     <div>
@@ -985,12 +984,12 @@ export default function Perfil() {
           <div className="flex flex-wrap gap-2 mb-3">
             {habilidades.map((h) => (
               <button key={h} onClick={() => editando && toggleHabilidad(h)}
-                className={'px-3 py-1.5 rounded-full text-sm font-semibold transition ' + (habilidadesSeleccionadas.includes(h) ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500') + ' ' + (editando ? 'cursor-pointer' : 'cursor-default')}>
+                className={'px-3 py-1.5 rounded-full text-sm font-semibold transition ' + (habilidadesSeleccionadas.includes(h) ? 'bg-purple-700 text-white' : 'bg-gray-100 text-gray-500') + ' ' + (editando ? 'cursor-pointer' : 'cursor-default')}>
                 {h}
               </button>
             ))}
             {habilidadesSeleccionadas.filter(h => !habilidades.includes(h)).map((h) => (
-              <span key={h} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+              <span key={h} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-purple-700 text-white">
                 {h}
                 {editando && (
                   <button onClick={() => toggleHabilidad(h)} className="ml-1 text-white/70 hover:text-white">✕</button>
@@ -1005,7 +1004,7 @@ export default function Perfil() {
                 onKeyDown={(e) => e.key === 'Enter' && agregarHabilidadCustom()}
                 className="flex-1 p-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900 text-sm"/>
               <button onClick={agregarHabilidadCustom}
-                className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-sm">
+                className="px-4 py-3 bg-purple-700 text-white rounded-2xl font-semibold text-sm">
                 + Agregar
               </button>
             </div>
@@ -1116,7 +1115,7 @@ export default function Perfil() {
                       <OjitoBTN ver={verPassConfirmar} toggle={() => setVerPassConfirmar(!verPassConfirmar)}/>
                     </div>
                     <button onClick={cambiarPassword} disabled={guardandoPass}
-                      className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">
+                      className="w-full py-3 bg-purple-700 text-white rounded-xl font-bold text-sm disabled:opacity-50">
                       {guardandoPass ? 'Actualizando...' : 'Actualizar contraseña'}
                     </button>
                   </div>
@@ -1171,7 +1170,7 @@ export default function Perfil() {
       {mostrarModalCodigo && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-8 pb-10 text-center">
+            <div className="bg-purple-700 px-6 pt-8 pb-10 text-center">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <span className="text-4xl">🎁</span>
               </div>
@@ -1203,7 +1202,7 @@ export default function Perfil() {
                 </button>
               </div>
               <button onClick={() => setMostrarModalCodigo(false)}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition">
+                className="w-full py-4 bg-purple-700 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition">
                 ¡Entendido! →
               </button>
             </div>
