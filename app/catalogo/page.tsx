@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 import { cacheGet, cacheSet, TTL } from '@/lib/cache';
@@ -13,6 +14,22 @@ const habilidadesOpciones = [
   '🎪 Staff para eventos', '🍽️ Mesero', '🍳 Cocinero particular',
   '🚗 Chofer ejecutivo', '🗣️ Intérprete / Traductor',
 ];
+
+// Mapa de id de categoría (home) → habilidad del catálogo
+const categoriaAHabilidad: Record<string, string> = {
+  hogar: '🔧 Mantenimiento general',
+  limpieza: '🧹 Limpieza del hogar',
+  eventos: '🎪 Staff para eventos',
+  mudanza: '🚚 Fletes y traslados',
+  mecanica: '🔩 Mecánica básica',
+  cerrajeria: '🔑 Cerrajería',
+  estetica: '💅 Uñas / Estética',
+  envios: '🚚 Fletes y traslados',
+  jardineria: '🌿 Jardinería',
+  cocina: '🍳 Cocinero particular',
+  ejecutivo: '🚗 Chofer ejecutivo',
+  interprete: '🗣️ Intérprete / Traductor',
+};
 
 const CATEGORIA_OTROS = '✨ Otros / Sin definir';
 
@@ -31,6 +48,19 @@ function tieneSoloPersonalizadas(f: any) {
 }
 
 export default function Catalogo() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
+      </main>
+    }>
+      <CatalogoContent />
+    </Suspense>
+  );
+}
+
+function CatalogoContent() {
+  const searchParams = useSearchParams();
   const [fleksers, setFleksers] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
@@ -39,6 +69,14 @@ export default function Catalogo() {
   const [usuario, setUsuario] = useState<any>(null);
 
   useEffect(() => { cargar(); }, []);
+
+  useEffect(() => {
+    // Leer ?categoria= de la URL y mapear al nombre de habilidad
+    const catParam = searchParams.get('categoria');
+    if (catParam && categoriaAHabilidad[catParam]) {
+      setCategoriaActiva(categoriaAHabilidad[catParam]);
+    }
+  }, [searchParams]);
 
   const cargar = async () => {
     try {
