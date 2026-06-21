@@ -169,7 +169,7 @@ function DetalleTrabajoContent() {
   };
 
   if (cargandoPagina) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-gray-400">Cargando trabajo...</p>
@@ -178,23 +178,23 @@ function DetalleTrabajoContent() {
   );
 
   if (!trabajo) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main className="min-h-screen flex items-center justify-center p-6" style={{background: '#F8FAFC'}}>
       <div className="text-center">
         <p className="text-4xl mb-4">🔍</p>
         <p className="font-bold text-gray-900 mb-2">No hay trabajos disponibles</p>
         <p className="text-gray-400 text-sm mb-6">Vuelve más tarde</p>
-        <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">Volver al inicio</a>
+        <a href="/home" className="inline-block px-6 py-3 text-white rounded-2xl font-bold" style={{background:'#7B2FE0'}}>Volver al inicio</a>
       </div>
     </main>
   );
 
   if (noDisponible) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main className="min-h-screen flex items-center justify-center p-6" style={{background: '#F8FAFC'}}>
       <div className="text-center max-w-sm">
         <p className="text-4xl mb-4">🚫</p>
         <p className="font-bold text-gray-900 mb-2">Esta solicitud ya no está disponible</p>
         <p className="text-gray-400 text-sm mb-6">El cliente la canceló o ya no está activa. No es posible aplicar a este trabajo.</p>
-        <a href="/home" className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold">Volver al inicio</a>
+        <a href="/home" className="inline-block px-6 py-3 text-white rounded-2xl font-bold" style={{background:'#7B2FE0'}}>Volver al inicio</a>
       </div>
     </main>
   );
@@ -210,9 +210,9 @@ function DetalleTrabajoContent() {
   }).length;
 
   if (aplicado) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main className="min-h-screen flex items-center justify-center p-6" style={{background: '#F8FAFC'}}>
       <div className="max-w-md w-full text-center">
-        <div className="w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6' style={{background:'#7B2FE0'}}">
           <span className="text-4xl">✅</span>
         </div>
         <h1 className="text-2xl font-extrabold text-gray-900 mb-2">¡Aplicación enviada!</h1>
@@ -230,19 +230,19 @@ function DetalleTrabajoContent() {
             <span className="text-gray-700 text-sm font-bold">💰 Recibirás</span>
             <span className="font-extrabold text-green-600">${ganancia?.total.toLocaleString('es-MX')} MXN</span>
           </div>
-        </div>
+                  </div>
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 text-left">
           <p className="text-blue-800 text-xs font-semibold">⏳ ¿Qué sigue?</p>
           <p className="text-blue-700 text-xs mt-1 leading-relaxed">El cliente revisará tu propuesta. Si te acepta, recibirás una notificación y el pago quedará retenido en Fleksi hasta que completes el trabajo.</p>
         </div>
-        <a href="/mis-trabajos" className="block w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 transition mb-3">Ver mis aplicaciones</a>
+        <a href="/mis-trabajos" className="block w-full py-4 text-white rounded-2xl font-bold text-lg hover:opacity-90 transition mb-3" style={{background: '#7B2FE0'}}>Ver mis aplicaciones</a>
         <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">Volver al inicio</a>
       </div>
     </main>
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-56">
+    <main className="min-h-screen pb-56" style={{background: '#F8FAFC'}}>
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm">
         <div className="max-w-md mx-auto">
           <div className="flex items-center gap-4 mb-4">
@@ -271,7 +271,7 @@ function DetalleTrabajoContent() {
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-14 h-14 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0" style={{background: '#F5F0FF'}}>
               {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
             </div>
             <div className="flex-1">
@@ -313,7 +313,7 @@ function DetalleTrabajoContent() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">👤 Cliente</h3>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{background: '#7B2FE0'}}>
               {trabajo.usuarios?.foto_url
                 ? <img src={trabajo.usuarios.foto_url} alt="cliente" className="w-full h-full object-cover"/>
                 : <span className="text-white font-bold text-lg">{trabajo.usuarios?.nombre?.charAt(0) || '?'}</span>}
@@ -418,7 +418,7 @@ function DetalleTrabajoContent() {
         <div className="max-w-md mx-auto">
           {sinSesion ? (
             <div className="flex flex-col gap-2">
-              <a href="/registro" className="block w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-center shadow-lg hover:opacity-90 transition text-sm">
+              <a href="/registro" className="block w-full py-3.5 text-white rounded-2xl font-extrabold text-center hover:opacity-90 transition text-sm" style={{background: '#7B2FE0'}}>
                 ⚡ Crear cuenta y aplicar gratis
               </a>
               <a href="/login" className="block w-full py-3 border-2 border-gray-200 text-gray-600 rounded-2xl font-bold text-center hover:border-purple-400 transition text-sm">
@@ -435,11 +435,11 @@ function DetalleTrabajoContent() {
             <button
               onClick={handleAplicar}
               disabled={cargando || !miPrecio || Number(miPrecio) <= 0}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-extrabold text-lg shadow-lg hover:opacity-90 transition disabled:opacity-50">
+              className="w-full py-4 text-white rounded-2xl font-extrabold text-lg hover:opacity-90 transition disabled:opacity-50" style={{background: '#7B2FE0'}}>
               {cargando ? 'Enviando...' : precioNum > 0 && ganancia ? '✋ Enviar propuesta — recibirás $' + ganancia.total.toLocaleString('es-MX') + ' MXN' : '✋ Escribe tu precio para aplicar'}
             </button>
           ) : (
-            <a href="/mis-trabajos" className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-center shadow-lg hover:opacity-90 transition">
+            <a href="/mis-trabajos" className="block w-full py-3 text-white rounded-2xl font-bold text-center hover:opacity-90 transition" style={{background: '#7B2FE0'}}>
               Ver mis aplicaciones →
             </a>
           )}
@@ -454,7 +454,7 @@ function DetalleTrabajoContent() {
 export default function DetalleTrabajo() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
         <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
       </main>
     }>

@@ -258,7 +258,7 @@ function ChatContent() {
     });
     const convs = Array.from(convMap.values());
     setConversaciones(convs);
-    if (usuarioDestinoId) {
+        if (usuarioDestinoId) {
       const convDirecta = convs.find(c =>
         !c.servicio_id && (
           (c.remitente_id === user.id && c.destinatario_id === usuarioDestinoId) ||
@@ -339,18 +339,18 @@ function ChatContent() {
   const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
   const esEmpresa = rol === 'empresa';
 
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const bubbleGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const focusBorder = esEmpresa ? 'focus:border-blue-700' : 'focus:border-purple-400';
-  const dotColor = esEmpresa ? 'bg-blue-800' : 'bg-purple-600';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const bgFondo = esEmpresa ? 'bg-slate-100' : 'bg-purple-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
+  const MORADO = '#7B2FE0';
+
+  const focusBorder = 'focus:border-purple-400';
+  const dotColor = 'bg-purple-600';
+
+  const bgFondo = '#F8FAFC';
+  const spinnerColor = 'border-purple-600';
   const Fondo = esEmpresa ? FondoEmpresa : FondoFlekser;
 
   if (cargando) {
     return (
-      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
+      <main className="min-h-screen flex items-center justify-center" style={{background: bgFondo}}>
         <div className="text-center">
           <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
           <p className="text-gray-400">Cargando mensajes...</p>
@@ -362,7 +362,7 @@ function ChatContent() {
   if (conversacionActiva) {
     const otroUsuario = getOtroUsuario(conversacionActiva);
     return (
-      <main className={`min-h-screen ${bgFondo} flex flex-col pb-16 relative`}>
+      <main className="min-h-screen flex flex-col pb-16 relative" style={{background: bgFondo}}>
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <Fondo />
         </div>
@@ -375,7 +375,7 @@ function ChatContent() {
               <h2 className="font-extrabold text-gray-900 text-sm leading-tight">{otroUsuario?.nombre || 'Conversación'}</h2>
               <p className="text-xs text-gray-400">{conversacionActiva.servicios?.titulo || 'Mensaje directo'}</p>
             </div>
-            <div className={`w-10 h-10 bg-gradient-to-r ${avatarGradient} rounded-full flex items-center justify-center text-white font-bold text-sm overflow-hidden`}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm overflow-hidden" style={{background: MORADO}}>
               {otroUsuario?.foto_url ? <img src={otroUsuario.foto_url} className="w-full h-full object-cover"/> : otroUsuario?.nombre?.charAt(0) || '?'}
             </div>
           </div>
@@ -401,11 +401,7 @@ function ChatContent() {
                 const esMio = msg.remitente_id === usuario?.authId;
                 return (
                   <div key={msg.id} className={`flex ${esMio ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs px-4 py-3 rounded-2xl ${
-                      esMio
-                        ? `bg-gradient-to-r ${bubbleGradient} text-white rounded-br-sm`
-                        : 'bg-white/90 backdrop-blur-sm text-gray-900 shadow-sm border border-gray-100 rounded-bl-sm'
-                    }`}>
+                    <div className={`max-w-xs px-4 py-3 rounded-2xl ${esMio ? 'text-white rounded-br-sm' : 'bg-white/90 backdrop-blur-sm text-gray-900 shadow-sm border border-gray-100 rounded-bl-sm'}`} style={esMio ? {background: MORADO} : {}}>
                       <p className="text-sm">{msg.contenido}</p>
                       <p className={`text-xs mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>
                         {new Date(msg.created_at).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}
@@ -431,7 +427,7 @@ function ChatContent() {
                 onKeyDown={(e) => e.key === 'Enter' && enviarMensaje()}
                 className={`flex-1 p-4 rounded-2xl border-2 border-gray-200 ${focusBorder} outline-none transition text-gray-900`}/>
               <button onClick={enviarMensaje} disabled={enviando || !nuevoMensaje.trim()}
-                className={`w-14 h-14 bg-gradient-to-r ${bubbleGradient} text-white rounded-2xl font-bold text-xl disabled:opacity-50 transition flex items-center justify-center`}>
+                className="w-14 h-14 text-white rounded-2xl font-bold text-xl disabled:opacity-50 transition flex items-center justify-center" style={{background: MORADO}}>
                 ➤
               </button>
             </div>
@@ -444,15 +440,15 @@ function ChatContent() {
   }
 
   return (
-    <main className={`min-h-screen ${bgFondo} pb-32 relative`}>
+    <main className="min-h-screen pb-32 relative" style={{background: bgFondo}}>
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <Fondo />
       </div>
 
-      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-4 shadow-sm relative z-10`}>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100 relative z-10">
         <div className="max-w-md mx-auto">
-          <h1 className="font-extrabold text-white text-xl">Mensajes</h1>
-          <p className="text-white/70 text-sm mt-0.5">Coordina tus trabajos de forma segura</p>
+          <h1 className="font-extrabold text-gray-900 text-xl">Mensajes</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Coordina tus trabajos de forma segura</p>
         </div>
       </div>
 
@@ -462,7 +458,7 @@ function ChatContent() {
             <p className="text-4xl mb-4">💬</p>
             <p className="font-bold text-gray-900 mb-2">Sin mensajes todavía</p>
             <p className="text-gray-400 text-sm mb-6">Cuando apliques a un trabajo o recibas una aplicación, podrás chatear aquí</p>
-            <a href="/home" className={`inline-block px-6 py-3 bg-gradient-to-r ${headerGradient} text-white rounded-2xl font-bold text-sm`}>
+            <a href="/home" className="inline-block px-6 py-3 text-white rounded-2xl font-bold text-sm" style={{background: MORADO}}>
               Ver trabajos disponibles
             </a>
           </div>
@@ -475,7 +471,7 @@ function ChatContent() {
                 <button key={conv.id} onClick={() => cargarMensajes(conv)}
                   className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/80 text-left w-full active:scale-95 transition backdrop-blur-sm">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 bg-gradient-to-r ${avatarGradient} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden`}>
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden" style={{background: MORADO}}>
                       {otro?.foto_url ? <img src={otro.foto_url} className="w-full h-full object-cover"/> : otro?.nombre?.charAt(0) || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -503,7 +499,7 @@ function ChatContent() {
 export default function Chat() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-purple-50 flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
         <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
       </main>
     }>
