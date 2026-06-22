@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#2563EB',
+  themeColor: '#7B2FE0',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -72,7 +72,11 @@ export default function RootLayout({
           __html: `
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js');
+                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                  // Algunos navegadores (Safari, modo incógnito, iOS) rechazan
+                  // el registro del Service Worker. No es un error crítico.
+                  console.warn('Service Worker no registrado:', err);
+                });
               });
             }
           `
