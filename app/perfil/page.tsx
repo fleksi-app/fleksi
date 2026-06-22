@@ -404,7 +404,7 @@ export default function Perfil() {
       setTimeout(() => setExitoCuenta(''), 3000);
     } catch (err: any) {
       setErrorCuenta('Error al guardar. Intenta de nuevo.');
-          } finally {
+    } finally {
       setGuardandoCuenta(false);
     }
   };
@@ -556,9 +556,7 @@ export default function Perfil() {
                 ⚙️ Admin
               </a>
             )}
-            <button onClick={cerrarSesion} className="text-gray-400 text-sm hover:text-gray-600 transition">
-              Cerrar sesión
-            </button>
+
           </div>
         </div>
       </div>
@@ -808,7 +806,8 @@ export default function Perfil() {
             </div>
           </div>
         )}
-                {ciudadesVisitadas.length > 0 && (
+
+        {ciudadesVisitadas.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde has trabajado</h3>
             <div className="flex flex-wrap gap-2">
