@@ -88,6 +88,8 @@ export default function HomeWorker() {
   const [guardandoCiudad, setGuardandoCiudad] = useState(false);
 
   const [mostrarBannerInstalar, setMostrarBannerInstalar] = useState(false);
+  const [walletSaldo, setWalletSaldo] = useState(0);
+  const [ganadoMes, setGanadoMes] = useState(0);
   const [esIOS, setEsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [instalando, setInstalando] = useState(false);
@@ -116,6 +118,22 @@ export default function HomeWorker() {
       if (perfil) cacheSet('perfil_' + user.id, perfil, TTL.PERFIL);
     }
     setUsuario(perfil);
+
+    // Cargar wallet y ganado este mes
+    setWalletSaldo(perfil?.wallet_saldo || 0);
+    if (perfil?.rol === 'flekser' || perfil?.rol === 'viajero') {
+      const inicioMes = new Date();
+      inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+      const { data: appsCompletadas } = await supabase
+        .from('aplicaciones')
+        .select('precio_ofrecido, servicios(presupuesto)')
+        .eq('prestador_id', user.id)
+        .eq('estado', 'completado')
+        .gte('created_at', inicioMes.toISOString());
+      const totalMes = (appsCompletadas || []).reduce((acc: number, a: any) =>
+        acc + (a.precio_ofrecido || a.servicios?.presupuesto || 0), 0);
+      setGanadoMes(totalMes);
+    }
 
     const ciudadUsuario = perfil?.ciudad || '';
     setCiudadActiva(ciudadUsuario);
@@ -313,6 +331,25 @@ export default function HomeWorker() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
           </button>
         </div>
+
+        {/* Widget wallet */}
+        {(usuario?.rol === 'flekser' || usuario?.rol === 'viajero') && (walletSaldo > 0 || ganadoMes > 0) && (
+          <div className="max-w-md mx-auto mb-3">
+            <a href="/wallet" className="flex items-center justify-between rounded-2xl px-4 py-2.5 hover:opacity-90 transition" style={{background: '#F5F0FF'}}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">💜</span>
+                <div>
+                  <p className="text-xs font-semibold" style={{color: '#7B2FE0'}}>Este mes</p>
+                  <p className="text-sm font-extrabold" style={{color: '#1A1A2E'}}>${ganadoMes.toLocaleString('es-MX', {maximumFractionDigits: 0})} MXN</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Wallet</p>
+                <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
+              </div>
+            </a>
+          </div>
+        )}
 
         {/* Buscador */}
         <div className="max-w-md mx-auto">
