@@ -13,15 +13,19 @@ export default function Nav({ activo }: { activo: string }) {
   const [noLeidas, setNoLeidas] = useState(0);
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
   const [usuarioId, setUsuarioId] = useState('');
+  const [fotoUrl, setFotoUrl] = useState('');
+  const [nombreInicial, setNombreInicial] = useState('');
 
   useEffect(() => {
     const obtenerDatos = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUsuarioId(user.id);
-      const { data } = await supabase.from('usuarios').select('rol, rol_activo, roles').eq('id', user.id).single();
+      const { data } = await supabase.from('usuarios').select('rol, rol_activo, roles, foto_url, nombre').eq('id', user.id).single();
       setRol(data?.rol_activo || data?.rol || 'flekser');
       setRoles(data?.roles || [data?.rol || 'flekser']);
+      setFotoUrl(data?.foto_url || '');
+      setNombreInicial(data?.nombre?.charAt(0)?.toUpperCase() || 'U');
       cargarNotificaciones(user.id);
       cargarMensajesNoLeidos(user.id);
     };
@@ -98,10 +102,14 @@ export default function Nav({ activo }: { activo: string }) {
     },
     {
       href: perfil, label: 'Perfil', id: 'perfil',
-      icon: (a: boolean) => (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? MORADO : '#94A3B8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
+      icon: (a: boolean) => fotoUrl ? (
+        <div className="w-6 h-6 rounded-full overflow-hidden" style={{border: a ? `2px solid ${MORADO}` : '2px solid #E5E7EB'}}>
+          <img src={fotoUrl} alt="perfil" className="w-full h-full object-cover"/>
+        </div>
+      ) : (
+        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{background: a ? MORADO : '#94A3B8'}}>
+          {nombreInicial}
+        </div>
       )
     },
   ];
