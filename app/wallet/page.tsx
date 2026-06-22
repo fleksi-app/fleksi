@@ -3,23 +3,21 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
-const bancos = [
-  'BBVA', 'Banamex', 'Santander', 'Banorte', 'HSBC',
-  'Scotiabank', 'Inbursa', 'Bajío', 'Afirme', 'BanBajío',
-  'Mifel', 'Multiva', 'Banca Mifel', 'BBASE', 'CIBanco',
-  'Consubanco', 'Inmobiliario Mexicano', 'Invex', 'Ixe',
-  'Monexcb', 'Nu Bank (Nu México)', 'Spin by OXXO',
-  'Stori', 'Mercado Pago', 'KLAR', 'Otro',
-];
+const MORADO = '#7B2FE0';
+
+const bancos = ['BBVA','Banamex','Santander','Banorte','HSBC','Scotiabank','Inbursa','Bajío','Afirme','BanBajío','Mifel','Multiva','Banca Mifel','BBASE','CIBanco','Consubanco','Inmobiliario Mexicano','Invex','Ixe','Monexcb','Nu Bank (Nu México)','Spin by OXXO','Stori','Mercado Pago','KLAR','Otro'];
+
+const tipoEmoji: any = { recarga:'💳', pago:'💸', comision:'📊', retiro:'🏦', reembolso:'↩️', ganancia:'💰' };
+const estadoRetiroColor: any = { pendiente:'bg-yellow-100 text-yellow-700', procesando:'bg-blue-100 text-blue-700', completado:'bg-green-100 text-green-700', rechazado:'bg-red-100 text-red-700' };
+const estadoRetiroLabel: any = { pendiente:'⏳ Pendiente', procesando:'🔄 Procesando', completado:'✅ Completado', rechazado:'❌ Rechazado' };
 
 export default function Wallet() {
   const [usuario, setUsuario] = useState<any>(null);
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [retiros, setRetiros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
-
   const [mostrarRetiro, setMostrarRetiro] = useState(false);
-  const [paso, setPaso] = useState<'datos' | 'monto' | 'confirmar'>('datos');
+  const [paso, setPaso] = useState<'datos'|'monto'|'confirmar'>('datos');
   const [clabe, setClabe] = useState('');
   const [banco, setBanco] = useState('');
   const [titular, setTitular] = useState('');
@@ -36,27 +34,13 @@ export default function Wallet() {
     if (!user) { window.location.href = '/login'; return; }
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario({ ...perfil, id: user.id });
-
     if (perfil?.clabe) setClabe(perfil.clabe);
     if (perfil?.banco) setBanco(perfil.banco);
     if (perfil?.titular_cuenta) setTitular(perfil.titular_cuenta);
-
-    const { data: movs } = await supabase
-      .from('wallet_movimientos')
-      .select('*')
-      .eq('usuario_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const { data: movs } = await supabase.from('wallet_movimientos').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(50);
     setMovimientos(movs || []);
-
-    const { data: retirosData } = await supabase
-      .from('retiros')
-      .select('*')
-      .eq('usuario_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { data: retirosData } = await supabase.from('retiros').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(10);
     setRetiros(retirosData || []);
-
     setCargando(false);
   };
 
@@ -64,10 +48,7 @@ export default function Wallet() {
   const montoNum = parseFloat(monto) || 0;
   const MINIMO_RETIRO = 50;
   const MAXIMO_RETIRO = 50000;
-
   const validarClabe = (c: string) => /^\d{18}$/.test(c.replace(/\s/g, ''));
-
-  // Verificar si tiene retiro pendiente activo
   const tieneRetiroPendiente = retiros.some(r => r.estado === 'pendiente' || r.estado === 'procesando');
 
   const avanzarPaso = () => {
@@ -81,248 +62,97 @@ export default function Wallet() {
       setPaso('monto');
     } else if (paso === 'monto') {
       if (!monto || montoNum <= 0) { setErrorRetiro('Ingresa un monto válido'); return; }
-      if (isNaN(montoNum)) { setErrorRetiro('El monto no es válido'); return; }
-      if (montoNum < MINIMO_RETIRO) { setErrorRetiro(`El monto mínimo de retiro es $${MINIMO_RETIRO} MXN`); return; }
-      if (montoNum > MAXIMO_RETIRO) { setErrorRetiro(`El monto máximo por retiro es $${MAXIMO_RETIRO.toLocaleString()} MXN`); return; }
+      if (montoNum < MINIMO_RETIRO) { setErrorRetiro(`El monto mínimo es $${MINIMO_RETIRO} MXN`); return; }
+      if (montoNum > MAXIMO_RETIRO) { setErrorRetiro(`El monto máximo es $${MAXIMO_RETIRO.toLocaleString()} MXN`); return; }
       if (montoNum > saldoDisponible) { setErrorRetiro('No tienes suficiente saldo'); return; }
-      // Verificar que el monto no tenga más de 2 decimales
-      if (Math.round(montoNum * 100) !== montoNum * 100) {
-        setErrorRetiro('El monto no puede tener más de 2 decimales'); return;
-      }
       setPaso('confirmar');
     }
   };
 
   const solicitarRetiro = async () => {
     if (procesando) return;
-    setProcesando(true);
-    setErrorRetiro('');
+    setProcesando(true); setErrorRetiro('');
     try {
       const clabeClean = clabe.replace(/\s/g, '');
-
-      // Re-validar todo en el momento de confirmar
       if (!validarClabe(clabeClean)) throw new Error('CLABE inválida');
       if (!banco || !titular.trim()) throw new Error('Datos bancarios incompletos');
       if (montoNum < MINIMO_RETIRO) throw new Error(`Monto mínimo: $${MINIMO_RETIRO} MXN`);
       if (montoNum > MAXIMO_RETIRO) throw new Error(`Monto máximo: $${MAXIMO_RETIRO.toLocaleString()} MXN`);
-
-      // Verificar sesión activa
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
-
-      // Re-leer saldo fresco del servidor para evitar manipulación
-      const { data: perfilFresco, error: perfilError } = await supabase
-        .from('usuarios')
-        .select('wallet_saldo')
-        .eq('id', user.id)
-        .single();
-
+      const { data: perfilFresco, error: perfilError } = await supabase.from('usuarios').select('wallet_saldo').eq('id', user.id).single();
       if (perfilError || !perfilFresco) throw new Error('No se pudo verificar tu saldo');
-
       const saldoReal = perfilFresco.wallet_saldo || 0;
-
       if (saldoReal < MINIMO_RETIRO) throw new Error('Saldo insuficiente para retirar');
       if (montoNum > saldoReal) throw new Error(`Saldo insuficiente. Tu saldo real es $${saldoReal.toFixed(2)} MXN`);
-
-      // Verificar que no tenga otro retiro pendiente
-      const { data: retirosPendientes } = await supabase
-        .from('retiros')
-        .select('id')
-        .eq('usuario_id', user.id)
-        .in('estado', ['pendiente', 'procesando'])
-        .limit(1);
-
-      if (retirosPendientes && retirosPendientes.length > 0) {
-        throw new Error('Ya tienes un retiro pendiente. Espera a que se complete antes de solicitar otro.');
-      }
-
-      // Guardar datos bancarios si el usuario quiere
-      if (guardarDatos) {
-        await supabase.from('usuarios').update({
-          clabe: clabeClean,
-          banco,
-          titular_cuenta: titular,
-        }).eq('id', user.id);
-      }
-
-      // Crear solicitud de retiro
-      const { error: retiroError } = await supabase.from('retiros').insert({
-        usuario_id: user.id,
-        monto: montoNum,
-        clabe: clabeClean,
-        banco,
-        titular,
-        estado: 'pendiente',
-      });
+      const { data: retirosPendientes } = await supabase.from('retiros').select('id').eq('usuario_id', user.id).in('estado', ['pendiente','procesando']).limit(1);
+      if (retirosPendientes && retirosPendientes.length > 0) throw new Error('Ya tienes un retiro pendiente. Espera a que se complete antes de solicitar otro.');
+      if (guardarDatos) await supabase.from('usuarios').update({ clabe: clabeClean, banco, titular_cuenta: titular }).eq('id', user.id);
+      const { error: retiroError } = await supabase.from('retiros').insert({ usuario_id: user.id, monto: montoNum, clabe: clabeClean, banco, titular, estado: 'pendiente' });
       if (retiroError) throw retiroError;
-
-      // Descontar saldo usando el valor del servidor, no del estado local
       const nuevoSaldo = saldoReal - montoNum;
-      const { error: saldoError } = await supabase
-        .from('usuarios')
-        .update({ wallet_saldo: nuevoSaldo })
-        .eq('id', user.id)
-        .eq('wallet_saldo', saldoReal); // Optimistic lock: solo si el saldo no cambió
-
-      if (saldoError) {
-        // Si falló el update del saldo, cancelar el retiro recién creado
-        await supabase.from('retiros')
-          .delete()
-          .eq('usuario_id', user.id)
-          .eq('estado', 'pendiente')
-          .order('created_at', { ascending: false })
-          .limit(1);
-        throw new Error('El saldo cambió durante la operación. Intenta de nuevo.');
-      }
-
-      // Registrar movimiento
-      await supabase.from('wallet_movimientos').insert({
-        usuario_id: user.id,
-        tipo: 'retiro',
-        monto: -montoNum,
-        descripcion: `Retiro solicitado a ${banco} ****${clabeClean.slice(-4)}`,
-      });
-
-      // Notificación
-      try {
-        await supabase.from('notificaciones').insert({
-          usuario_id: user.id,
-          tipo: 'retiro_solicitado',
-          titulo: '🏦 Solicitud de retiro recibida',
-          mensaje: `Tu solicitud de retiro por $${montoNum.toFixed(2)} MXN está siendo procesada. Te notificaremos cuando se complete.`,
-          link: '/wallet',
-        });
-      } catch (e) {}
-
+      const { error: saldoError } = await supabase.from('usuarios').update({ wallet_saldo: nuevoSaldo }).eq('id', user.id).eq('wallet_saldo', saldoReal);
+      if (saldoError) { await supabase.from('retiros').delete().eq('usuario_id', user.id).eq('estado', 'pendiente').order('created_at', { ascending: false }).limit(1); throw new Error('El saldo cambió durante la operación. Intenta de nuevo.'); }
+      await supabase.from('wallet_movimientos').insert({ usuario_id: user.id, tipo: 'retiro', monto: -montoNum, descripcion: `Retiro solicitado a ${banco} ****${clabeClean.slice(-4)}` });
+      try { await supabase.from('notificaciones').insert({ usuario_id: user.id, tipo: 'retiro_solicitado', titulo: '🏦 Solicitud de retiro recibida', mensaje: `Tu solicitud de retiro por $${montoNum.toFixed(2)} MXN está siendo procesada.`, link: '/wallet' }); } catch (e) {}
       setExitoRetiro(true);
       await cargarDatos();
-    } catch (err: any) {
-      setErrorRetiro(err.message || 'Ocurrió un error. Intenta de nuevo.');
-      console.error(err);
-    } finally {
-      setProcesando(false);
-    }
+    } catch (err: any) { setErrorRetiro(err.message || 'Ocurrió un error. Intenta de nuevo.'); }
+    finally { setProcesando(false); }
   };
 
   const cerrarRetiro = () => {
     if (procesando) return;
-    setMostrarRetiro(false);
-    setExitoRetiro(false);
-    setPaso('datos');
-    setMonto('');
-    setErrorRetiro('');
+    setMostrarRetiro(false); setExitoRetiro(false); setPaso('datos'); setMonto(''); setErrorRetiro('');
   };
 
-  const tipoColor: any = {
-    recarga: 'text-green-600',
-    pago: 'text-red-600',
-    comision: 'text-orange-600',
-    retiro: 'text-blue-600',
-    reembolso: 'text-purple-600',
-    ganancia: 'text-green-600',
-  };
-
-  const tipoEmoji: any = {
-    recarga: '💳',
-    pago: '💸',
-    comision: '📊',
-    retiro: '🏦',
-    reembolso: '↩️',
-    ganancia: '💰',
-  };
-
-  const estadoRetiroColor: any = {
-    pendiente: 'bg-yellow-100 text-yellow-700',
-    procesando: 'bg-blue-100 text-blue-700',
-    completado: 'bg-green-100 text-green-700',
-    rechazado: 'bg-red-100 text-red-700',
-  };
-
-  const estadoRetiroLabel: any = {
-    pendiente: '⏳ Pendiente',
-    procesando: '🔄 Procesando',
-    completado: '✅ Completado',
-    rechazado: '❌ Rechazado',
-  };
-
-  if (cargando) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Cargando wallet...</p>
-        </div>
-      </main>
-    );
-  }
+  if (cargando) return (
+    <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{borderColor: MORADO, borderTopColor: 'transparent'}}/>
+        <p className="text-gray-400">Cargando wallet...</p>
+      </div>
+    </main>
+  );
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32">
-
-      <div className="bg-gradient-to-br from-teal-500 to-cyan-600 px-6 pt-12 pb-20">
+    <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto">
-          <h1 className="text-white font-extrabold text-xl mb-1">Fleksi Wallet</h1>
-          <p className="text-white/70 text-sm">Tu saldo disponible</p>
+          <h1 className="font-extrabold text-gray-900 text-xl mb-1">Fleksi Wallet</h1>
+          <p className="text-gray-400 text-sm">Tu saldo disponible</p>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-12">
-
+      <div className="max-w-md mx-auto px-6 pt-4">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
           <div className="text-center mb-6">
             <p className="text-gray-400 text-sm mb-1">Saldo disponible</p>
-            <p className="text-5xl font-extrabold text-teal-600">${saldoDisponible.toFixed(2)}</p>
+            <p className="text-5xl font-extrabold" style={{color: MORADO}}>${saldoDisponible.toFixed(2)}</p>
             <p className="text-gray-400 text-sm mt-1">MXN</p>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
-            <a href="/wallet/recargar"
-              className="flex flex-col items-center gap-2 p-4 bg-teal-50 rounded-2xl border border-teal-100 hover:bg-teal-100 transition">
+            <a href="/wallet/recargar" className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition hover:opacity-90" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
               <span className="text-2xl">💳</span>
-              <p className="font-bold text-teal-700 text-sm">Recargar</p>
+              <p className="font-bold text-sm" style={{color: MORADO}}>Recargar</p>
             </a>
-            <button
-              onClick={() => {
-                if (tieneRetiroPendiente) {
-                  setErrorRetiro('Ya tienes un retiro pendiente. Espera a que se complete.');
-                  return;
-                }
-                setMostrarRetiro(true);
-              }}
+            <button onClick={() => { if (tieneRetiroPendiente) { setErrorRetiro('Ya tienes un retiro pendiente.'); return; } setMostrarRetiro(true); }}
               disabled={saldoDisponible < MINIMO_RETIRO}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition ${
-                saldoDisponible >= MINIMO_RETIRO
-                  ? 'bg-blue-50 border-blue-100 hover:bg-blue-100 cursor-pointer'
-                  : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
-              }`}>
+              className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{background: saldoDisponible >= MINIMO_RETIRO ? '#EFF6FF' : '#F9FAFB', borderColor: saldoDisponible >= MINIMO_RETIRO ? '#BFDBFE' : '#E5E7EB'}}>
               <span className="text-2xl">🏦</span>
-              <p className={`font-bold text-sm ${saldoDisponible >= MINIMO_RETIRO ? 'text-blue-700' : 'text-gray-500'}`}>
-                Retirar
-              </p>
-              {saldoDisponible < MINIMO_RETIRO && (
-                <p className="text-xs text-gray-400">Mín. $50</p>
-              )}
+              <p className="font-bold text-blue-700 text-sm">Retirar</p>
+              {saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400">Mín. $50</p>}
             </button>
           </div>
-
-          {tieneRetiroPendiente && (
-            <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
-              <p className="text-yellow-700 text-xs font-semibold">⏳ Tienes un retiro en proceso. Espera a que se complete para solicitar otro.</p>
-            </div>
-          )}
-
-          {saldoDisponible > 0 && saldoDisponible < MINIMO_RETIRO && (
-            <p className="text-xs text-gray-400 text-center mt-3">
-              Necesitas al menos $50 MXN para solicitar un retiro. Te faltan ${(MINIMO_RETIRO - saldoDisponible).toFixed(2)} MXN.
-            </p>
-          )}
+          {tieneRetiroPendiente && <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center"><p className="text-yellow-700 text-xs font-semibold">⏳ Tienes un retiro en proceso.</p></div>}
+          {saldoDisponible > 0 && saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400 text-center mt-3">Necesitas al menos $50 MXN para retirar. Te faltan ${(MINIMO_RETIRO - saldoDisponible).toFixed(2)} MXN.</p>}
+          {errorRetiro && <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-red-600 text-xs font-semibold">{errorRetiro}</p></div>}
         </div>
 
-        <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 mb-4">
-          <p className="text-teal-700 text-sm font-semibold mb-1">💡 ¿Cómo funcionan los retiros?</p>
-          <p className="text-teal-600 text-xs leading-relaxed">
-            Solicitas el retiro aquí, ingresas tu CLABE y en un plazo de 1-3 días hábiles recibirás el dinero en tu cuenta bancaria. El monto mínimo es $50 MXN y el máximo por retiro es $50,000 MXN.
-          </p>
+        <div className="rounded-2xl p-4 mb-4 border" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+          <p className="text-sm font-semibold mb-1" style={{color: MORADO}}>💡 ¿Cómo funcionan los retiros?</p>
+          <p className="text-xs leading-relaxed" style={{color: '#6D28D9'}}>Solicita el retiro, ingresa tu CLABE y en 1-3 días hábiles recibirás el dinero en tu cuenta. Mínimo $50 MXN, máximo $50,000 MXN por retiro.</p>
         </div>
 
         {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').length > 0 && (
@@ -333,14 +163,10 @@ export default function Wallet() {
                 <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-bold text-gray-900">${r.monto.toFixed(2)} MXN</p>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoRetiroColor[r.estado]}`}>
-                      {estadoRetiroLabel[r.estado]}
-                    </span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoRetiroColor[r.estado]}`}>{estadoRetiroLabel[r.estado]}</span>
                   </div>
                   <p className="text-xs text-gray-500">{r.banco} — ****{r.clabe?.slice(-4)}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Solicitado: {new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               ))}
             </div>
@@ -357,43 +183,33 @@ export default function Wallet() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {movimientos.map((mov) => (
+              {movimientos.map(mov => (
                 <div key={mov.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                      {tipoEmoji[mov.tipo] || '💰'}
-                    </div>
+                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">{tipoEmoji[mov.tipo] || '💰'}</div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-gray-900 text-sm truncate">{mov.descripcion || mov.tipo}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(mov.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <p className="text-xs text-gray-400">{new Date(mov.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
-                    <p className={`font-extrabold text-sm flex-shrink-0 ${mov.monto > 0 ? 'text-green-600' : tipoColor[mov.tipo] || 'text-gray-900'}`}>
-                      {mov.monto > 0 ? '+' : ''}${Math.abs(mov.monto).toFixed(2)}
-                    </p>
+                    <p className={`font-extrabold text-sm flex-shrink-0 ${mov.monto > 0 ? 'text-green-600' : 'text-red-500'}`}>{mov.monto > 0 ? '+' : ''}${Math.abs(mov.monto).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
       </div>
 
       {mostrarRetiro && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={cerrarRetiro}>
           <div className="w-full bg-white rounded-t-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
               <div>
-                <h3 className="font-extrabold text-gray-900 text-lg">
-                  {exitoRetiro ? '¡Retiro solicitado!' : paso === 'datos' ? 'Datos bancarios' : paso === 'monto' ? '¿Cuánto retirar?' : 'Confirmar retiro'}
-                </h3>
+                <h3 className="font-extrabold text-gray-900 text-lg">{exitoRetiro ? '¡Retiro solicitado!' : paso === 'datos' ? 'Datos bancarios' : paso === 'monto' ? '¿Cuánto retirar?' : 'Confirmar retiro'}</h3>
                 {!exitoRetiro && (
                   <div className="flex items-center gap-1 mt-1">
-                    {['datos', 'monto', 'confirmar'].map((p, i) => (
-                      <div key={p} className={`h-1.5 rounded-full transition-all ${paso === p ? 'w-8 bg-teal-500' : ['datos','monto','confirmar'].indexOf(paso) > i ? 'w-4 bg-teal-300' : 'w-4 bg-gray-200'}`}/>
+                    {['datos','monto','confirmar'].map((p, i) => (
+                      <div key={p} className="h-1.5 rounded-full transition-all" style={{width: paso === p ? '2rem' : '1rem', background: ['datos','monto','confirmar'].indexOf(paso) >= i ? MORADO : '#E5E7EB'}}/>
                     ))}
                   </div>
                 )}
@@ -402,182 +218,111 @@ export default function Wallet() {
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-4">
-
               {exitoRetiro && (
                 <div className="text-center py-6">
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">🏦</div>
                   <h4 className="font-extrabold text-gray-900 text-xl mb-2">¡Solicitud enviada!</h4>
                   <p className="text-gray-500 text-sm mb-2">Tu retiro de <span className="font-bold text-gray-900">${montoNum.toFixed(2)} MXN</span> está siendo procesado.</p>
-                  <p className="text-gray-400 text-xs mb-6">Recibirás el dinero en tu cuenta <span className="font-semibold">{banco}</span> terminada en <span className="font-semibold">****{clabe.replace(/\s/g,'').slice(-4)}</span> en un plazo de 1-3 días hábiles.</p>
-                  <button onClick={cerrarRetiro} className="w-full py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-bold">
-                    Entendido ✓
-                  </button>
+                  <p className="text-gray-400 text-xs mb-6">Recibirás el dinero en tu cuenta <span className="font-semibold">{banco}</span> terminada en <span className="font-semibold">****{clabe.replace(/\s/g,'').slice(-4)}</span> en 1-3 días hábiles.</p>
+                  <button onClick={cerrarRetiro} className="w-full py-4 text-white rounded-2xl font-bold" style={{background: MORADO}}>Entendido ✓</button>
                 </div>
               )}
 
               {!exitoRetiro && paso === 'datos' && (
                 <div className="flex flex-col gap-4">
-                  <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                    <p className="text-sm font-bold text-blue-800 mb-1">🏦 Datos de tu cuenta bancaria</p>
-                    <p className="text-xs text-blue-600">Ingresa la CLABE de la cuenta donde recibirás el dinero. Debe ser una cuenta a tu nombre.</p>
+                  <div className="rounded-2xl p-4 border" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+                    <p className="text-sm font-bold mb-1" style={{color: MORADO}}>🏦 Datos de tu cuenta bancaria</p>
+                    <p className="text-xs" style={{color: '#6D28D9'}}>Ingresa la CLABE de la cuenta donde recibirás el dinero.</p>
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">CLABE Interbancaria (18 dígitos)</label>
-                    <input
-                      type="tel"
-                      placeholder="000000000000000000"
-                      value={clabe}
-                      onChange={e => setClabe(e.target.value.replace(/\D/g, '').slice(0, 18))}
-                      className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 font-mono text-lg tracking-widest"
-                      maxLength={18}
-                    />
-                    <p className={`text-xs mt-1 ${clabe.length === 18 ? 'text-green-600' : 'text-gray-400'}`}>
-                      {clabe.length}/18 dígitos {clabe.length === 18 && '✓'}
-                    </p>
+                    <input type="tel" placeholder="000000000000000000" value={clabe} onChange={e => setClabe(e.target.value.replace(/\D/g,'').slice(0,18))} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 font-mono text-lg tracking-widest bg-gray-50" maxLength={18}/>
+                    <p className={`text-xs mt-1 ${clabe.length === 18 ? 'text-green-600' : 'text-gray-400'}`}>{clabe.length}/18 dígitos {clabe.length === 18 && '✓'}</p>
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Banco</label>
-                    <select value={banco} onChange={e => setBanco(e.target.value)}
-                      className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 bg-white">
+                    <select value={banco} onChange={e => setBanco(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 bg-white">
                       <option value="">Selecciona tu banco</option>
                       {bancos.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
-
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Nombre del titular de la cuenta</label>
-                    <input
-                      type="text"
-                      placeholder="Tal como aparece en tu estado de cuenta"
-                      value={titular}
-                      onChange={e => setTitular(e.target.value)}
-                      className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900"
-                    />
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Nombre del titular</label>
+                    <input type="text" placeholder="Tal como aparece en tu estado de cuenta" value={titular} onChange={e => setTitular(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 bg-gray-50"/>
                   </div>
-
-                  <div
-                    onClick={() => setGuardarDatos(!guardarDatos)}
-                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${guardarDatos ? 'border-teal-400 bg-teal-50' : 'border-gray-200'}`}>
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition ${guardarDatos ? 'bg-teal-500 border-teal-500' : 'border-gray-300'}`}>
-                      {guardarDatos && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  <div onClick={() => setGuardarDatos(!guardarDatos)} className="flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition" style={{borderColor: guardarDatos ? MORADO : '#E5E7EB', background: guardarDatos ? '#F5F0FF' : 'white'}}>
+                    <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition" style={{background: guardarDatos ? MORADO : 'transparent', borderColor: guardarDatos ? MORADO : '#D1D5DB'}}>
+                      {guardarDatos && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <p className="text-sm text-gray-600">Guardar estos datos para futuros retiros</p>
                   </div>
-
                   {errorRetiro && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">{errorRetiro}</div>}
-
-                  <button onClick={avanzarPaso} className="w-full py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-bold text-lg">
-                    Continuar →
-                  </button>
+                  <button onClick={avanzarPaso} className="w-full py-4 text-white rounded-2xl font-bold text-lg" style={{background: MORADO}}>Continuar →</button>
                 </div>
               )}
 
               {!exitoRetiro && paso === 'monto' && (
                 <div className="flex flex-col gap-4">
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 text-center">
+                  <div className="rounded-2xl p-4 border border-gray-100 text-center" style={{background: '#F5F0FF'}}>
                     <p className="text-xs text-gray-500 mb-1">Saldo disponible</p>
-                    <p className="text-3xl font-extrabold text-teal-600">${saldoDisponible.toFixed(2)} MXN</p>
+                    <p className="text-3xl font-extrabold" style={{color: MORADO}}>${saldoDisponible.toFixed(2)} MXN</p>
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">¿Cuánto quieres retirar?</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">$</span>
-                      <input
-                        type="number"
-                        placeholder="0.00"
-                        value={monto}
-                        onChange={e => setMonto(e.target.value)}
-                        className="w-full p-4 pl-8 rounded-2xl border-2 border-gray-200 focus:border-teal-400 outline-none text-gray-900 text-2xl font-bold"
-                        min={MINIMO_RETIRO}
-                        max={Math.min(saldoDisponible, MAXIMO_RETIRO)}
-                        step="0.01"
-                      />
+                      <input type="number" placeholder="0.00" value={monto} onChange={e => setMonto(e.target.value)} className="w-full p-4 pl-8 rounded-2xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-2xl font-bold bg-gray-50" min={MINIMO_RETIRO} max={Math.min(saldoDisponible, MAXIMO_RETIRO)} step="0.01"/>
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MXN</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">Mínimo $50 MXN · Máximo $50,000 MXN por retiro</p>
                   </div>
-
                   <div className="grid grid-cols-4 gap-2">
                     {[50, 100, 200, Math.min(saldoDisponible, MAXIMO_RETIRO)].map((val, i) => (
-                      <button key={i} onClick={() => setMonto(val.toFixed(2))}
-                        className={`py-2 rounded-xl text-sm font-bold border-2 transition ${parseFloat(monto) === val ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      <button key={i} onClick={() => setMonto(val.toFixed(2))} className="py-2 rounded-xl text-sm font-bold border-2 transition"
+                        style={{borderColor: parseFloat(monto) === val ? MORADO : '#E5E7EB', background: parseFloat(monto) === val ? '#F5F0FF' : 'white', color: parseFloat(monto) === val ? MORADO : '#6B7280'}}>
                         {i === 3 ? 'Todo' : `$${val}`}
                       </button>
                     ))}
                   </div>
-
-                  {montoNum > 0 && montoNum <= saldoDisponible && montoNum <= MAXIMO_RETIRO && (
+                  {montoNum > 0 && montoNum <= saldoDisponible && (
                     <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500">Retiras</span>
-                        <span className="font-bold text-gray-900">${montoNum.toFixed(2)} MXN</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Saldo restante</span>
-                        <span className="font-bold text-teal-600">${(saldoDisponible - montoNum).toFixed(2)} MXN</span>
-                      </div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-gray-500">Retiras</span><span className="font-bold text-gray-900">${montoNum.toFixed(2)} MXN</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-gray-500">Saldo restante</span><span className="font-bold" style={{color: MORADO}}>${(saldoDisponible - montoNum).toFixed(2)} MXN</span></div>
                     </div>
                   )}
-
                   {errorRetiro && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">{errorRetiro}</div>}
-
                   <div className="flex gap-3">
                     <button onClick={() => setPaso('datos')} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold">← Atrás</button>
-                    <button onClick={avanzarPaso} className="flex-1 py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-bold">Continuar →</button>
+                    <button onClick={avanzarPaso} className="flex-1 py-4 text-white rounded-2xl font-bold" style={{background: MORADO}}>Continuar →</button>
                   </div>
                 </div>
               )}
 
               {!exitoRetiro && paso === 'confirmar' && (
                 <div className="flex flex-col gap-4">
-                  <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-5 border border-teal-100">
-                    <p className="text-xs text-gray-500 mb-1 text-center">Monto a retirar</p>
-                    <p className="text-4xl font-extrabold text-teal-600 text-center">${montoNum.toFixed(2)}</p>
+                  <div className="rounded-2xl p-5 border text-center" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+                    <p className="text-xs text-gray-500 mb-1">Monto a retirar</p>
+                    <p className="text-4xl font-extrabold" style={{color: MORADO}}>${montoNum.toFixed(2)}</p>
                     <p className="text-center text-gray-400 text-sm mt-1">MXN</p>
                   </div>
-
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-xs text-gray-400 mb-0.5">Banco destino</p>
-                      <p className="font-bold text-gray-900">{banco}</p>
-                    </div>
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-xs text-gray-400 mb-0.5">CLABE</p>
-                      <p className="font-bold text-gray-900 font-mono">
-                        {clabe.replace(/\s/g,'').replace(/(\d{4})/g, '$1 ').trim()}
-                      </p>
-                    </div>
-                    <div className="px-4 py-3">
-                      <p className="text-xs text-gray-400 mb-0.5">Titular</p>
-                      <p className="font-bold text-gray-900">{titular}</p>
-                    </div>
+                    <div className="px-4 py-3 border-b border-gray-100"><p className="text-xs text-gray-400 mb-0.5">Banco destino</p><p className="font-bold text-gray-900">{banco}</p></div>
+                    <div className="px-4 py-3 border-b border-gray-100"><p className="text-xs text-gray-400 mb-0.5">CLABE</p><p className="font-bold text-gray-900 font-mono">{clabe.replace(/\s/g,'').replace(/(\d{4})/g,'$1 ').trim()}</p></div>
+                    <div className="px-4 py-3"><p className="text-xs text-gray-400 mb-0.5">Titular</p><p className="font-bold text-gray-900">{titular}</p></div>
                   </div>
-
                   <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-100">
                     <p className="text-xs text-yellow-800 font-semibold">⏱️ Tiempo estimado: 1-3 días hábiles</p>
                     <p className="text-xs text-yellow-700 mt-1">Verifica que la CLABE y el titular sean correctos. Una vez confirmado no podrás cancelar la solicitud.</p>
                   </div>
-
                   {errorRetiro && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">{errorRetiro}</div>}
-
                   <div className="flex gap-3">
                     <button onClick={() => setPaso('monto')} disabled={procesando} className="flex-1 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold disabled:opacity-50">← Atrás</button>
-                    <button onClick={solicitarRetiro} disabled={procesando}
-                      className="flex-1 py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-2xl font-bold disabled:opacity-50">
-                      {procesando ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-                          Procesando...
-                        </div>
-                      ) : 'Confirmar retiro ✓'}
+                    <button onClick={solicitarRetiro} disabled={procesando} className="flex-1 py-4 text-white rounded-2xl font-bold disabled:opacity-50" style={{background: MORADO}}>
+                      {procesando ? <div className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>Procesando...</div> : 'Confirmar retiro ✓'}
                     </button>
                   </div>
                 </div>
               )}
-
             </div>
             <div className="pb-8 flex-shrink-0"/>
           </div>

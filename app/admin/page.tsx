@@ -334,7 +334,7 @@ export default function Admin() {
       // Notificar al Flekser aceptado
       const { data: app } = await supabase.from('aplicaciones').select('prestador_id').eq('id', appId).single();
       if (app?.prestador_id) {
-try {
+        try {
           await supabase.from('notificaciones').insert({
             usuario_id: app.prestador_id,
             tipo: 'aplicacion_aceptada',
@@ -342,7 +342,8 @@ try {
             mensaje: 'El equipo de Fleksi confirmó tu propuesta. Coordina con el cliente.',
             link: '/mis-trabajos',
           });
-        } catch (e) {}      }
+        } catch (e) {}
+      }
       await cargarSolicitudesActivas();
     } catch (e) { console.error(e); }
     finally { setProcesandoApp(null); }
@@ -615,7 +616,7 @@ try {
     setCargandoModalServicios(true);
     setModalServicios({ visible: true, estado, lista: [] });
     try {
-      let query = supabase
+            let query = supabase
         .from('servicios')
         .select('id, titulo, categoria, estado, presupuesto, fecha, hora, created_at, completado_at, usuarios!cliente_id(nombre, foto_url, telefono, email)')
         .order('created_at', { ascending: false });
@@ -1151,7 +1152,7 @@ try {
   const pendienteCount = pagosDispersion.filter(p => !p.dispersado).length;
 
   if (cargando) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-gray-400">Cargando panel admin...</p>
@@ -1160,8 +1161,8 @@ try {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-10">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-8">
+    <main className="min-h-screen pb-10" style={{background: '#F8FAFC'}}>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <div>
             <p className="text-white/70 text-sm">Panel de administración</p>
@@ -1177,27 +1178,27 @@ try {
 
       <div className="max-w-2xl mx-auto px-6 py-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          <button onClick={() => setTab('dashboard')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dashboard' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Dashboard</button>
-          <button onClick={() => setTab('solicitudes')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'solicitudes' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('dashboard')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dashboard' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Dashboard</button>
+          <button onClick={() => setTab('solicitudes')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'solicitudes' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Solicitudes {solicitudesActivas.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{solicitudesActivas.length}</span>}
           </button>
-          <button onClick={() => setTab('historial')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'historial' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Historial</button>
-          <button onClick={() => setTab('acciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'acciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('historial')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'historial' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📊 Historial</button>
+          <button onClick={() => setTab('acciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'acciones' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📋 Acciones {acciones.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{acciones.length}</span>}
           </button>
-          <button onClick={() => setTab('comunicaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'comunicaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📢 Comunicaciones</button>
-          <button onClick={() => setTab('trabajos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'trabajos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>⚡ Trabajos</button>
-          <button onClick={() => setTab('habilidades')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'habilidades' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>🛠️ Habilidades</button>
-          <button onClick={() => setTab('dispersion')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dispersion' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('comunicaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'comunicaciones' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>📢 Comunicaciones</button>
+          <button onClick={() => setTab('trabajos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'trabajos' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>⚡ Trabajos</button>
+          <button onClick={() => setTab('habilidades')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'habilidades' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>🛠️ Habilidades</button>
+          <button onClick={() => setTab('dispersion')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'dispersion' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             💸 Dispersión {pendienteCount > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendienteCount}</span>}
           </button>
-          <button onClick={() => setTab('documentos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'documentos' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('documentos')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'documentos' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             📄 Documentos {totalDocsSubidos > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalDocsSubidos}</span>}
           </button>
-          <button onClick={() => setTab('verificaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'verificaciones' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('verificaciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'verificaciones' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             🪪 Verificaciones {conteoVerifs.en_revision > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{conteoVerifs.en_revision}</span>}
           </button>
-          <button onClick={() => setTab('retiros')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'retiros' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
+          <button onClick={() => setTab('retiros')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'retiros' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
         </div>
@@ -1233,7 +1234,7 @@ try {
                     mudanza: ['🚚 Fletes y traslados', '📦 Mudanza ligera / Ayudante', '🪑 Armado de muebles'],
                     ejecutivo: ['🚗 Chofer ejecutivo'],
                     interprete: ['🗣️ Intérprete / Traductor'],
-                    cocina: ['🍳 Cocinero particular'],
+                                        cocina: ['🍳 Cocinero particular'],
                     jardineria: ['🌿 Jardinería'],
                     mecanica: ['🔩 Mecánica básica'],
                     cerrajeria: ['🔑 Cerrajería'],
@@ -1330,7 +1331,7 @@ try {
                                   <div key={app.id} className={'rounded-xl p-3 border ' + (app.estado === 'rechazado' ? 'bg-red-50 border-red-100 opacity-60' : 'bg-white border-gray-200')}>
                                     <div className="flex items-center justify-between mb-1">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
+                                        <div className="w-8 h-8 rounded-lg bg-purple-700 flex items-center justify-center overflow-hidden flex-shrink-0">{app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}</div>
                                         <div><p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>{app.usuarios?.telefono && <p className="text-xs text-gray-400">📱 {app.usuarios.telefono}</p>}</div>
                                       </div>
                                       <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (app.estado === 'rechazado' ? 'bg-red-100 text-red-500' : 'bg-amber-100 text-amber-700')}>{app.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
@@ -1420,7 +1421,7 @@ try {
                                     <div key={f.id} className="bg-green-50 border border-green-100 rounded-xl p-3">
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">{f.foto_url ? <img src={f.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{f.nombre?.charAt(0) || '?'}</span>}</div>
+                                          <div className="w-8 h-8 rounded-lg bg-purple-700 flex items-center justify-center overflow-hidden flex-shrink-0">{f.foto_url ? <img src={f.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{f.nombre?.charAt(0) || '?'}</span>}</div>
                                           <div><p className="font-bold text-gray-900 text-xs">{f.nombre}</p>{f.ciudad && <p className="text-xs text-gray-400">📍 {f.ciudad}</p>}</div>
                                         </div>
                                         {f.telefono && <p className="text-xs text-gray-500">📱 {f.telefono}</p>}
@@ -1532,7 +1533,7 @@ try {
                             <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                               <p className="text-xs font-bold text-green-800 mb-2">✅ Flekser elegido</p>
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                                   {aceptada.usuarios?.foto_url ? <img src={aceptada.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{aceptada.usuarios?.nombre?.charAt(0) || '?'}</span>}
                                 </div>
                                 <div className="flex-1">
@@ -1560,7 +1561,7 @@ try {
                                     <div key={app.id} className={'rounded-xl p-3 border ' + (esElegido ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100')}>
                                       <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-2">
-                                          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                          <div className="w-7 h-7 rounded-lg bg-purple-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                                             {app.usuarios?.foto_url ? <img src={app.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{app.usuarios?.nombre?.charAt(0) || '?'}</span>}
                                           </div>
                                           <p className="font-bold text-gray-900 text-xs">{app.usuarios?.nombre || '—'}</p>
@@ -1621,7 +1622,7 @@ try {
             <div>
               <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
                 {[{ key: '7d', label: '7 días' }, { key: '30d', label: '30 días' }, { key: '90d', label: '90 días' }, { key: 'todo', label: 'Todo' }].map(p => (
-                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoTrabajos === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{p.label}</button>
+                  <button key={p.key} onClick={() => setPeriodoTrabajos(p.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoTrabajos === p.key ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{p.label}</button>
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1634,8 +1635,8 @@ try {
                 <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100"><p className="text-xl font-extrabold text-red-600">{cancelados}</p><p className="text-xs text-gray-400 mt-0.5">Cancelados</p></div>
                 <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100"><p className="text-xl font-extrabold text-purple-600">{conContraoferta}</p><p className="text-xs text-gray-400 mt-0.5">Contraoferta</p></div>
               </div>
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 mb-4 flex items-center justify-between">
-                <div><p className="text-white/70 text-xs font-semibold">Ticket promedio</p><p className="text-white font-extrabold text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p></div>
+              <div className="bg-purple-700 rounded-2xl p-4 mb-4 flex items-center justify-between">
+                <div><p className="text-white/70 text-xs font-semibold">Ticket promedio</p><p className="font-extrabold text-gray-900 text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p></div>
                 <span className="text-4xl">🎯</span>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
@@ -1669,7 +1670,7 @@ try {
                   <h3 className="font-extrabold text-gray-900 mb-3">📋 Listado</h3>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {[{ key: 'todos', label: 'Todos' }, { key: 'activo', label: '⚡ Activos' }, { key: 'completado', label: '✅ Completados' }, { key: 'cancelado', label: '❌ Cancelados' }].map(f => (
-                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (filtroTrabajos === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500')}>{f.label}</button>
+                      <button key={f.key} onClick={() => setFiltroTrabajos(f.key as any)} className={'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition ' + (filtroTrabajos === f.key ? 'bg-purple-700 text-white' : 'bg-gray-100 text-gray-500')}>{f.label}</button>
                     ))}
                   </div>
                 </div>
@@ -1720,7 +1721,7 @@ try {
                     <div key={accion.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {usr?.foto_url ? <img src={usr.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{usr?.nombre?.charAt(0) || '?'}</span>}
                           </div>
                           <div><p className="font-extrabold text-gray-900 text-sm">{usr?.nombre || 'Usuario'}</p>{usr?.telefono && <p className="text-xs text-gray-500">📱 {usr.telefono}</p>}</div>
@@ -1739,7 +1740,7 @@ try {
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => copiarMensaje(msgWA, accion.id)} className={'flex-1 py-2.5 rounded-xl font-bold text-xs transition ' + (yaCopiado ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200')}>{yaCopiado ? '✅ ¡Copiado!' : '📋 Copiar mensaje'}</button>
-                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id} className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">{marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}</button>
+                        <button onClick={() => marcarLeida(accion.id)} disabled={marcandoLeida === accion.id} className="flex-1 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs hover:opacity-90 transition disabled:opacity-50">{marcandoLeida === accion.id ? 'Guardando...' : '✅ Ya avisé'}</button>
                       </div>
                     </div>
                   );
@@ -1752,8 +1753,8 @@ try {
         {tab === 'comunicaciones' && (
           <div>
             <div className="flex gap-2 mb-6">
-              <button onClick={() => setModoComunicacion('individual')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'individual' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>👤 Individual</button>
-              <button onClick={() => setModoComunicacion('masivo')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'masivo' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📣 Masivo</button>
+              <button onClick={() => setModoComunicacion('individual')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'individual' ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>👤 Individual</button>
+              <button onClick={() => setModoComunicacion('masivo')} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'masivo' ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📣 Masivo</button>
               <button onClick={() => { setModoComunicacion('whatsapp'); cargarUsuariosWA(); }} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'whatsapp' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📱 WhatsApp</button>
               <button onClick={() => { setModoComunicacion('metricas'); cargarMetricasMensajes(); }} className={'flex-1 py-3 rounded-2xl font-bold text-sm transition ' + (modoComunicacion === 'metricas' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200')}>📊 Métricas</button>
             </div>
@@ -1851,7 +1852,7 @@ try {
                 {cargandoWA ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"/></div>
                 : usuariosWA.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin usuarios</p></div>
                 : (
-                  <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-3">
                     <p className="text-xs text-gray-400">{usuariosWA.length} usuarios</p>
                     {usuariosWA.map((u) => {
                       const mensaje = generarMensajeWA(u);
@@ -1861,7 +1862,7 @@ try {
                         <div key={u.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                 {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
                               </div>
                               <div>
@@ -1906,7 +1907,7 @@ try {
                     <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 overflow-hidden">
                       {resultadosBusqueda.map((u) => (
                         <button key={u.id} onClick={() => { setUsuarioSeleccionado(u); setBusquedaUsuario(u.nombre); setResultadosBusqueda([]); }} className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition text-left border-b border-gray-100 last:border-0">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-8 h-8 rounded-lg bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{u.nombre?.charAt(0)}</span>}
                           </div>
                           <div><p className="font-bold text-gray-900 text-sm">{u.nombre}</p><p className="text-xs text-gray-400">{u.email} · {u.rol}</p></div>
@@ -1918,7 +1919,7 @@ try {
                 {usuarioSeleccionado && (
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-purple-700 flex items-center justify-center overflow-hidden">
                         {usuarioSeleccionado.foto_url ? <img src={usuarioSeleccionado.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{usuarioSeleccionado.nombre?.charAt(0)}</span>}
                       </div>
                       <div><p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p><p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p></div>
@@ -1929,7 +1930,7 @@ try {
                 <div className="mb-3"><label className="text-sm font-semibold text-gray-700 mb-1 block">Título</label><input type="text" placeholder="Ej. Información importante sobre tu cuenta" value={tituloMensaje} onChange={(e) => setTituloMensaje(e.target.value)} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/></div>
                 <div className="mb-4"><label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label><textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMensaje} onChange={(e) => setCuerpoMensaje(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/></div>
                 {mensajeEnviado && <div className={'rounded-xl p-3 mb-4 text-sm font-semibold ' + (mensajeEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700')}>{mensajeEnviado}</div>}
-                <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}</button>
+                <button onClick={enviarMensajeIndividual} disabled={!usuarioSeleccionado || !tituloMensaje.trim() || !cuerpoMensaje.trim() || enviandoMensaje} className="w-full py-3 bg-purple-700 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMensaje ? 'Enviando...' : '📤 Enviar mensaje'}</button>
               </div>
             )}
 
@@ -1948,7 +1949,7 @@ try {
                 <div className="mb-4"><label className="text-sm font-semibold text-gray-700 mb-1 block">Mensaje</label><textarea placeholder="Escribe el mensaje aquí..." value={cuerpoMasivo} onChange={(e) => setCuerpoMasivo(e.target.value)} rows={4} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition resize-none"/></div>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4"><p className="text-amber-800 text-xs font-semibold">⚠️ Este mensaje llegará a todos los usuarios del segmento como notificación en la app.</p></div>
                 {mensajeMasivoEnviado && <div className={'rounded-xl p-3 mb-4 text-sm font-semibold ' + (mensajeMasivoEnviado.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700')}>{mensajeMasivoEnviado}</div>}
-                <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}</button>
+                <button onClick={enviarMensajeMasivo} disabled={!tituloMasivo.trim() || !cuerpoMasivo.trim() || enviandoMasivo} className="w-full py-3 bg-purple-700 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{enviandoMasivo ? 'Enviando...' : '📣 Enviar a todos'}</button>
               </div>
             )}
           </div>
@@ -1996,8 +1997,8 @@ try {
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo funciona la dispersión?</p><p className="text-blue-700 text-xs leading-relaxed">Cuando un trabajo se completa y el pago se libera, el dinero queda en tu cuenta de Stripe. Haz la transferencia por SPEI y marca como dispersado.</p></div>
             <div className="flex gap-2 mb-4">
-              <button onClick={() => setFiltroDispersion('pendiente')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'pendiente' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>⏳ Pendientes {pendienteCount > 0 && '(' + pendienteCount + ')'}</button>
-              <button onClick={() => setFiltroDispersion('dispersado')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'dispersado' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>✅ Dispersados</button>
+              <button onClick={() => setFiltroDispersion('pendiente')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'pendiente' ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>⏳ Pendientes {pendienteCount > 0 && '(' + pendienteCount + ')'}</button>
+              <button onClick={() => setFiltroDispersion('dispersado')} className={'flex-1 py-2.5 rounded-2xl font-bold text-sm transition ' + (filtroDispersion === 'dispersado' ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>✅ Dispersados</button>
             </div>
             {cargandoDispersion ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
             : pagosFiltrados.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">{filtroDispersion === 'pendiente' ? '🎉' : '📭'}</p><p className="font-bold text-gray-900">{filtroDispersion === 'pendiente' ? '¡Sin pagos pendientes!' : 'Sin pagos dispersados aún'}</p></div>
@@ -2019,7 +2020,7 @@ try {
                     {!pago.dispersado && (
                       <div className="flex flex-col gap-2">
                         <input type="text" placeholder="Nota opcional..." value={notaDispersion[pago.id] || ''} onChange={(e) => setNotaDispersion(prev => ({ ...prev, [pago.id]: e.target.value }))} className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-400 outline-none text-gray-900 text-sm transition"/>
-                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}</button>
+                        <button onClick={() => marcarDispersado(pago.id, notaDispersion[pago.id] || '')} disabled={marcandoDispersado === pago.id} className="w-full py-3 bg-purple-700 text-white rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{marcandoDispersado === pago.id ? 'Guardando...' : '✅ Marcar como dispersado'}</button>
                       </div>
                     )}
                   </div>
@@ -2059,7 +2060,7 @@ try {
                     <div className="bg-green-50 rounded-xl p-4 border border-green-100"><p className="text-xs text-gray-500 font-semibold mb-1">Hoy</p><p className="text-2xl font-extrabold text-green-700">${metrics.ingresosDia.toLocaleString()}</p><p className="text-xs text-gray-400">MXN</p></div>
                     <div className="bg-green-50 rounded-xl p-4 border border-green-100"><p className="text-xs text-gray-500 font-semibold mb-1">Este mes</p><p className="text-2xl font-extrabold text-green-700">${metrics.ingresosMes.toLocaleString()}</p><p className="text-xs text-gray-400">MXN</p></div>
                   </div>
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4"><p className="text-white/70 text-xs font-semibold mb-1">Comisión acumulada Fleksi (25%)</p><p className="text-3xl font-extrabold text-white">${metrics.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-white/60 text-xs mt-1">MXN ganados por Fleksi</p></div>
+                  <div className="bg-purple-700 rounded-xl p-4"><p className="text-white/70 text-xs font-semibold mb-1">Comisión acumulada Fleksi (25%)</p><p className="text-3xl font-extrabold text-white">${metrics.comisionAcumulada.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p><p className="text-white/60 text-xs mt-1">MXN ganados por Fleksi</p></div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📍</span> Ciudad con más actividad</h2>
@@ -2146,11 +2147,11 @@ try {
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>📥</span> Descargar reporte</h2>
                   <div className="flex gap-2 flex-wrap mb-4">
-                    {PERIODOS.map(p => (<button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={'px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoReporte === p.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>{p.label}</button>))}
+                    {PERIODOS.map(p => (<button key={p.key} onClick={() => setPeriodoReporte(p.key)} className={'px-3 py-1.5 rounded-full text-xs font-bold transition ' + (periodoReporte === p.key ? 'bg-purple-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>{p.label}</button>))}
                   </div>
                   <div className="flex gap-3">
                     <button onClick={descargarExcel} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">{generandoReporte === 'excel' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📊'} Excel</button>
-                    <button onClick={descargarPDF} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF</button>
+                    <button onClick={descargarPDF} disabled={!!generandoReporte} className="flex-1 flex items-center justify-center gap-2 py-3 bg-purple-700 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">{generandoReporte === 'pdf' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '📄'} PDF</button>
                   </div>
                   <button onClick={descargarPDFMercado} disabled={!!generandoReporte} className="w-full mt-3 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-2xl font-bold text-sm hover:opacity-90 transition disabled:opacity-50">
                     {generandoReporte === 'mercado' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : '🔍'} Análisis de mercado
@@ -2178,7 +2179,7 @@ try {
                     <div key={grupo.usuario_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                       <button onClick={() => setUsuarioExpandido(expandido ? null : grupo.usuario_id)} className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0">
                             {grupo.usuario?.foto_url ? <img src={grupo.usuario.foto_url} className="w-full h-full object-cover rounded-xl"/> : <span className="text-white font-bold text-sm">{grupo.usuario?.nombre?.charAt(0) || '?'}</span>}
                           </div>
                           <div className="text-left">
@@ -2267,7 +2268,7 @@ try {
             </div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'en_revision', label: '🔍 En revisión' }, { key: 'aprobado', label: '✅ Aprobados' }, { key: 'rechazado', label: '❌ Rechazados' }, { key: 'todas', label: '📋 Todas' }].map(f => (
-                <button key={f.key} onClick={() => setFiltro(f.key)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtro === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
+                <button key={f.key} onClick={() => setFiltro(f.key)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtro === f.key ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
               ))}
             </div>
             {filtradas.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin verificaciones en esta categoría</p></div> : (
@@ -2276,7 +2277,7 @@ try {
                   <div key={v.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center">
                           {v.usuarios?.foto_url ? <img src={v.usuarios.foto_url} className="w-full h-full object-cover rounded-xl"/> : <span className="text-white font-bold">{v.usuarios?.nombre?.charAt(0) || '?'}</span>}
                         </div>
                         <div>
@@ -2300,7 +2301,7 @@ try {
                       ) : (
                         <div className="flex gap-2">
                           <button onClick={() => setRechazando(v.id)} className="flex-1 py-3 border-2 border-red-200 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition">❌ Rechazar</button>
-                          <button onClick={() => aprobar(v.id, v.usuario_id, v.usuarios?.nombre)} disabled={procesando === v.id} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-50">{procesando === v.id ? 'Aprobando...' : '✅ Aprobar'}</button>
+                          <button onClick={() => aprobar(v.id, v.usuario_id, v.usuarios?.nombre)} disabled={procesando === v.id} className="flex-1 py-3 bg-purple-700 text-white rounded-xl font-bold text-sm disabled:opacity-50">{procesando === v.id ? 'Aprobando...' : '✅ Aprobar'}</button>
                         </div>
                       )
                     )}
@@ -2322,7 +2323,7 @@ try {
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5"><p className="text-blue-800 text-sm font-semibold mb-1">📌 ¿Cómo procesar un retiro?</p><p className="text-blue-700 text-xs leading-relaxed">Haz la transferencia SPEI a la CLABE indicada y marca como completado.</p></div>
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {[{ key: 'pendiente', label: '⏳ Pendientes' }, { key: 'completado', label: '✅ Completados' }, { key: 'rechazado', label: '❌ Rechazados' }].map(f => (
-                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtroRetiros === f.key ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
+                <button key={f.key} onClick={() => setFiltroRetiros(f.key as any)} className={'flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition ' + (filtroRetiros === f.key ? 'bg-purple-700 text-white' : 'bg-white text-gray-500 border border-gray-200')}>{f.label}</button>
               ))}
             </div>
             {cargandoRetiros ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
@@ -2403,7 +2404,7 @@ try {
                 {modalUsuarios.lista.map((u) => (
                   <div key={u.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
                       </div>
                       <div className="flex-1">

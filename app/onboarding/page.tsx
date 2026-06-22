@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 const slides: Record<string, any[]> = {
   flekser: [
     {
-      bg: 'from-blue-600 to-purple-700',
+      bg: 'from-purple-700 to-purple-900',
       ilustracion: (
         <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
           <rect x="20" y="120" width="40" height="80" rx="4" fill="rgba(255,255,255,0.15)"/>
@@ -32,7 +32,7 @@ const slides: Record<string, any[]> = {
       descripcion: 'Encuentra trabajos cerca de ti, aplica con tu precio y empieza a ganar dinero hoy mismo.',
     },
     {
-      bg: 'from-purple-600 to-pink-600',
+      bg: 'from-purple-600 to-purple-800',
       ilustracion: (
         <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
           <rect x="100" y="20" width="100" height="180" rx="16" fill="rgba(255,255,255,0.2)"/>
@@ -58,7 +58,7 @@ const slides: Record<string, any[]> = {
       descripcion: 'Ve los trabajos disponibles, aplica con el precio que quieres y espera a que te contraten.',
     },
     {
-      bg: 'from-green-500 to-teal-600',
+      bg: 'from-purple-800 to-indigo-900',
       ilustracion: (
         <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
           <path d="M150 20 L220 50 L220 110 Q220 160 150 190 Q80 160 80 110 L80 50 Z" fill="rgba(255,255,255,0.2)"/>
@@ -78,7 +78,7 @@ const slides: Record<string, any[]> = {
       descripcion: 'El cliente paga antes de que empieces. Tú terminas el trabajo y el dinero se libera automáticamente.',
     },
     {
-      bg: 'from-blue-700 to-indigo-800',
+      bg: 'from-indigo-700 to-purple-900',
       ilustracion: (
         <svg viewBox="0 0 300 220" className="w-full max-w-xs mx-auto">
           <rect x="60" y="30" width="180" height="140" rx="12" fill="rgba(255,255,255,0.15)"/>
@@ -259,7 +259,7 @@ function OnboardingContent() {
 
   if (cargando) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+      <main className="min-h-screen bg-purple-800 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/>
       </main>
     );
@@ -337,7 +337,7 @@ function OnboardingContent() {
 export default function Onboarding() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+      <main className="min-h-screen bg-purple-800 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"/>
       </main>
     }>

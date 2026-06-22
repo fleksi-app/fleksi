@@ -1,11 +1,11 @@
 export default function Privacidad() {
   return (
-    <main className="min-h-screen bg-gray-50 pb-16">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-12 pb-8">
+    <main className="min-h-screen pb-16" style={{background: '#F8FAFC'}}>
+      <div className="bg-white px-6 pt-12 pb-6 shadow-sm border-b border-gray-100">
         <div className="max-w-2xl mx-auto">
-          <a href="/" className="text-white/70 text-sm hover:text-white transition">← Volver</a>
-          <h1 className="text-white font-extrabold text-2xl mt-3">Aviso de Privacidad Integral</h1>
-          <p className="text-white/70 text-sm mt-1">Versión 1.0 — Junio 2026 — Conforme a la LFPDPPP</p>
+          <a href="/" className="text-gray-400 text-sm hover:text-gray-600 transition">← Volver</a>
+          <h1 className="font-extrabold text-gray-900 text-2xl mt-3">Aviso de Privacidad Integral</h1>
+          <p className="text-gray-400 text-sm mt-1">Versión 1.0 — Junio 2026 — Conforme a la LFPDPPP</p>
         </div>
       </div>
 
@@ -159,7 +159,7 @@ export default function Privacidad() {
               { letra: 'O', nombre: 'Oposición', desc: 'Oponerte al tratamiento de tus datos' },
             ].map((d) => (
               <div key={d.letra} className="bg-gray-50 rounded-xl p-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-extrabold text-sm mb-2">{d.letra}</div>
+                <div className="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center text-white font-extrabold text-sm mb-2">{d.letra}</div>
                 <p className="text-sm font-bold text-gray-900">{d.nombre}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{d.desc}</p>
               </div>
