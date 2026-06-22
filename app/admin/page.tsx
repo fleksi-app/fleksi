@@ -1162,16 +1162,16 @@ export default function Admin() {
 
   return (
     <main className="min-h-screen pb-10" style={{background: '#F8FAFC'}}>
-      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
+      <div className="px-6 pt-12 pb-4 shadow-sm" style={{background: '#EDE9FA', borderBottom: '1px solid #DDD6FE'}}>
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <div>
-            <p className="text-white/70 text-sm">Panel de administración</p>
-            <h1 className="text-white font-extrabold text-2xl mb-1">Fleksi Admin</h1>
-            <p className="text-white/70 text-sm">{usuario?.email}</p>
+            <p className="text-xs font-semibold" style={{color: '#7C3AED'}}>Panel de administración</p>
+            <h1 className="font-extrabold text-2xl mb-0.5" style={{color: '#1A1A2E'}}>⚡ Fleksi Admin</h1>
+            <p className="text-xs" style={{color: '#6D28D9'}}>{usuario?.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { cargarMetrics(); cargarDatos(); }} className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">🔄</button>
-            <a href="/perfil" className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-white/30 transition">← Perfil</a>
+            <button onClick={() => { cargarMetrics(); cargarDatos(); }} className="text-xs font-bold px-3 py-2 rounded-full transition" style={{background: '#DDD6FE', color: '#5B21B6'}}>🔄</button>
+            <a href="/perfil" className="text-xs font-bold px-3 py-2 rounded-full transition" style={{background: '#DDD6FE', color: '#5B21B6'}}>← Perfil</a>
           </div>
         </div>
       </div>
