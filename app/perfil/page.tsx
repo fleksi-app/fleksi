@@ -1174,6 +1174,7 @@ export default function Perfil() {
           )}
         </div>
 
+        </>)}
       </div>
 
       {fotoAmpliada && (
@@ -1230,7 +1231,6 @@ export default function Perfil() {
         </div>
       )}
 
-        </>)}
       <Nav activo="perfil" />
     </main>
   );
