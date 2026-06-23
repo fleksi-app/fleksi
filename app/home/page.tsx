@@ -249,6 +249,13 @@ export default function HomeWorker() {
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
 
+  const fleksersFiltrados = busqueda.trim().length >= 2
+    ? fleksers.filter(f =>
+        f.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (f.habilidades || []).some((h: string) => h.toLowerCase().includes(busqueda.toLowerCase()))
+      )
+    : [];
+
   const trabajosFiltrados = trabajos
     .filter(t => !trabajosCompletados.includes(t.id))
     .filter(t => !aplicacionesRechazadas.includes(t.id))
@@ -333,7 +340,7 @@ export default function HomeWorker() {
         </div>
 
         {/* Widget wallet */}
-        {(usuario?.rol === 'flekser' || usuario?.rol === 'viajero') && (walletSaldo > 0 || ganadoMes > 0) && (
+        {usuario && (
           <div className="max-w-md mx-auto mb-3">
             <a href="/wallet" className="flex items-center justify-between rounded-2xl px-4 py-2.5 hover:opacity-90 transition" style={{background: '#F5F0FF'}}>
               <div className="flex items-center gap-2">
@@ -416,11 +423,32 @@ export default function HomeWorker() {
           </div>
         </div>
 
+        {/* ── RESULTADOS DE BÚSQUEDA ── */}
+        {busqueda.trim().length >= 2 && (fleksersFiltrados.length > 0) && (
+          <div className="mb-6">
+            <h2 className="font-extrabold text-gray-900 mb-3">👤 Fleksers que coinciden</h2>
+            <div className="flex flex-col gap-2">
+              {fleksersFiltrados.slice(0, 3).map((f) => (
+                <a href={'/perfil/' + f.id} key={f.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 active:scale-95 transition">
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+                    {f.foto_url ? <img src={f.foto_url} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center font-bold text-gray-400 text-lg">{f.nombre?.charAt(0)}</div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-sm">{f.nombre}</p>
+                    <p className="text-xs text-gray-400 truncate">{(f.habilidades || []).slice(0,2).join(', ') || 'Flekser'}</p>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Ver perfil →</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── SERVICIOS POPULARES CERCA DE TI ── */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-extrabold text-gray-900">
-              {ciudadActiva ? 'Servicios en ' + ciudadActiva : 'Servicios disponibles'}
+              {busqueda.trim().length >= 2 ? 'Servicios que coinciden' : ciudadActiva ? 'Servicios en ' + ciudadActiva : 'Servicios disponibles'}
             </h2>
             <span className="text-xs text-gray-400 font-semibold">{trabajosFiltrados.length} activos</span>
           </div>
