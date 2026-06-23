@@ -112,6 +112,7 @@ export default function Perfil() {
   const [mostrarModalCodigo, setMostrarModalCodigo] = useState(false);
   const [copiadoModal, setCopiadoModal] = useState(false);
 
+  const [tabActiva, setTabActiva] = useState<'perfil'|'cuenta'>('perfil');
   const [mostrarCuenta, setMostrarCuenta] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState(false);
   const [cuentaNombre, setCuentaNombre] = useState('');
@@ -407,7 +408,7 @@ export default function Perfil() {
     } finally {
       setGuardandoCuenta(false);
     }
-  };
+      };
 
   const cambiarPassword = async () => {
     setErrorPass('');
@@ -561,7 +562,24 @@ export default function Perfil() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 px-6">
+        <div className="max-w-md mx-auto flex gap-1 pt-2">
+          <button onClick={() => setTabActiva('perfil')}
+            className="flex-1 py-2.5 text-sm font-bold border-b-2 transition"
+            style={{borderColor: tabActiva === 'perfil' ? '#7B2FE0' : 'transparent', color: tabActiva === 'perfil' ? '#7B2FE0' : '#9CA3AF'}}>
+            👤 Perfil
+          </button>
+          <button onClick={() => setTabActiva('cuenta')}
+            className="flex-1 py-2.5 text-sm font-bold border-b-2 transition"
+            style={{borderColor: tabActiva === 'cuenta' ? '#7B2FE0' : 'transparent', color: tabActiva === 'cuenta' ? '#7B2FE0' : '#9CA3AF'}}>
+            ⚙️ Mi cuenta
+          </button>
+        </div>
+      </div>
+
       <div className="max-w-md mx-auto px-6 pt-4">
+        {tabActiva === 'perfil' && (<>
 
         {mostrarBannerIntencion && (
           <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-purple-200 mb-4">
@@ -800,7 +818,7 @@ export default function Perfil() {
         {tieneBadge('confianza_maxima') && (
           <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
             <span className="text-3xl">🛡️</span>
-            <div>
+                        <div>
               <p className="font-extrabold text-indigo-700 text-sm">¡Confianza máxima!</p>
               <p className="text-xs text-indigo-500">Tus antecedentes no penales fueron verificados. Los clientes confían más en ti.</p>
             </div>
@@ -1013,6 +1031,9 @@ export default function Perfil() {
           )}
         </div>
 
+        </>)}
+
+        {tabActiva === 'cuenta' && (<>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
           <button onClick={() => setMostrarCuenta(!mostrarCuenta)}
             className="w-full flex items-center justify-between p-5">
@@ -1209,6 +1230,7 @@ export default function Perfil() {
         </div>
       )}
 
+        </>)}
       <Nav activo="perfil" />
     </main>
   );
