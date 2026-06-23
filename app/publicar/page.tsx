@@ -795,8 +795,12 @@ function PublicarForm() {
               className="flex-1 py-4 text-white rounded-2xl font-bold shadow-sm transition disabled:opacity-50"
               style={{background: '#7B2FE0'}}>
               {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
-            </button>
-                </main>
+</button>
+          )}
+        </div>
+      </div>
+
+    </main>
   );
 }
 
