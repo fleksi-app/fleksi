@@ -508,5 +508,3 @@ export default function Wallet() {
     </main>
   );
 }
-ENDOFFILE
-echo "OK"
