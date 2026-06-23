@@ -136,6 +136,8 @@ export default function Admin() {
   const [rechazandoRetiro, setRechazandoRetiro] = useState('');
 
   const [modalUsuarios, setModalUsuarios] = useState<{ visible: boolean; rol: string; lista: any[] }>({ visible: false, rol: '', lista: [] });
+  const [modalIntencion, setModalIntencion] = useState<{ visible: boolean; tipo: string; lista: any[] }>({ visible: false, tipo: '', lista: [] });
+  const [cargandoModalIntencion, setCargandoModalIntencion] = useState(false);
   const [cargandoModal, setCargandoModal] = useState(false);
 
   const [modalServicios, setModalServicios] = useState<{ visible: boolean; estado: string; lista: any[] }>({ visible: false, estado: '', lista: [] });
@@ -612,11 +614,26 @@ export default function Admin() {
     finally { setCargandoModal(false); }
   };
 
+  const abrirModalIntencion = async (tipo: string) => {
+    setCargandoModalIntencion(true);
+        setModalIntencion({ visible: true, tipo, lista: [] });
+    try {
+      let query = supabase.from('usuarios').select('id, nombre, email, telefono, ciudad, foto_url, created_at, rol, intencion');
+      if (tipo === 'trabajar') query = query.eq('intencion', 'trabajar');
+      else if (tipo === 'contratar') query = query.eq('intencion', 'contratar');
+      else if (tipo === 'ambos') query = query.eq('intencion', 'ambos');
+      else if (tipo === 'sin_dato') query = query.is('intencion', null);
+      const { data } = await query.order('created_at', { ascending: false });
+      setModalIntencion({ visible: true, tipo, lista: data || [] });
+    } catch (e) { console.error(e); }
+    finally { setCargandoModalIntencion(false); }
+  };
+
   const abrirModalServicios = async (estado: 'activos' | 'completados' | 'cancelados') => {
     setCargandoModalServicios(true);
     setModalServicios({ visible: true, estado, lista: [] });
     try {
-            let query = supabase
+      let query = supabase
         .from('servicios')
         .select('id, titulo, categoria, estado, presupuesto, fecha, hora, created_at, completado_at, usuarios!cliente_id(nombre, foto_url, telefono, email)')
         .order('created_at', { ascending: false });
@@ -1217,7 +1234,7 @@ export default function Admin() {
             ) : solicitudesActivas.length === 0 ? (
               <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">🎉</p><p className="font-bold text-gray-900 mb-1">¡Todo en orden!</p><p className="text-gray-400 text-sm">Todas las solicitudes activas tienen Flekser aceptado</p></div>
             ) : (
-              <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-4">
                 {solicitudesActivas.map((svc) => {
                   const expandido = solicitudExpandida === svc.id;
                   const apps = svc.aplicaciones || [];
@@ -1234,7 +1251,7 @@ export default function Admin() {
                     mudanza: ['🚚 Fletes y traslados', '📦 Mudanza ligera / Ayudante', '🪑 Armado de muebles'],
                     ejecutivo: ['🚗 Chofer ejecutivo'],
                     interprete: ['🗣️ Intérprete / Traductor'],
-                                        cocina: ['🍳 Cocinero particular'],
+                    cocina: ['🍳 Cocinero particular'],
                     jardineria: ['🌿 Jardinería'],
                     mecanica: ['🔩 Mecánica básica'],
                     cerrajeria: ['🔑 Cerrajería'],
@@ -1835,7 +1852,7 @@ export default function Admin() {
                               )}
                             </div>
                           )}
-                        </div>
+                                                  </div>
                       );
                     })}
                   </div>
@@ -1852,7 +1869,7 @@ export default function Admin() {
                 {cargandoWA ? <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"/></div>
                 : usuariosWA.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">📭</p><p className="font-bold text-gray-900">Sin usuarios</p></div>
                 : (
-                                    <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
                     <p className="text-xs text-gray-400">{usuariosWA.length} usuarios</p>
                     {usuariosWA.map((u) => {
                       const mensaje = generarMensajeWA(u);
@@ -2070,20 +2087,20 @@ export default function Admin() {
                   <h2 className="font-extrabold text-gray-900 mb-4 flex items-center gap-2"><span>🎯</span> Intención de registro</h2>
                   <div className="flex flex-col gap-3">
                     {[
-                      { label: 'Busca trabajo', sub: 'Quieren ofrecer servicios', count: metrics.intencionTrabajar, emoji: '💼', color: 'bg-blue-50 border-blue-100', textColor: 'text-blue-600' },
-                      { label: 'Busca contratar', sub: 'Quieren encontrar ayuda', count: metrics.intencionContratar, emoji: '🔍', color: 'bg-purple-50 border-purple-100', textColor: 'text-purple-600' },
-                      { label: 'Trabaja y contrata', sub: 'Intención dual', count: metrics.intencionAmbos, emoji: '⚡', color: 'bg-green-50 border-green-100', textColor: 'text-green-600' },
-                    ].map(({ label, sub, count, emoji, color, textColor }) => (
-                      <div key={label} className={'flex items-center justify-between rounded-xl p-3 border ' + color}>
-                        <div className="flex items-center gap-2"><span className="text-lg">{emoji}</span><div><p className="font-bold text-gray-900 text-sm">{label}</p><p className="text-xs text-gray-400">{sub}</p></div></div>
-                        <div className="text-right"><p className={'text-2xl font-extrabold ' + textColor}>{count}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((count / metrics.totalUsuarios) * 100) : 0}%</p></div>
-                      </div>
+                      { label: 'Busca trabajo', sub: 'Quieren ofrecer servicios', count: metrics.intencionTrabajar, emoji: '💼', color: 'bg-blue-50 border-blue-100', textColor: 'text-blue-600', tipo: 'trabajar' },
+                      { label: 'Busca contratar', sub: 'Quieren encontrar ayuda', count: metrics.intencionContratar, emoji: '🔍', color: 'bg-purple-50 border-purple-100', textColor: 'text-purple-600', tipo: 'contratar' },
+                      { label: 'Trabaja y contrata', sub: 'Intención dual', count: metrics.intencionAmbos, emoji: '⚡', color: 'bg-green-50 border-green-100', textColor: 'text-green-600', tipo: 'ambos' },
+                    ].map(({ label, sub, count, emoji, color, textColor, tipo }) => (
+                      <button key={label} onClick={() => abrirModalIntencion(tipo)} className={'flex items-center justify-between rounded-xl p-3 border w-full transition hover:opacity-80 active:scale-95 ' + color}>
+                        <div className="flex items-center gap-2"><span className="text-lg">{emoji}</span><div className="text-left"><p className="font-bold text-gray-900 text-sm">{label}</p><p className="text-xs text-gray-400">{sub}</p></div></div>
+                        <div className="text-right"><p className={'text-2xl font-extrabold ' + textColor}>{count}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((count / metrics.totalUsuarios) * 100) : 0}% →</p></div>
+                      </button>
                     ))}
                     {metrics.intencionSinDato > 0 && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
-                        <div className="flex items-center gap-2"><span className="text-lg">❓</span><div><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores</p></div></div>
-                        <div className="text-right"><p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}%</p></div>
-                      </div>
+                      <button onClick={() => abrirModalIntencion('sin_dato')} className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100 w-full hover:opacity-80 transition active:scale-95">
+                        <div className="flex items-center gap-2"><span className="text-lg">❓</span><div className="text-left"><p className="font-bold text-gray-900 text-sm">Sin dato</p><p className="text-xs text-gray-400">Registros anteriores</p></div></div>
+                        <div className="text-right"><p className="text-2xl font-extrabold text-gray-400">{metrics.intencionSinDato}</p><p className="text-xs text-gray-400">{metrics.totalUsuarios > 0 ? Math.round((metrics.intencionSinDato / metrics.totalUsuarios) * 100) : 0}% →</p></div>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -2423,50 +2440,32 @@ export default function Admin() {
         </div>
       )}
 
-      {modalServicios.visible && (() => {
-        const tituloModal = modalServicios.estado === 'activos' ? '⚡ Servicios activos' : modalServicios.estado === 'completados' ? '✅ Servicios completados' : '❌ Servicios cancelados';
-        const categoriaEmoji: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨' };
-        return (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })}>
-            <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="font-extrabold text-gray-900 text-lg">{tituloModal}</h3>
-                <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
-              </div>
-              {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
-              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios en esta categoría</p></div>
-              : (
-                <div className="flex flex-col gap-3">
-                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
-                  {modalServicios.lista.map((s: any) => (
-                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-gray-900 text-sm truncate">{s.titulo}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{s.usuarios?.nombre || 'Cliente'} · {new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                          </div>
-                        </div>
-                        {s.presupuesto > 0 && <span className="text-xs font-bold text-gray-700 flex-shrink-0">${s.presupuesto.toLocaleString('es-MX')} MXN</span>}
-                      </div>
-                      <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
-                        {s.fecha && <span>📅 {s.fecha}{s.hora ? ' ' + s.hora.slice(0,5) : ''}</span>}
-                        {s.usuarios?.telefono && <span>📱 {s.usuarios.telefono}</span>}
-                      </div>
-                      {s.completado_at && (
-                        <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+      {modalIntencion.visible && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalIntencion({ visible: false, tipo: '', lista: [] })}>
+          <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-extrabold text-gray-900 text-lg">
+                {modalIntencion.tipo === 'trabajar' ? '💼 Buscan trabajo' : modalIntencion.tipo === 'contratar' ? '🔍 Buscan contratar' : modalIntencion.tipo === 'ambos' ? '⚡ Trabajan y contratan' : '❓ Sin intención registrada'}
+              </h3>
+              <button onClick={() => setModalIntencion({ visible: false, tipo: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
             </div>
-          </div>
-        );
-      })()}
-
-    </main>
-  );
-}
+            {cargandoModalIntencion ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            : modalIntencion.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin usuarios</p></div>
+            : (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs text-gray-400 mb-1">{modalIntencion.lista.length} usuario{modalIntencion.lista.length !== 1 ? 's' : ''}</p>
+                {modalIntencion.lista.map((u) => (
+                  <div key={u.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                    <div className="flex items-center gap-3 mb-1">
+                      <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-extrabold text-gray-900 text-sm">{u.nombre}</p>
+                        <p className="text-xs text-gray-400 capitalize">{u.rol} {u.ciudad ? '· 📍 ' + u.ciudad : ''}</p>
+                      </div>
+                      <p className="text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                    {u.email && <p className="text-xs text-gray-500 mt-1">✉️ {u.email}</p>}
+                    {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
