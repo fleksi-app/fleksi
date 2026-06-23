@@ -16,6 +16,7 @@ export default function Wallet() {
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [retiros, setRetiros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [tabActiva, setTabActiva] = useState<'saldo'|'metodos'>('saldo');
   const [mostrarRetiro, setMostrarRetiro] = useState(false);
   const [paso, setPaso] = useState<'datos'|'monto'|'confirmar'>('datos');
   const [clabe, setClabe] = useState('');
@@ -27,6 +28,19 @@ export default function Wallet() {
   const [exitoRetiro, setExitoRetiro] = useState(false);
   const [errorRetiro, setErrorRetiro] = useState('');
 
+  // Métodos de pago
+  const [tabMetodo, setTabMetodo] = useState<'cobro'|'pago'>('cobro');
+  const [nombreTarjeta, setNombreTarjeta] = useState('');
+  const [numTarjeta, setNumTarjeta] = useState('');
+  const [expiracion, setExpiracion] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [guardandoMetodo, setGuardandoMetodo] = useState(false);
+  const [guardadoMetodo, setGuardadoMetodo] = useState('');
+  // Cobro separado para la sección de métodos
+  const [clabeMetodo, setClabeMetodo] = useState('');
+  const [bancoMetodo, setBancoMetodo] = useState('');
+  const [titularMetodo, setTitularMetodo] = useState('');
+
   useEffect(() => { cargarDatos(); }, []);
 
   const cargarDatos = async () => {
@@ -34,9 +48,15 @@ export default function Wallet() {
     if (!user) { window.location.href = '/login'; return; }
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario({ ...perfil, id: user.id });
-    if (perfil?.clabe) setClabe(perfil.clabe);
-    if (perfil?.banco) setBanco(perfil.banco);
-    if (perfil?.titular_cuenta) setTitular(perfil.titular_cuenta);
+    if (perfil?.clabe) { setClabe(perfil.clabe); setClabeMetodo(perfil.clabe); }
+    if (perfil?.banco) { setBanco(perfil.banco); setBancoMetodo(perfil.banco); }
+    if (perfil?.titular_cuenta) { setTitular(perfil.titular_cuenta); setTitularMetodo(perfil.titular_cuenta); }
+    if (perfil?.metodo_pago_datos) {
+      const p = perfil.metodo_pago_datos;
+      setNombreTarjeta(p.nombre || '');
+      setNumTarjeta(p.ultimos4 ? '•••• •••• •••• ' + p.ultimos4 : '');
+      setExpiracion(p.expiracion || '');
+    }
     const { data: movs } = await supabase.from('wallet_movimientos').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(50);
     setMovimientos(movs || []);
     const { data: retirosData } = await supabase.from('retiros').select('*').eq('usuario_id', user.id).order('created_at', { ascending: false }).limit(10);
@@ -106,6 +126,33 @@ export default function Wallet() {
     setMostrarRetiro(false); setExitoRetiro(false); setPaso('datos'); setMonto(''); setErrorRetiro('');
   };
 
+  const guardarCobro = async () => {
+    if (!usuario || !clabeMetodo.trim() || clabeMetodo.replace(/\s/g, '').length !== 18) return;
+    setGuardandoMetodo(true);
+    try {
+      const clabeClean = clabeMetodo.replace(/\s/g, '');
+      await supabase.from('usuarios').update({ clabe: clabeClean, banco: bancoMetodo, titular_cuenta: titularMetodo }).eq('id', usuario.id);
+      setClabe(clabeClean); setBanco(bancoMetodo); setTitular(titularMetodo);
+      setGuardadoMetodo('cobro');
+      setTimeout(() => setGuardadoMetodo(''), 2500);
+    } finally { setGuardandoMetodo(false); }
+  };
+
+  const guardarPago = async () => {
+    if (!usuario || !nombreTarjeta.trim() || !numTarjeta.trim() || !expiracion.trim() || !cvv.trim()) return;
+    setGuardandoMetodo(true);
+    try {
+      const ultimos4 = numTarjeta.replace(/\s/g, '').slice(-4);
+      await supabase.from('usuarios').update({ metodo_pago_datos: { nombre: nombreTarjeta.trim(), ultimos4, expiracion: expiracion.trim() } }).eq('id', usuario.id);
+      setCvv(''); setNumTarjeta('•••• •••• •••• ' + ultimos4);
+      setGuardadoMetodo('pago');
+      setTimeout(() => setGuardadoMetodo(''), 2500);
+    } finally { setGuardandoMetodo(false); }
+  };
+
+  const formatClabe = (val: string) => { const nums = val.replace(/\D/g, '').slice(0, 18); return nums.match(/.{1,6}/g)?.join(' ') || nums; };
+  const formatCard = (val: string) => { const nums = val.replace(/\D/g, '').slice(0, 16); return nums.match(/.{1,4}/g)?.join(' ') || nums; };
+
   if (cargando) return (
     <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
       <div className="text-center">
@@ -120,86 +167,214 @@ export default function Wallet() {
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto">
           <h1 className="font-extrabold text-gray-900 text-xl mb-1">Fleksi Wallet</h1>
-          <p className="text-gray-400 text-sm">Tu saldo disponible</p>
+          <p className="text-gray-400 text-sm">Saldo, movimientos y métodos de pago</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 px-6">
+        <div className="max-w-md mx-auto flex gap-1 pt-2">
+          <button onClick={() => setTabActiva('saldo')}
+            className="flex-1 py-2.5 text-sm font-bold border-b-2 transition"
+            style={{borderColor: tabActiva === 'saldo' ? MORADO : 'transparent', color: tabActiva === 'saldo' ? MORADO : '#9CA3AF'}}>
+            💰 Saldo
+          </button>
+          <button onClick={() => setTabActiva('metodos')}
+            className="flex-1 py-2.5 text-sm font-bold border-b-2 transition"
+            style={{borderColor: tabActiva === 'metodos' ? MORADO : 'transparent', color: tabActiva === 'metodos' ? MORADO : '#9CA3AF'}}>
+            💳 Métodos
+          </button>
         </div>
       </div>
 
       <div className="max-w-md mx-auto px-6 pt-4">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
-          <div className="text-center mb-6">
-            <p className="text-gray-400 text-sm mb-1">Saldo disponible</p>
-            <p className="text-5xl font-extrabold" style={{color: MORADO}}>${saldoDisponible.toFixed(2)}</p>
-            <p className="text-gray-400 text-sm mt-1">MXN</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <a href="/wallet/recargar" className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition hover:opacity-90" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
-              <span className="text-2xl">💳</span>
-              <p className="font-bold text-sm" style={{color: MORADO}}>Recargar</p>
-            </a>
-            <button onClick={() => { if (tieneRetiroPendiente) { setErrorRetiro('Ya tienes un retiro pendiente.'); return; } setMostrarRetiro(true); }}
-              disabled={saldoDisponible < MINIMO_RETIRO}
-              className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{background: saldoDisponible >= MINIMO_RETIRO ? '#EFF6FF' : '#F9FAFB', borderColor: saldoDisponible >= MINIMO_RETIRO ? '#BFDBFE' : '#E5E7EB'}}>
-              <span className="text-2xl">🏦</span>
-              <p className="font-bold text-blue-700 text-sm">Retirar</p>
-              {saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400">Mín. $50</p>}
-            </button>
-          </div>
-          {tieneRetiroPendiente && <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center"><p className="text-yellow-700 text-xs font-semibold">⏳ Tienes un retiro en proceso.</p></div>}
-          {saldoDisponible > 0 && saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400 text-center mt-3">Necesitas al menos $50 MXN para retirar. Te faltan ${(MINIMO_RETIRO - saldoDisponible).toFixed(2)} MXN.</p>}
-          {errorRetiro && <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-red-600 text-xs font-semibold">{errorRetiro}</p></div>}
-        </div>
 
-        <div className="rounded-2xl p-4 mb-4 border" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
-          <p className="text-sm font-semibold mb-1" style={{color: MORADO}}>💡 ¿Cómo funcionan los retiros?</p>
-          <p className="text-xs leading-relaxed" style={{color: '#6D28D9'}}>Solicita el retiro, ingresa tu CLABE y en 1-3 días hábiles recibirás el dinero en tu cuenta. Mínimo $50 MXN, máximo $50,000 MXN por retiro.</p>
-        </div>
-
-        {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').length > 0 && (
-          <div className="mb-4">
-            <h3 className="font-extrabold text-gray-900 mb-3">⏳ Retiros en proceso</h3>
-            <div className="flex flex-col gap-2">
-              {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').map(r => (
-                <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-gray-900">${r.monto.toFixed(2)} MXN</p>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoRetiroColor[r.estado]}`}>{estadoRetiroLabel[r.estado]}</span>
-                  </div>
-                  <p className="text-xs text-gray-500">{r.banco} — ****{r.clabe?.slice(-4)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              ))}
+        {/* ── TAB SALDO ── */}
+        {tabActiva === 'saldo' && (
+          <>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
+              <div className="text-center mb-6">
+                <p className="text-gray-400 text-sm mb-1">Saldo disponible</p>
+                <p className="text-5xl font-extrabold" style={{color: MORADO}}>${saldoDisponible.toFixed(2)}</p>
+                <p className="text-gray-400 text-sm mt-1">MXN</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <a href="/wallet/recargar" className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition hover:opacity-90" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+                  <span className="text-2xl">💳</span>
+                  <p className="font-bold text-sm" style={{color: MORADO}}>Recargar</p>
+                </a>
+                <button onClick={() => { if (tieneRetiroPendiente) { setErrorRetiro('Ya tienes un retiro pendiente.'); return; } setMostrarRetiro(true); }}
+                  disabled={saldoDisponible < MINIMO_RETIRO}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl border transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{background: saldoDisponible >= MINIMO_RETIRO ? '#EFF6FF' : '#F9FAFB', borderColor: saldoDisponible >= MINIMO_RETIRO ? '#BFDBFE' : '#E5E7EB'}}>
+                  <span className="text-2xl">🏦</span>
+                  <p className="font-bold text-blue-700 text-sm">Retirar</p>
+                  {saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400">Mín. $50</p>}
+                </button>
+              </div>
+              {tieneRetiroPendiente && <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center"><p className="text-yellow-700 text-xs font-semibold">⏳ Tienes un retiro en proceso.</p></div>}
+              {saldoDisponible > 0 && saldoDisponible < MINIMO_RETIRO && <p className="text-xs text-gray-400 text-center mt-3">Necesitas al menos $50 MXN para retirar. Te faltan ${(MINIMO_RETIRO - saldoDisponible).toFixed(2)} MXN.</p>}
+              {errorRetiro && <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-red-600 text-xs font-semibold">{errorRetiro}</p></div>}
             </div>
-          </div>
+
+            <div className="rounded-2xl p-4 mb-4 border" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+              <p className="text-sm font-semibold mb-1" style={{color: MORADO}}>💡 ¿Cómo funcionan los retiros?</p>
+              <p className="text-xs leading-relaxed" style={{color: '#6D28D9'}}>Solicita el retiro, ingresa tu CLABE y en 1-3 días hábiles recibirás el dinero en tu cuenta. Mínimo $50 MXN, máximo $50,000 MXN por retiro.</p>
+            </div>
+
+            {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').length > 0 && (
+              <div className="mb-4">
+                <h3 className="font-extrabold text-gray-900 mb-3">⏳ Retiros en proceso</h3>
+                <div className="flex flex-col gap-2">
+                  {retiros.filter(r => r.estado === 'pendiente' || r.estado === 'procesando').map(r => (
+                    <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-bold text-gray-900">${r.monto.toFixed(2)} MXN</p>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${estadoRetiroColor[r.estado]}`}>{estadoRetiroLabel[r.estado]}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">{r.banco} — ****{r.clabe?.slice(-4)}</p>
+                      <p className="text-xs text-gray-400 mt-1">{new Date(r.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <h3 className="font-extrabold text-gray-900 mb-3">📋 Movimientos</h3>
+              {movimientos.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                  <p className="text-3xl mb-3">💳</p>
+                  <p className="font-bold text-gray-900 mb-1">Sin movimientos todavía</p>
+                  <p className="text-gray-400 text-sm">Aquí verás tu historial de pagos y retiros</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {movimientos.map(mov => (
+                    <div key={mov.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">{tipoEmoji[mov.tipo] || '💰'}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 text-sm truncate">{mov.descripcion || mov.tipo}</p>
+                          <p className="text-xs text-gray-400">{new Date(mov.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                        <p className={`font-extrabold text-sm flex-shrink-0 ${mov.monto > 0 ? 'text-green-600' : 'text-red-500'}`}>{mov.monto > 0 ? '+' : ''}${Math.abs(mov.monto).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        <div className="mb-4">
-          <h3 className="font-extrabold text-gray-900 mb-3">📋 Movimientos</h3>
-          {movimientos.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
-              <p className="text-3xl mb-3">💳</p>
-              <p className="font-bold text-gray-900 mb-1">Sin movimientos todavía</p>
-              <p className="text-gray-400 text-sm">Aquí verás tu historial de pagos y retiros</p>
+        {/* ── TAB MÉTODOS ── */}
+        {tabActiva === 'metodos' && (
+          <div>
+            {guardadoMetodo && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-3 mb-4 text-center">
+                <p className="text-green-700 font-bold text-sm">✅ Datos guardados correctamente</p>
+              </div>
+            )}
+
+            {/* Sub-tabs cobro / pago */}
+            <div className="flex bg-gray-100 rounded-2xl p-1 mb-5">
+              <button onClick={() => setTabMetodo('cobro')} className="flex-1 py-2.5 rounded-xl font-bold text-sm transition"
+                style={{background: tabMetodo === 'cobro' ? MORADO : 'transparent', color: tabMetodo === 'cobro' ? 'white' : '#6B7280'}}>
+                💰 Cobro (CLABE)
+              </button>
+              <button onClick={() => setTabMetodo('pago')} className="flex-1 py-2.5 rounded-xl font-bold text-sm transition"
+                style={{background: tabMetodo === 'pago' ? MORADO : 'transparent', color: tabMetodo === 'pago' ? 'white' : '#6B7280'}}>
+                💳 Pago (tarjeta)
+              </button>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {movimientos.map(mov => (
-                <div key={mov.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">{tipoEmoji[mov.tipo] || '💰'}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm truncate">{mov.descripcion || mov.tipo}</p>
-                      <p className="text-xs text-gray-400">{new Date(mov.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                    <p className={`font-extrabold text-sm flex-shrink-0 ${mov.monto > 0 ? 'text-green-600' : 'text-red-500'}`}>{mov.monto > 0 ? '+' : ''}${Math.abs(mov.monto).toFixed(2)}</p>
+
+            {tabMetodo === 'cobro' && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h2 className="font-extrabold text-gray-900 mb-1">Cuenta de cobro</h2>
+                <p className="text-gray-400 text-xs mb-4">Para recibir tus pagos como Flekser vía SPEI</p>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1 block">CLABE interbancaria (18 dígitos)</label>
+                    <input type="text" value={clabeMetodo} onChange={e => setClabeMetodo(formatClabe(e.target.value))}
+                      placeholder="000000 000000 000000" maxLength={20}
+                      className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50 font-mono"/>
+                    {clabeMetodo && clabeMetodo.replace(/\s/g, '').length !== 18 && (
+                      <p className="text-red-500 text-xs mt-1">La CLABE debe tener exactamente 18 dígitos</p>
+                    )}
                   </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Banco</label>
+                    <select value={bancoMetodo} onChange={e => setBancoMetodo(e.target.value)}
+                      className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 bg-white text-sm">
+                      <option value="">Selecciona tu banco</option>
+                      {bancos.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Titular de la cuenta</label>
+                    <input type="text" value={titularMetodo} onChange={e => setTitularMetodo(e.target.value)}
+                      placeholder="Nombre completo del titular"
+                      className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50"/>
+                  </div>
+                  <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                    <p className="text-green-700 text-xs font-semibold">💰 Los pagos se transfieren a esta CLABE dentro de 1–2 días hábiles tras confirmar el trabajo.</p>
+                  </div>
+                  <button onClick={guardarCobro} disabled={guardandoMetodo || !clabeMetodo.trim() || clabeMetodo.replace(/\s/g, '').length !== 18}
+                    className="w-full py-4 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
+                    {guardandoMetodo ? 'Guardando...' : '💾 Guardar cuenta'}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+
+            {tabMetodo === 'pago' && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h2 className="font-extrabold text-gray-900 mb-1">Tarjeta de pago</h2>
+                <p className="text-gray-400 text-xs mb-4">Para pagar servicios en Fleksi</p>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Nombre en la tarjeta</label>
+                    <input type="text" value={nombreTarjeta} onChange={e => setNombreTarjeta(e.target.value)} placeholder="FERNANDO NAJERA"
+                      className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50 uppercase"/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1 block">Número de tarjeta</label>
+                    <input type="text" value={numTarjeta} onChange={e => setNumTarjeta(formatCard(e.target.value))}
+                      placeholder="1234 5678 9012 3456" maxLength={19}
+                      className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50 font-mono"/>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 mb-1 block">Vencimiento</label>
+                      <input type="text" value={expiracion} onChange={e => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setExpiracion(v.length > 2 ? v.slice(0,2) + '/' + v.slice(2) : v);
+                      }} placeholder="MM/AA" maxLength={5}
+                        className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50 font-mono"/>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 mb-1 block">CVV</label>
+                      <input type="password" value={cvv} onChange={e => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="•••" maxLength={4}
+                        className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm bg-gray-50 font-mono"/>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                    <p className="text-blue-700 text-xs font-semibold">🔒 Al pagar solo se te pedirá el CVV. Tus datos están encriptados y seguros.</p>
+                  </div>
+                  <button onClick={guardarPago} disabled={guardandoMetodo || !nombreTarjeta.trim() || !numTarjeta.trim() || !expiracion.trim() || !cvv.trim()}
+                    className="w-full py-4 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
+                    {guardandoMetodo ? 'Guardando...' : '💾 Guardar tarjeta'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* Modal retiro */}
       {mostrarRetiro && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={cerrarRetiro}>
           <div className="w-full bg-white rounded-t-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -333,3 +508,5 @@ export default function Wallet() {
     </main>
   );
 }
+ENDOFFILE
+echo "OK"
