@@ -25,8 +25,18 @@ function BotonCompartir({ trabajo }: { trabajo: any }) {
 
   return (
     <button onClick={handleCompartir}
-      className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-purple-100 hover:text-purple-600 transition active:scale-95">
-      {copiado ? '✅' : '🔗'}
+      className="w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95"
+      style={{background: copiado ? '#F0FDF4' : '#F5F0FF'}}>
+      {copiado ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+        </svg>
+      )}
     </button>
   );
 }
@@ -230,7 +240,7 @@ function DetalleTrabajoContent() {
             <span className="text-gray-700 text-sm font-bold">💰 Recibirás</span>
             <span className="font-extrabold text-green-600">${ganancia?.total.toLocaleString('es-MX')} MXN</span>
           </div>
-                  </div>
+        </div>
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 text-left">
           <p className="text-blue-800 text-xs font-semibold">⏳ ¿Qué sigue?</p>
           <p className="text-blue-700 text-xs mt-1 leading-relaxed">El cliente revisará tu propuesta. Si te acepta, recibirás una notificación y el pago quedará retenido en Fleksi hasta que completes el trabajo.</p>
