@@ -3,21 +3,22 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+const MORADO = '#7B2FE0';
 const categorias = [
-  { id: 'hogar', emoji: '🔧', nombre: 'Hogar y reparaciones' },
-  { id: 'limpieza', emoji: '🧹', nombre: 'Limpieza' },
-  { id: 'eventos', emoji: '🍽️', nombre: 'Eventos y hospitalidad' },
-  { id: 'mudanza', emoji: '🚚', nombre: 'Mudanza y carga' },
-  { id: 'ejecutivo', emoji: '🚗', nombre: 'Chofer ejecutivo' },
-  { id: 'interprete', emoji: '🗣️', nombre: 'Intérprete / Traductor' },
-  { id: 'cocina', emoji: '🍳', nombre: 'Cocinero particular' },
-  { id: 'jardineria', emoji: '🌿', nombre: 'Jardinería' },
-  { id: 'mecanica', emoji: '🔩', nombre: 'Mecánica básica' },
-  { id: 'cerrajeria', emoji: '🔑', nombre: 'Cerrajería' },
-  { id: 'estetica', emoji: '💅', nombre: 'Uñas / Estética' },
-  { id: 'envios', emoji: '🛵', nombre: 'Envíos y mensajería' },
-  { id: 'mascotas', emoji: '🐾', nombre: 'Mascotas y paseo' },
-  { id: 'super', emoji: '🛒', nombre: 'Hacer el súper' },
+  { id: 'hogar', nombre: 'Hogar y reparaciones', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg> },
+  { id: 'limpieza', nombre: 'Limpieza', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l9-9"/><path d="M12.5 8.5L16 5l3 3-7.5 7.5"/><path d="M15 6l1.5-1.5a2.12 2.12 0 013 3L18 9"/></svg> },
+  { id: 'eventos', nombre: 'Eventos', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg> },
+  { id: 'mudanza', nombre: 'Mudanza y carga', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+  { id: 'ejecutivo', nombre: 'Chofer ejecutivo', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="2"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg> },
+  { id: 'interprete', nombre: 'Intérprete / Traductor', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> },
+  { id: 'cocina', nombre: 'Cocinero particular', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 011.05-1.54 5 5 0 017.08 0A5.11 5.11 0 0117 6a4 4 0 011.41 7.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></svg> },
+  { id: 'jardineria', nombre: 'Jardinería', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 0 5.5 1.5 7 6zM12 12c0 0 5-2 7-6-3 0-5.5 1.5-7 6z"/></svg> },
+  { id: 'mecanica', nombre: 'Mecánica básica', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg> },
+  { id: 'cerrajeria', nombre: 'Cerrajería', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> },
+  { id: 'estetica', nombre: 'Uñas / Estética', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> },
+  { id: 'envios', nombre: 'Envíos y mensajería', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> },
+  { id: 'mascotas', nombre: 'Mascotas y paseo', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.96-1.45-2.344-2.5M8 14v.5M16 14v.5M11.25 16.25h1.5L12 17l-.75-.75z"/><path d="M4.42 11.247A13.152 13.152 0 0012 15c2.5 0 4.847-.655 6.58-1.753"/></svg> },
+  { id: 'super', nombre: 'Hacer el súper', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> },
   { id: 'otro', emoji: '✨', nombre: 'Otro' },
 ];
 
@@ -396,8 +397,8 @@ function PublicarForm() {
               <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
               <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
                 {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
-                              </span>
-            </div>
+              </span>
+                          </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Stripe' : '💵 Efectivo'}</span></div>
@@ -433,7 +434,7 @@ function PublicarForm() {
       <div className="max-w-md mx-auto px-6 py-6">
         {flekserSugerido && (
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0" style={{background: '#7B2FE0'}}>
               {flekserSugerido.foto_url ? <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-lg">{flekserSugerido.nombre?.charAt(0)}</span>}
             </div>
             <div className="flex-1">
@@ -455,7 +456,7 @@ function PublicarForm() {
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
                   className="p-4 rounded-2xl border-2 text-left transition"
                   style={{borderColor: categoriaSeleccionada === cat.id ? '#7B2FE0' : '#F1F5F9', background: categoriaSeleccionada === cat.id ? '#F5F0FF' : 'white'}}>
-                  <span className="text-2xl mb-2 block">{cat.emoji}</span>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{background: '#F5F0FF'}}>{cat.icon}</div>
                   <span className="text-sm font-semibold text-gray-900">{cat.nombre}</span>
                 </button>
               ))}
@@ -678,7 +679,7 @@ function PublicarForm() {
 
             {flekserSugerido && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0" style={{background: '#7B2FE0'}}>
                   {flekserSugerido.foto_url ? <img src={flekserSugerido.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold">{flekserSugerido.nombre?.charAt(0)}</span>}
                 </div>
                 <div>
@@ -794,4 +795,3 @@ export default function Publicar() {
       <PublicarForm />
     </Suspense>
   );
-}
