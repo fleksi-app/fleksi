@@ -738,7 +738,10 @@ export default function HomeWorker() {
                     {ciudadesSugeridas.map(c => (
                       <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
                         className="flex items-center gap-4 p-4 rounded-2xl border-2 transition"
-                                                  <p className="font-bold text-gray-900">{c}</p>
+                        style={{borderColor: ciudadActiva === c ? MORADO : '#E5E7EB', background: ciudadActiva === c ? '#F5F0FF' : 'white'}}>
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
+                        <div className="flex-1 text-left">
+                          <p className="font-bold text-gray-900">{c}</p>
                           {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
                         </div>
                         {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
@@ -755,6 +758,6 @@ export default function HomeWorker() {
 
       <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
       <Nav activo="inicio" />
-    </main>
+          </main>
   );
 }
