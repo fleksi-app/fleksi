@@ -64,7 +64,7 @@ export default function Nav({ activo }: { activo: string }) {
 
   const esEmpresa = rol === 'empresa';
   const inicio = esEmpresa ? '/home-empresa' : '/home';
-  const perfil = esEmpresa ? '/perfil-empresa' : '/perfil';
+  const perfil = '/perfil';
 
   const items = [
     {

@@ -118,7 +118,7 @@ export default function Verificacion() {
     <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
       <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto">
-          <a href={esEmpresa ? '/perfil-empresa' : '/perfil'} className="flex items-center gap-2 text-gray-400 mb-4 hover:text-gray-600 transition text-sm">← Regresar</a>
+          <a href="/perfil" className="flex items-center gap-2 text-gray-400 mb-4 hover:text-gray-600 transition text-sm">← Regresar</a>
           <h1 className="font-extrabold text-gray-900 text-xl mb-1">Verificación de identidad</h1>
           <p className="text-gray-400 text-sm">Genera confianza con clientes y empresas</p>
         </div>
