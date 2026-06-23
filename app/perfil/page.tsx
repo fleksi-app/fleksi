@@ -409,7 +409,7 @@ export default function Perfil() {
       setGuardandoCuenta(false);
     }
   };
-   const cambiarPassword = async () => {
+    const cambiarPassword = async () => {
     setErrorPass('');
     setExitoPass('');
     if (!passNueva || !passConfirmar) { setErrorPass('Llena todos los campos'); return; }
@@ -1034,19 +1034,11 @@ export default function Perfil() {
 
         {tabActiva === 'cuenta' && (<>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
-          <button onClick={() => setMostrarCuenta(!mostrarCuenta)}
-            className="w-full flex items-center justify-between p-5">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">⚙️</span>
-              <h3 className="font-extrabold text-gray-900">Mi cuenta</h3>
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-              className={'text-gray-400 transition-transform ' + (mostrarCuenta ? 'rotate-180' : '')}>
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </button>
-
-          {mostrarCuenta && (
+          <div className="flex items-center gap-3 p-5 border-b border-gray-100">
+            <span className="text-xl">⚙️</span>
+            <h3 className="font-extrabold text-gray-900">Mi cuenta</h3>
+          </div>
+          {(true && (
             <div className="px-5 pb-5 flex flex-col gap-4 border-t border-gray-100 pt-4">
               {exitoCuenta && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoCuenta}</div>}
               {exitoPass && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-semibold">{exitoPass}</div>}
