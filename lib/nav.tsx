@@ -122,34 +122,37 @@ export default function Nav({ activo }: { activo: string }) {
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5"/>
             <h3 className="font-extrabold text-gray-900 text-lg mb-4 text-center">Mis cosas</h3>
-            <div className="flex flex-col gap-3">
-              <a href="/mis-trabajos" onClick={() => setMostrarMisCosas(false)}
-                className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl hover:border-purple-200 transition">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{background: '#F5F0FF'}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-                  </svg>
+            <div className="flex flex-col gap-2">
+              {[
+                { href: '/mis-trabajos', label: 'Mis trabajos', sub: 'Trabajos a los que aplicaste', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg> },
+                { href: '/aplicaciones', label: 'Mis solicitudes', sub: 'Solicitudes que publicaste', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
+                { href: '/wallet', label: 'Wallet', sub: 'Saldo, retiros y métodos de pago', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg> },
+                { href: '/notificaciones', label: 'Notificaciones', sub: 'Avisos y alertas', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg> },
+                { href: '/verificacion', label: 'Verificación', sub: 'Documenta tu identidad', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+                { href: '/terminos', label: 'Términos y condiciones', sub: 'Lee nuestros términos', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
+                { href: '/privacidad', label: 'Aviso de privacidad', sub: 'Cómo usamos tus datos', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> },
+              ].map(item => (
+                <a key={item.href} href={item.href} onClick={() => setMostrarMisCosas(false)}
+                  className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl hover:border-purple-200 transition">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: '#F5F0FF'}}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-extrabold text-gray-900 text-sm">{item.label}</p>
+                    <p className="text-gray-400 text-xs">{item.sub}</p>
+                  </div>
+                  <span className="text-gray-400 flex-shrink-0">→</span>
+                </a>
+              ))}
+              <button onClick={async () => { const { createClient } = await import('@supabase/supabase-js'); await import('@/lib/supabase').then(m => m.supabase.auth.signOut()); window.location.href = '/'; }}
+                className="flex items-center gap-4 p-4 bg-red-50 border-2 border-red-100 rounded-2xl hover:border-red-300 transition mt-1">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
                 </div>
-                <div>
-                  <p className="font-extrabold text-gray-900">Mis trabajos</p>
-                  <p className="text-gray-400 text-sm">Trabajos a los que aplicaste</p>
+                <div className="flex-1">
+                  <p className="font-extrabold text-red-600 text-sm">Cerrar sesión</p>
                 </div>
-                <span className="ml-auto text-gray-400">→</span>
-              </a>
-              <a href="/aplicaciones" onClick={() => setMostrarMisCosas(false)}
-                className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl hover:border-purple-200 transition">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{background: '#F5F0FF'}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-extrabold text-gray-900">Mis solicitudes</p>
-                  <p className="text-gray-400 text-sm">Solicitudes que publicaste</p>
-                </div>
-                <span className="ml-auto text-gray-400">→</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>

@@ -35,10 +35,23 @@ const categoriasDatos = [
   )},
 ];
 
-const categoriaEmoji: any = {
-  hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗',
-  interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩',
-  cerrajeria: '🔑', estetica: '💅', envios: '🛵', mascotas: '🐾', super: '🛒', otro: '✨',
+const MORADO_ICON = '#7B2FE0';
+const categoriaIcono: any = {
+  hogar: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,
+  limpieza: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l9-9"/><path d="M12.5 8.5L16 5l3 3-7.5 7.5"/><path d="M15 6l1.5-1.5a2.12 2.12 0 013 3L18 9"/></svg>,
+  eventos: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>,
+  mudanza: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  ejecutivo: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="2"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>,
+  interprete: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+  cocina: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 011.05-1.54 5 5 0 017.08 0A5.11 5.11 0 0117 6a4 4 0 011.41 7.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>,
+  jardineria: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 0 5.5 1.5 7 6zM12 12c0 0 5-2 7-6-3 0-5.5 1.5-7 6z"/></svg>,
+  mecanica: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
+  cerrajeria: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+  estetica: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,
+  envios: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
+  mascotas: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="4.5" cy="9.5" r="2.5"/><circle cx="9" cy="5.5" r="2.5"/><circle cx="15" cy="5.5" r="2.5"/><circle cx="19.5" cy="9.5" r="2.5"/><path d="M17.34 14.72c.96-2.08.54-4.5-1.21-5.97C14.88 7.63 13.47 7 12 7s-2.88.63-4.13 1.75c-1.75 1.47-2.17 3.89-1.21 5.97l2.49 5.36c.65 1.39 2.04 2.27 3.85 2.27s3.2-.88 3.85-2.27z"/></svg>,
+  super: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>,
+  otro: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO_ICON} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>,
 };
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -355,7 +368,7 @@ export default function HomeWorker() {
                 <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
               </div>
             </a>
-          </div>
+                      </div>
         )}
 
         {/* Buscador */}
@@ -435,7 +448,12 @@ export default function HomeWorker() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 text-sm">{f.nombre}</p>
-                    <p className="text-xs text-gray-400 truncate">{(f.habilidades || []).slice(0,2).join(', ') || 'Flekser'}</p>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {(f.habilidades || []).slice(0,2).map((h: string) => (
+                        <span key={h} className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{background: '#F5F0FF', color: '#7B2FE0'}}>{h.split(' ').slice(1).join(' ') || h}</span>
+                      ))}
+                      {(!f.habilidades || f.habilidades.length === 0) && <span className="text-xs text-gray-400">Flekser</span>}
+                    </div>
                   </div>
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Ver perfil →</span>
                 </a>
@@ -465,8 +483,8 @@ export default function HomeWorker() {
               {trabajosFiltrados.slice(0, 5).map((trabajo) => (
                 <a href={'/trabajo?id=' + trabajo.id} key={trabajo.id}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-95 transition flex gap-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0" style={{background: '#F5F0FF'}}>
-                    {categoriaEmoji[trabajo.categoria?.toLowerCase()] || '✨'}
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{background: '#F5F0FF'}}>
+                    {categoriaIcono[trabajo.categoria?.toLowerCase()] || categoriaIcono.otro}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
@@ -507,7 +525,12 @@ export default function HomeWorker() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 text-sm">{f.nombre}</p>
-                    <p className="text-xs text-gray-400 truncate">{(f.habilidades || []).slice(0,2).join(', ') || 'Flekser'}</p>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {(f.habilidades || []).slice(0,2).map((h: string) => (
+                        <span key={h} className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{background: '#F5F0FF', color: '#7B2FE0'}}>{h.split(' ').slice(1).join(' ') || h}</span>
+                      ))}
+                      {(!f.habilidades || f.habilidades.length === 0) && <span className="text-xs text-gray-400">Flekser</span>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -715,10 +738,7 @@ export default function HomeWorker() {
                     {ciudadesSugeridas.map(c => (
                       <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
                         className="flex items-center gap-4 p-4 rounded-2xl border-2 transition"
-                        style={{borderColor: ciudadActiva === c ? MORADO : '#E5E7EB', background: ciudadActiva === c ? '#F5F0FF' : 'white'}}>
-                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
-                        <div className="flex-1 text-left">
-                          <p className="font-bold text-gray-900">{c}</p>
+                                                  <p className="font-bold text-gray-900">{c}</p>
                           {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
                         </div>
                         {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}

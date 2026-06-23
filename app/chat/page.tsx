@@ -18,179 +18,68 @@ function contienetelefono(texto: string): boolean {
   return patrones.some(p => p.test(texto));
 }
 
-function FondoFlekser() {
+function FondoIconos() {
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
+    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity: 0.07}}>
       <defs>
-        <pattern id="patronFlekser" x="0" y="0" width="320" height="260" patternUnits="userSpaceOnUse">
-          <g transform="translate(20,40) rotate(-30)">
-            <rect x="0" y="3" width="28" height="6" rx="3" fill="#7C3AED"/>
-            <circle cx="4" cy="6" r="6" fill="none" stroke="#7C3AED" strokeWidth="3"/>
-            <circle cx="24" cy="6" r="4" fill="none" stroke="#7C3AED" strokeWidth="2.5"/>
-          </g>
-          <g transform="translate(80,20)">
-            <rect x="8" y="0" width="3" height="30" rx="1.5" fill="#2563EB"/>
-            <path d="M2,30 Q9.5,35 17,30 L14,50 Q9.5,52 5,50 Z" fill="#2563EB"/>
-          </g>
-          <g transform="translate(150,50) rotate(20)">
-            <rect x="5" y="0" width="4" height="20" rx="2" fill="#7C3AED"/>
-            <path d="M3,20 Q7,28 11,20 L10,26 Q7,29 4,26 Z" fill="#2563EB"/>
-          </g>
-          <g transform="translate(220,30)">
-            <rect x="0" y="8" width="35" height="16" rx="3" fill="#7C3AED"/>
-            <rect x="25" y="4" width="10" height="12" rx="2" fill="#2563EB"/>
-            <circle cx="8" cy="25" r="4" fill="#7C3AED"/>
-            <circle cx="27" cy="25" r="4" fill="#7C3AED"/>
-          </g>
-          <g transform="translate(30,120) rotate(45)">
-            <rect x="6" y="0" width="4" height="22" rx="2" fill="#2563EB"/>
-            <rect x="0" y="0" width="16" height="8" rx="2" fill="#7C3AED"/>
-          </g>
-          <g transform="translate(100,100) rotate(-15)">
-            <rect x="7" y="0" width="3" height="28" rx="1.5" fill="#7C3AED"/>
-            <path d="M0,28 L14,28 L11,38 L3,38 Z" fill="#2563EB"/>
-          </g>
-          <g transform="translate(180,110) rotate(20)">
-            <rect x="4" y="0" width="4" height="24" rx="2" fill="#2563EB"/>
-            <ellipse cx="6" cy="4" rx="6" ry="4" fill="none" stroke="#7C3AED" strokeWidth="2.5"/>
-            <ellipse cx="6" cy="22" rx="5" ry="3" fill="none" stroke="#7C3AED" strokeWidth="2"/>
-          </g>
-          <g transform="translate(255,105)">
-            <rect x="0" y="10" width="38" height="12" rx="4" fill="#7C3AED"/>
-            <path d="M6,10 Q10,2 28,2 Q34,2 36,10 Z" fill="#2563EB"/>
-            <circle cx="8" cy="23" r="4" fill="#7C3AED"/>
-            <circle cx="30" cy="23" r="4" fill="#7C3AED"/>
-          </g>
-          <g transform="translate(55,195) rotate(-20)">
-            <line x1="8" y1="0" x2="0" y2="20" stroke="#2563EB" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="8" y1="0" x2="16" y2="20" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round"/>
-            <circle cx="8" cy="0" r="3" fill="#7C3AED"/>
-          </g>
-          <g transform="translate(140,185)">
-            <path d="M4,0 L16,0 L14,18 L6,18 Z" fill="#2563EB"/>
-            <path d="M4,0 Q10,-5 16,0" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round"/>
-          </g>
-          <g transform="translate(210,180) rotate(35)">
-            <rect x="5" y="0" width="4" height="24" rx="2" fill="#7C3AED"/>
-            <rect x="3" y="22" width="8" height="5" rx="1" fill="#2563EB"/>
-            <rect x="6" y="27" width="2" height="6" rx="1" fill="#7C3AED"/>
-          </g>
-          <g transform="translate(270,175) rotate(-10)">
-            <rect x="8" y="0" width="3" height="20" rx="1.5" fill="#2563EB"/>
-            <rect x="0" y="4" width="18" height="10" rx="3" fill="#7C3AED"/>
-            <rect x="13" y="8" width="3" height="16" rx="1.5" fill="#2563EB"/>
-          </g>
+        <pattern id="patronIconos" x="0" y="0" width="300" height="250" patternUnits="userSpaceOnUse">
+          {/* Casa */}
+          <g transform="translate(20,20)"><path d="M3 19V9.5L12 3l9 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 20V12h6v8" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Llave */}
+          <g transform="translate(80,15)"><rect x="3" y="9" width="14" height="9" rx="2" fill="none" stroke="#7B2FE0" strokeWidth="2"/><path d="M7 9V7a4 4 0 018 0v2" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round"/></g>
+          {/* Chat */}
+          <g transform="translate(140,18)"><path d="M18 12a2 2 0 01-2 2H5l-3 3V4a2 2 0 012-2h12a2 2 0 012 2z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Camión */}
+          <g transform="translate(200,15)"><rect x="1" y="3" width="13" height="11" rx="2" fill="none" stroke="#7B2FE0" strokeWidth="2"/><path d="M14 7h3l2.5 2.5V14h-5.5V7z" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="5" cy="15" r="2" stroke="#7B2FE0" strokeWidth="2"/><circle cx="16" cy="15" r="2" stroke="#7B2FE0" strokeWidth="2"/></g>
+          {/* Estrella */}
+          <g transform="translate(258,18)"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+
+          {/* Carrito */}
+          <g transform="translate(10,80)"><circle cx="7" cy="17" r="1.5" stroke="#7B2FE0" strokeWidth="2"/><circle cx="16" cy="17" r="1.5" stroke="#7B2FE0" strokeWidth="2"/><path d="M1 1h3l2 11h10l1.5-7H5" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Herramienta */}
+          <g transform="translate(65,75)"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l2.5-2.5a5 5 0 01-6.4 6.4L7.4 19a2 2 0 01-2.8-2.8l5.9-5.9a5 5 0 016.4-6.4l-2.2 2.2z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Notif */}
+          <g transform="translate(120,78)"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round"/></g>
+          {/* Calendario */}
+          <g transform="translate(175,75)"><path d="M6 2v4M14 2v4M2 9h16M4 4h12a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Escudo */}
+          <g transform="translate(230,76)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Corazón */}
+          <g transform="translate(265,80)"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+
+          {/* Tarjeta */}
+          <g transform="translate(15,148)"><rect x="1" y="4" width="18" height="13" rx="2" fill="none" stroke="#7B2FE0" strokeWidth="2"/><path d="M1 9h18" stroke="#7B2FE0" strokeWidth="2"/></g>
+          {/* Persona */}
+          <g transform="translate(65,145)"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="7" r="4" fill="none" stroke="#7B2FE0" strokeWidth="2"/></g>
+          {/* Pincel */}
+          <g transform="translate(120,148)"><path d="M3 21l9-9M12.5 8.5L16 5l3 3-7.5 7.5" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 6l1.5-1.5a2.1 2.1 0 013 3L18 9" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Hoja */}
+          <g transform="translate(175,148)"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 0 5.5 1.5 7 6zM12 12c0 0 5-2 7-6-3 0-5.5 1.5-7 6z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Reloj */}
+          <g transform="translate(232,145)"><circle cx="10" cy="10" r="9" fill="none" stroke="#7B2FE0" strokeWidth="2"/><path d="M10 5v5l3 3" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round"/></g>
+          {/* Archivo */}
+          <g transform="translate(268,148)"><path d="M13 2H6a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V7z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M13 2v5h5M9 12h4M9 16h4" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round"/></g>
+
+          {/* Rayo */}
+          <g transform="translate(40,210)"><path d="M13 2L4.09 12.5H11L10 22l8.91-10.5H13z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Coche */}
+          <g transform="translate(90,208)"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h9a2 2 0 012 2v3" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><rect x="9" y="11" width="11" height="8" rx="2" fill="none" stroke="#7B2FE0" strokeWidth="2"/><circle cx="11" cy="19" r="1" stroke="#7B2FE0" strokeWidth="2"/><circle cx="17" cy="19" r="1" stroke="#7B2FE0" strokeWidth="2"/></g>
+          {/* Check */}
+          <g transform="translate(155,212)"><path d="M20 6L9 17l-5-5" fill="none" stroke="#7B2FE0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></g>
+          {/* Ubicación */}
+          <g transform="translate(195,208)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="none" stroke="#7B2FE0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="#7B2FE0" strokeWidth="2"/></g>
+          {/* Barras */}
+          <g transform="translate(240,210)"><rect x="0" y="10" width="5" height="10" rx="1" fill="#7B2FE0"/><rect x="7" y="5" width="5" height="15" rx="1" fill="#7B2FE0"/><rect x="14" y="0" width="5" height="20" rx="1" fill="#7B2FE0"/></g>
+          {/* Estrellas pequeñas */}
+          <g transform="translate(275,212)"><circle cx="4" cy="4" r="3" fill="none" stroke="#7B2FE0" strokeWidth="2"/><circle cx="14" cy="14" r="3" fill="none" stroke="#7B2FE0" strokeWidth="2"/><line x1="7" y1="4" x2="11" y2="14" stroke="#7B2FE0" strokeWidth="1.5" strokeLinecap="round"/></g>
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill="url(#patronFlekser)"/>
+      <rect width="100%" height="100%" fill="url(#patronIconos)"/>
     </svg>
   );
 }
 
-function FondoEmpresa() {
-  return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.12}}>
-      <defs>
-        <pattern id="patronEmpresa" x="0" y="0" width="320" height="260" patternUnits="userSpaceOnUse">
-          <g transform="translate(15,20)">
-            <rect x="0" y="0" width="28" height="50" rx="2" fill="#1e3a8a"/>
-            {[0,1,2,3].map(i=>[0,1,2].map(j=>(
-              <rect key={`${i}-${j}`} x={3+j*8} y={4+i*11} width="5" height="7" rx="1" fill="#334155"/>
-            )))}
-          </g>
-          <g transform="translate(60,35)">
-            <rect x="0" y="0" width="20" height="35" rx="2" fill="#334155"/>
-            {[0,1,2].map(i=>[0,1].map(j=>(
-              <rect key={`${i}-${j}`} x={3+j*9} y={4+i*10} width="5" height="6" rx="1" fill="#1e3a8a"/>
-            )))}
-          </g>
-          <g transform="translate(110,25) rotate(30)">
-            <path d="M6,0 Q12,8 8,20 L4,20 Q0,8 6,0 Z" fill="#1e3a8a"/>
-            <rect x="4" y="20" width="4" height="8" rx="1" fill="#334155"/>
-          </g>
-          <g transform="translate(165,20)">
-            <ellipse cx="20" cy="5" rx="20" ry="4" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
-            <rect x="18" y="5" width="4" height="12" rx="2" fill="#334155"/>
-            <ellipse cx="20" cy="17" rx="8" ry="2" fill="#1e3a8a"/>
-          </g>
-          <g transform="translate(225,15)">
-            <rect x="0" y="0" width="4" height="28" rx="2" fill="#334155"/>
-            <ellipse cx="2" cy="4" rx="4" ry="6" fill="none" stroke="#1e3a8a" strokeWidth="2"/>
-            <rect x="10" y="0" width="3" height="28" rx="1.5" fill="#1e3a8a"/>
-            <path d="M9,0 Q9,8 12,10 Q15,8 15,0" fill="#334155"/>
-          </g>
-          <g transform="translate(275,25)">
-            <rect x="0" y="6" width="28" height="20" rx="3" fill="#1e3a8a"/>
-            <rect x="8" y="0" width="12" height="8" rx="2" fill="none" stroke="#334155" strokeWidth="2.5"/>
-            <line x1="0" y1="14" x2="28" y2="14" stroke="#334155" strokeWidth="1.5"/>
-          </g>
-          <g transform="translate(20,110) rotate(-25)">
-            <rect x="4" y="0" width="6" height="26" rx="1" fill="#334155"/>
-            <polygon points="4,26 10,26 7,34" fill="#1e3a8a"/>
-            <rect x="4" y="0" width="6" height="5" rx="1" fill="#1e3a8a"/>
-          </g>
-          <g transform="translate(85,95)">
-            <rect x="0" y="10" width="22" height="40" rx="2" fill="#334155"/>
-            {[0,1,2].map(i=>[0,1].map(j=>(
-              <rect key={`${i}-${j}`} x={2+j*10} y={14+i*11} width="6" height="7" rx="1" fill="#1e3a8a"/>
-            )))}
-            <rect x="10" y="0" width="2" height="12" rx="1" fill="#1e3a8a"/>
-          </g>
-          <g transform="translate(155,100)">
-            <rect x="5" y="0" width="14" height="12" rx="3" fill="#1e3a8a"/>
-            <rect x="9" y="12" width="6" height="10" rx="2" fill="#334155"/>
-            <rect x="3" y="20" width="18" height="3" rx="1.5" fill="#1e3a8a"/>
-            <rect x="9" y="23" width="3" height="6" rx="1.5" fill="#334155"/>
-          </g>
-          <g transform="translate(218,95)">
-            <rect x="0" y="0" width="30" height="20" rx="3" fill="#334155"/>
-            <rect x="2" y="2" width="26" height="16" rx="2" fill="#1e3a8a"/>
-            <rect x="10" y="20" width="10" height="4" rx="1" fill="#334155"/>
-          </g>
-          <g transform="translate(272,100) rotate(5)">
-            <rect x="0" y="0" width="20" height="26" rx="2" fill="#1e3a8a"/>
-            <rect x="3" y="5" width="14" height="2" rx="1" fill="#334155"/>
-            <rect x="3" y="10" width="14" height="2" rx="1" fill="#334155"/>
-            <rect x="3" y="15" width="10" height="2" rx="1" fill="#334155"/>
-          </g>
-          <g transform="translate(15,200)">
-            <path d="M2,0 L18,0 L16,20 L4,20 Z" fill="#334155"/>
-            <path d="M18,5 Q26,5 26,12 Q26,18 18,16" fill="none" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
-            <ellipse cx="10" cy="0" rx="8" ry="2" fill="#1e3a8a"/>
-          </g>
-          <g transform="translate(75,195)">
-            <circle cx="10" cy="4" r="5" fill="#1e3a8a"/>
-            <rect x="6" y="9" width="8" height="14" rx="2" fill="#334155"/>
-            <line x1="4" y1="12" x2="0" y2="22" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="16" y1="12" x2="20" y2="8" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round"/>
-            <ellipse cx="22" cy="7" rx="6" ry="2" fill="none" stroke="#334155" strokeWidth="2"/>
-            <line x1="10" y1="23" x2="7" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="10" y1="23" x2="13" y2="34" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"/>
-          </g>
-          <g transform="translate(155,200)">
-            <rect x="0" y="14" width="6" height="14" rx="1" fill="#1e3a8a"/>
-            <rect x="8" y="8" width="6" height="20" rx="1" fill="#334155"/>
-            <rect x="16" y="2" width="6" height="26" rx="1" fill="#1e3a8a"/>
-            <line x1="0" y1="28" x2="22" y2="28" stroke="#334155" strokeWidth="1.5"/>
-          </g>
-          <g transform="translate(215,195)">
-            <rect x="0" y="5" width="16" height="24" rx="2" fill="#334155"/>
-            <rect x="6" y="0" width="4" height="6" rx="1" fill="#1e3a8a"/>
-            {[0,1].map(i=>[0,1].map(j=>(
-              <rect key={`${i}-${j}`} x={2+j*8} y={8+i*9} width="4" height="5" rx="1" fill="#1e3a8a"/>
-            )))}
-          </g>
-          <g transform="translate(265,200)">
-            <circle cx="14" cy="14" r="13" fill="none" stroke="#1e3a8a" strokeWidth="2.5"/>
-            <line x1="14" y1="14" x2="14" y2="5" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
-            <line x1="14" y1="14" x2="20" y2="18" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round"/>
-          </g>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#patronEmpresa)"/>
-    </svg>
-  );
-}
+
 
 function ChatContent() {
   const searchParams = useSearchParams();
@@ -258,7 +147,7 @@ function ChatContent() {
     });
     const convs = Array.from(convMap.values());
     setConversaciones(convs);
-        if (usuarioDestinoId) {
+    if (usuarioDestinoId) {
       const convDirecta = convs.find(c =>
         !c.servicio_id && (
           (c.remitente_id === user.id && c.destinatario_id === usuarioDestinoId) ||
@@ -346,7 +235,7 @@ function ChatContent() {
 
   const bgFondo = '#F8FAFC';
   const spinnerColor = 'border-purple-600';
-  const Fondo = esEmpresa ? FondoEmpresa : FondoFlekser;
+  const Fondo = FondoIconos;
 
   if (cargando) {
     return (
