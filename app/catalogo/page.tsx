@@ -48,6 +48,29 @@ export default function Catalogo() {
   );
 }
 
+const catalogoIconos: Record<string, JSX.Element> = {
+  '🧹 Limpieza del hogar': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l9-9"/><path d="M12.5 8.5L16 5l3 3-7.5 7.5"/><path d="M15 6l1.5-1.5a2.12 2.12 0 013 3L18 9"/></svg>,
+  '🌿 Jardinería': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 0 5.5 1.5 7 6zM12 12c0 0 5-2 7-6-3 0-5.5 1.5-7 6z"/></svg>,
+  '🎨 Pintura': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 13.5V20a2 2 0 002 2h16a2 2 0 002-2v-6.5"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>,
+  '🔧 Mantenimiento general': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
+  '⚡ Electricidad': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L4.09 12.5H11L10 22l8.91-10.5H13z"/></svg>,
+  '🚿 Plomería': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z"/><circle cx="12" cy="12" r="2"/></svg>,
+  '🚚 Fletes y traslados': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  '🪑 Armado de muebles': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="12" rx="2"/><path d="M3 15v4M21 15v4M3 19h18"/></svg>,
+  '🔩 Mecánica básica': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
+  '🔑 Cerrajería': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+  '📺 Instalación TV/repisas/cortinas': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
+  '🪵 Carpintería ligera': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l18 18M21 3L3 21"/></svg>,
+  '📦 Mudanza ligera / Ayudante': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>,
+  '👔 Planchado / Lavandería': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18M3 9a9 9 0 019-6 9 9 0 019 6M3 9l2 9h14l2-9"/></svg>,
+  '💅 Uñas / Estética': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,
+  '🎪 Staff para eventos': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>,
+  '🍽️ Mesero': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>,
+  '🍳 Cocinero particular': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 011.05-1.54 5 5 0 017.08 0A5.11 5.11 0 0117 6a4 4 0 011.41 7.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>,
+  '🚗 Chofer ejecutivo': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="2"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>,
+  '🗣️ Intérprete / Traductor': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+};
+
 function CatalogoContent() {
   const searchParams = useSearchParams();
   const [fleksers, setFleksers] = useState<any[]>([]);
@@ -131,12 +154,13 @@ function CatalogoContent() {
         <div className="grid grid-cols-2 gap-3">
           {habilidadesOpciones.map(h => {
             const conteo = conteoPorCategoria(h);
-            const emoji = h.split(' ')[0];
             const nombre = quitarEmoji(h);
             return (
               <button key={h} onClick={() => setCategoriaActiva(h)}
                 className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left hover:border-purple-300 transition active:scale-95">
-                <span className="text-3xl mb-2 block">{emoji}</span>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{background: '#F5F0FF'}}>
+                  {catalogoIconos[h] || <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>}
+                </div>
                 <p className="font-bold text-gray-900 text-sm leading-tight mb-2">{nombre}</p>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{background: conteo > 0 ? '#F5F0FF' : '#F3F4F6', color: conteo > 0 ? MORADO : '#9CA3AF'}}>
                   {conteo} flekser{conteo !== 1 ? 's' : ''}
@@ -146,7 +170,9 @@ function CatalogoContent() {
           })}
           <button onClick={() => setCategoriaActiva(CATEGORIA_OTROS)}
             className="bg-white rounded-2xl p-4 shadow-sm border border-dashed border-gray-300 text-left hover:border-purple-300 transition active:scale-95">
-            <span className="text-3xl mb-2 block">✨</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{background: '#F5F0FF'}}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+            </div>
             <p className="font-bold text-gray-900 text-sm leading-tight mb-2">Otros / Sin definir</p>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>
               {conteoPorCategoria(CATEGORIA_OTROS)} fleksers
@@ -221,7 +247,7 @@ function CatalogoContent() {
                       {f.habilidades.slice(0, 4).map((h: string) => (
                         <span key={h} className="text-xs font-semibold px-2 py-0.5 rounded-full border"
                           style={{background: h === categoriaActiva ? MORADO : '#F5F0FF', color: h === categoriaActiva ? 'white' : MORADO, borderColor: h === categoriaActiva ? MORADO : '#DDD6FE'}}>
-                          {h}
+                          {h.split(' ').slice(1).join(' ') || h}
                         </span>
                       ))}
                       {f.habilidades.length > 4 && <span className="text-xs bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">+{f.habilidades.length - 4} más</span>}

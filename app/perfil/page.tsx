@@ -408,9 +408,8 @@ export default function Perfil() {
     } finally {
       setGuardandoCuenta(false);
     }
-      };
-
-  const cambiarPassword = async () => {
+  };
+   const cambiarPassword = async () => {
     setErrorPass('');
     setExitoPass('');
     if (!passNueva || !passConfirmar) { setErrorPass('Llena todos los campos'); return; }
@@ -818,11 +817,11 @@ export default function Perfil() {
         {tieneBadge('confianza_maxima') && (
           <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
             <span className="text-3xl">🛡️</span>
-                        <div>
+            <div>
               <p className="font-extrabold text-indigo-700 text-sm">¡Confianza máxima!</p>
               <p className="text-xs text-indigo-500">Tus antecedentes no penales fueron verificados. Los clientes confían más en ti.</p>
             </div>
-          </div>
+                      </div>
         )}
 
         {ciudadesVisitadas.length > 0 && (

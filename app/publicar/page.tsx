@@ -127,6 +127,7 @@ function PublicarForm() {
   const [publicado, setPublicado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [camposError, setCamposError] = useState<Record<string, boolean>>({});
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [cargandoWallet, setCargandoWallet] = useState(true);
   const [flekserSugerido, setFlekserSugerido] = useState<any>(null);
@@ -397,8 +398,8 @@ function PublicarForm() {
               <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
               <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
                 {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
-              </span>
-                          </div>
+                              </span>
+            </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Pago</span><span className="font-semibold text-sm text-gray-900">{metodoPago === 'stripe' ? '💳 Stripe' : '💵 Efectivo'}</span></div>
@@ -510,7 +511,7 @@ function PublicarForm() {
               {/* Dirección */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">📍 Dirección del trabajo</label>
-                <input type="text" placeholder="Ej. Calle Reforma 123, Col. Centro, Irapuato" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-purple-400 outline-none transition text-gray-900"/>
+                <input type="text" placeholder="Ej. Calle Reforma 123, Col. Centro, Irapuato" value={direccion} onChange={(e) => { setDireccion(e.target.value); setCamposError(p => ({...p, direccion: false})); }} className="w-full p-4 rounded-2xl border-2 outline-none transition text-gray-900" style={{borderColor: camposError.direccion ? "#EF4444" : "#E5E7EB"}}/>
                 <p className="text-xs text-gray-400 mt-1">Se usará para mostrar Fleksers cercanos a ti</p>
               </div>
 
@@ -764,7 +765,24 @@ function PublicarForm() {
           )}
           {paso < 3 ? (
             <button
-              onClick={() => { setError(''); setPaso(paso + 1); }}
+              onClick={() => {
+                setError(''); setCamposError({});
+                if (paso === 1) {
+                  if (!categoriaSeleccionada) { setError('Selecciona una categoría'); return; }
+                  setPaso(2);
+                } else if (paso === 2) {
+                  const errores: Record<string, boolean> = {};
+                  let hayError = false;
+                  if (!direccion.trim()) { errores['direccion'] = true; hayError = true; }
+                  if (!urgente && fechas.length === 0) { errores['fecha'] = true; hayError = true; }
+                  if (hayError) {
+                    setCamposError(errores);
+                    setError('Por favor completa los campos marcados en rojo');
+                    return;
+                  }
+                  setPaso(3);
+                }
+              }}
               disabled={paso === 1 && !categoriaSeleccionada}
               className="flex-1 py-4 text-white rounded-2xl font-bold shadow-sm transition disabled:opacity-50"
               style={{background: '#7B2FE0'}}>
@@ -778,10 +796,7 @@ function PublicarForm() {
               style={{background: '#7B2FE0'}}>
               {cargando ? 'Publicando...' : subiendoFoto ? 'Subiendo foto...' : geocodificando ? 'Verificando...' : flekserSugerido ? '🎯 Enviar a ' + flekserSugerido.nombre?.split(' ')[0] : '🚀 Publicar solicitud'}
             </button>
-          )}
-        </div>
-      </div>
-    </main>
+                </main>
   );
 }
 

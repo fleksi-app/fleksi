@@ -1636,7 +1636,7 @@ export default function Admin() {
                 <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100"><p className="text-xl font-extrabold text-purple-600">{conContraoferta}</p><p className="text-xs text-gray-400 mt-0.5">Contraoferta</p></div>
               </div>
               <div className="bg-purple-700 rounded-2xl p-4 mb-4 flex items-center justify-between">
-                <div><p className="text-white/70 text-xs font-semibold">Ticket promedio</p><p className="font-extrabold text-gray-900 text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p></div>
+                <div><p className="text-white/70 text-xs font-semibold">Ticket promedio</p><p className="font-extrabold text-white text-2xl">${ticketPromedio.toLocaleString('es-MX')} MXN</p></div>
                 <span className="text-4xl">🎯</span>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
