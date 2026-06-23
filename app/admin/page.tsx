@@ -1218,6 +1218,7 @@ export default function Admin() {
           <button onClick={() => setTab('retiros')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'retiros' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
+          <button onClick={() => setTab('perfiles')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'perfiles' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>👥 Perfiles</button>
         </div>
 
         {tab === 'solicitudes' && (

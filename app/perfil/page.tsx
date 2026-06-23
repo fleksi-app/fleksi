@@ -401,7 +401,7 @@ export default function Perfil() {
       cacheInvalidate('perfil_' + usuario.id);
       setExitoCuenta('✅ Datos actualizados correctamente');
       setEditandoCuenta(false);
-      cargarPerfil();
+            cargarPerfil();
       setTimeout(() => setExitoCuenta(''), 3000);
     } catch (err: any) {
       setErrorCuenta('Error al guardar. Intenta de nuevo.');
@@ -409,7 +409,8 @@ export default function Perfil() {
       setGuardandoCuenta(false);
     }
   };
-    const cambiarPassword = async () => {
+
+  const cambiarPassword = async () => {
     setErrorPass('');
     setExitoPass('');
     if (!passNueva || !passConfirmar) { setErrorPass('Llena todos los campos'); return; }
@@ -799,10 +800,11 @@ export default function Perfil() {
           </div>
         )}
 
+        {verificacion?.estado !== 'aprobado' && (
         <a href="/documentos" className={'block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ' + verif.bg + ' ' + verif.border}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">{verif.emoji}</span>
                 <h3 className="font-extrabold text-gray-900">{verif.titulo}</h3>
               </div>
@@ -813,6 +815,7 @@ export default function Perfil() {
             </span>
           </div>
         </a>
+        )}
 
         {tieneBadge('confianza_maxima') && (
           <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
@@ -821,7 +824,7 @@ export default function Perfil() {
               <p className="font-extrabold text-indigo-700 text-sm">¡Confianza máxima!</p>
               <p className="text-xs text-indigo-500">Tus antecedentes no penales fueron verificados. Los clientes confían más en ti.</p>
             </div>
-                      </div>
+          </div>
         )}
 
         {ciudadesVisitadas.length > 0 && (
@@ -834,28 +837,6 @@ export default function Perfil() {
             </div>
           </div>
         )}
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-          <h3 className="font-extrabold text-gray-900 mb-3">📱 Teléfono</h3>
-          {editando ? (
-            <input value={telefono} onChange={(e) => setTelefono(e.target.value)}
-              className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"
-              placeholder="55 1234 5678"/>
-          ) : (
-            <p className="text-gray-600">{telefono || 'Sin teléfono registrado'}</p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-          <h3 className="font-extrabold text-gray-900 mb-3">📍 Ciudad base</h3>
-          {editando ? (
-            <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
-              className="w-full p-3 rounded-xl border-2 border-purple-400 outline-none text-gray-900"
-              placeholder="Ej. Ciudad de México"/>
-          ) : (
-            <p className="text-gray-600">{ciudad || 'Sin ciudad registrada'}</p>
-          )}
-        </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📝 Sobre mí</h3>
