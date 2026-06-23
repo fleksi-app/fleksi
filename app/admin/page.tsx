@@ -2469,6 +2469,7 @@ export default function Admin() {
                     </div>
                     {u.email && <p className="text-xs text-gray-500 mt-1">✉️ {u.email}</p>}
                     {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
+                    </div>
                     ))}
               </div>
             )}
