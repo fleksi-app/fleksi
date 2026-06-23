@@ -333,7 +333,7 @@ export default function HomeWorker() {
         </div>
 
         {/* Widget wallet */}
-        {(usuario?.rol === 'flekser' || usuario?.rol === 'viajero') && (walletSaldo > 0 || ganadoMes > 0) && (
+        {usuario && (
           <div className="max-w-md mx-auto mb-3">
             <a href="/wallet" className="flex items-center justify-between rounded-2xl px-4 py-2.5 hover:opacity-90 transition" style={{background: '#F5F0FF'}}>
               <div className="flex items-center gap-2">
