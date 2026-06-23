@@ -2469,3 +2469,44 @@ export default function Admin() {
                     </div>
                     {u.email && <p className="text-xs text-gray-500 mt-1">✉️ {u.email}</p>}
                     {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
+                    ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {modalServicios.visible && (() => {
+        const estadoLabel = modalServicios.estado === 'activos' ? '⚡ Servicios activos' : modalServicios.estado === 'completados' ? '✅ Servicios completados' : '❌ Servicios cancelados';
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })}>
+            <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-extrabold text-gray-900 text-lg">{estadoLabel}</h3>
+                <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
+              </div>
+              {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios</p></div>
+              : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
+                  {modalServicios.lista.map((s: any) => (
+                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                      <p className="font-extrabold text-gray-900 text-sm">{s.titulo}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{s.categoria} · {s.estado}</p>
+                      {s.usuarios?.nombre && <p className="text-xs text-gray-500 mt-1">👤 {s.usuarios.nombre}</p>}
+                      {s.presupuesto > 0 && <p className="text-xs font-bold text-gray-700 mt-0.5">${s.presupuesto.toLocaleString('es-MX')} MXN</p>}
+                      <p className="text-xs text-gray-400 mt-1">{new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+    </main>
+  );
+}
