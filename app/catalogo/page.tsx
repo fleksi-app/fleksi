@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
@@ -48,7 +48,7 @@ export default function Catalogo() {
   );
 }
 
-const catalogoIconos: Record<string, JSX.Element> = {
+const catalogoIconos: Record<string, React.ReactElement> = {
   '🧹 Limpieza del hogar': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l9-9"/><path d="M12.5 8.5L16 5l3 3-7.5 7.5"/><path d="M15 6l1.5-1.5a2.12 2.12 0 013 3L18 9"/></svg>,
   '🌿 Jardinería': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 0 5.5 1.5 7 6zM12 12c0 0 5-2 7-6-3 0-5.5 1.5-7 6z"/></svg>,
   '🎨 Pintura': <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B2FE0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 13.5V20a2 2 0 002 2h16a2 2 0 002-2v-6.5"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>,
