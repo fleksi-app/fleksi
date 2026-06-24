@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
+const MORADO = '#7B2FE0';
+
 export default function MisTrabajos() {
   const [aplicaciones, setAplicaciones] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -53,40 +55,26 @@ export default function MisTrabajos() {
     todos: aplicaciones.length,
   };
 
-  const rol = usuario?.rol_activo || usuario?.rol || 'flekser';
-  const esEmpresa = rol === 'empresa';
-
-  const headerGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const filtroActivo = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const precioColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
-  const calificarColor = esEmpresa ? 'text-blue-800' : 'text-purple-600';
-  const ctaGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const avatarGradient = esEmpresa ? 'from-slate-700 to-blue-900' : 'from-blue-600 to-purple-600';
-  const bgFondo = esEmpresa ? 'bg-slate-50' : 'bg-gray-50';
-  const spinnerColor = esEmpresa ? 'border-blue-800' : 'border-purple-600';
-
-  if (cargando) {
-    return (
-      <main className={`min-h-screen ${bgFondo} flex items-center justify-center`}>
-        <div className="text-center">
-          <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${spinnerColor}`}></div>
-          <p className="text-gray-400">Cargando trabajos...</p>
-        </div>
-      </main>
-    );
-  }
+  if (cargando) return (
+    <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{borderColor: MORADO, borderTopColor: 'transparent'}}/>
+        <p className="text-gray-400">Cargando trabajos...</p>
+      </div>
+    </main>
+  );
 
   return (
-    <main className={`min-h-screen ${bgFondo} pb-32`}>
+    <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
 
-      <div className={`bg-gradient-to-r ${headerGradient} px-6 pt-12 pb-8`}>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto">
-          <h1 className="text-white font-extrabold text-xl mb-1">Mis Trabajos</h1>
-          <p className="text-white/70 text-sm">Historial de tus aplicaciones</p>
+          <h1 className="font-extrabold text-gray-900 text-xl mb-1">Mis Trabajos</h1>
+          <p className="text-gray-400 text-sm">Historial de tus aplicaciones</p>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-4">
+      <div className="max-w-md mx-auto px-6 pt-4">
 
         <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100 mb-4">
           {[
@@ -95,11 +83,8 @@ export default function MisTrabajos() {
             { id: 'todos', label: 'Todos' },
           ].map((f) => (
             <button key={f.id} onClick={() => setFiltro(f.id as any)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition ${
-                filtro === f.id
-                  ? `bg-gradient-to-r ${filtroActivo} text-white shadow-sm`
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}>
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition"
+              style={{background: filtro === f.id ? MORADO : 'transparent', color: filtro === f.id ? 'white' : '#6B7280'}}>
               {f.label}
             </button>
           ))}
@@ -107,17 +92,14 @@ export default function MisTrabajos() {
 
         {appsFiltradas.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-4xl mb-4">
-              {filtro === 'activos' ? '✋' : filtro === 'completados' ? '🏁' : '📋'}
-            </p>
+            <p className="text-4xl mb-4">{filtro === 'activos' ? '✋' : filtro === 'completados' ? '🏁' : '📋'}</p>
             <p className="font-bold text-gray-900 mb-2">
               {filtro === 'activos' ? 'Sin trabajos activos' : filtro === 'completados' ? 'Sin trabajos completados' : 'Sin aplicaciones todavía'}
             </p>
             <p className="text-gray-400 text-sm mb-6">
               {filtro === 'activos' ? 'Aplica a trabajos disponibles cerca de ti' : 'Completa trabajos para verlos aquí'}
             </p>
-            <a href="/home"
-              className={`inline-block px-6 py-3 bg-gradient-to-r ${ctaGradient} text-white rounded-2xl font-bold text-sm`}>
+            <a href="/home" className="inline-block px-6 py-3 text-white rounded-2xl font-bold text-sm" style={{background: MORADO}}>
               Ver trabajos disponibles
             </a>
           </div>
@@ -130,33 +112,21 @@ export default function MisTrabajos() {
               const esPendiente = app.estado === 'pendiente';
 
               return (
-                <div key={app.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition ${
-                  esAceptado ? 'border-green-200' : esCompletado ? 'border-gray-200' : 'border-gray-100'
-                }`}>
+                <div key={app.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition ${esAceptado ? 'border-green-200' : esCompletado ? 'border-gray-200' : 'border-gray-100'}`}>
                   <a href={esAceptado ? '/checkin' : `/trabajo?id=${servicio?.id}`} className="block p-4">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">
-                        {servicio?.titulo || 'Trabajo'}
-                      </h3>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[app.estado]}`}>
-                        {estadoLabel[app.estado]}
-                      </span>
+                      <h3 className="font-bold text-gray-900 text-sm leading-tight flex-1 mr-2">{servicio?.titulo || 'Trabajo'}</h3>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${estadoColor[app.estado]}`}>{estadoLabel[app.estado]}</span>
                     </div>
 
                     <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-7 h-7 rounded-full overflow-hidden bg-gradient-to-r ${avatarGradient} flex items-center justify-center flex-shrink-0`}>
-                        {servicio?.usuarios?.foto_url ? (
-                          <img src={servicio.usuarios.foto_url} className="w-full h-full object-cover"/>
-                        ) : (
-                          <span className="text-white text-xs font-bold">{servicio?.usuarios?.nombre?.charAt(0) || '?'}</span>
-                        )}
+                      <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{background: MORADO}}>
+                        {servicio?.usuarios?.foto_url
+                          ? <img src={servicio.usuarios.foto_url} className="w-full h-full object-cover"/>
+                          : <span className="text-white text-xs font-bold">{servicio?.usuarios?.nombre?.charAt(0) || '?'}</span>}
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Cliente: <span className="font-semibold text-gray-700">{servicio?.usuarios?.nombre || 'Cliente'}</span>
-                      </p>
-                      {servicio?.metodo_pago === 'efectivo' && (
-                        <span className="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full ml-auto">💵 Efectivo</span>
-                      )}
+                      <p className="text-xs text-gray-500">Cliente: <span className="font-semibold text-gray-700">{servicio?.usuarios?.nombre || 'Cliente'}</span></p>
+                      {servicio?.metodo_pago === 'efectivo' && <span className="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full ml-auto">💵 Efectivo</span>}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -165,9 +135,7 @@ export default function MisTrabajos() {
                         {servicio?.urgente && <span className="text-xs text-red-500 font-bold">🔴 Urgente</span>}
                       </div>
                       <div className="text-right">
-                        <p className={`font-extrabold ${precioColor} text-base`}>
-                          ${app.precio_ofrecido || servicio?.presupuesto} MXN
-                        </p>
+                        <p className="font-extrabold text-base" style={{color: MORADO}}>${app.precio_ofrecido || servicio?.presupuesto} MXN</p>
                         <p className="text-xs text-gray-400">tu oferta</p>
                       </div>
                     </div>
@@ -175,24 +143,18 @@ export default function MisTrabajos() {
 
                   {esAceptado && (
                     <div className="bg-green-50 border-t border-green-100 px-4 py-3">
-                      <p className="text-green-700 text-xs font-bold text-center">
-                        ✅ ¡Trabajo aceptado! Toca para hacer Check-in cuando llegues
-                      </p>
+                      <p className="text-green-700 text-xs font-bold text-center">✅ ¡Trabajo aceptado! Toca para hacer Check-in cuando llegues</p>
                     </div>
                   )}
                   {esPendiente && (
                     <div className="bg-yellow-50 border-t border-yellow-100 px-4 py-3">
-                      <p className="text-yellow-700 text-xs font-semibold text-center">
-                        ⏳ Esperando respuesta del cliente...
-                      </p>
+                      <p className="text-yellow-700 text-xs font-semibold text-center">⏳ Esperando respuesta del cliente...</p>
                     </div>
                   )}
                   {esCompletado && (
                     <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 flex items-center justify-between">
                       <p className="text-gray-500 text-xs font-semibold">🏁 Trabajo completado</p>
-                      <a href="/calificar" className={`text-xs ${calificarColor} font-bold hover:underline`}>
-                        ⭐ Calificar →
-                      </a>
+                      <a href="/calificar" className="text-xs font-bold hover:underline" style={{color: MORADO}}>⭐ Calificar →</a>
                     </div>
                   )}
                 </div>
@@ -202,7 +164,7 @@ export default function MisTrabajos() {
         )}
       </div>
 
-      <Nav activo="inicio" />
+      <Nav activo="trabajos" />
     </main>
   );
 }
