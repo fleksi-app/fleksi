@@ -368,7 +368,7 @@ export default function HomeWorker() {
                 <p className="text-xs text-gray-400">Wallet</p>
                 <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
               </div>
-                          </a>
+            </a>
           </div>
         )}
 
@@ -378,7 +378,7 @@ export default function HomeWorker() {
             <svg className="absolute left-4 top-1/2 -translate-y-1/2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input
               type="text"
-              placeholder="¿Qué necesitas hoy?"
+                            placeholder="¿Qué necesitas hoy?"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-gray-900 placeholder-gray-400 outline-none focus:border-purple-200 transition text-sm"/>
@@ -575,12 +575,11 @@ export default function HomeWorker() {
             <div className="flex-1 overflow-y-auto py-3">
               {[
                 { href: '/perfil', icon: '👤', label: 'Mi perfil' },
-                { href: '/metodos-pago', icon: '💳', label: 'Métodos de pago' },
-                { href: '/metodos-pago', icon: '💰', label: 'Métodos de cobro' },
-                { href: '/wallet', icon: '🔄', label: 'Pagos y reembolsos' },
+                { href: '/wallet', icon: '💳', label: 'Wallet' },
+                { href: '/verificacion', icon: '🛡️', label: 'Verificación' },
                 { href: '/ayuda', icon: '❓', label: 'Ayuda y soporte' },
                 { href: '/terminos', icon: '📄', label: 'Términos y condiciones' },
-                { href: '/privacidad', icon: '🔒', label: 'Protección de datos' },
+                { href: '/privacidad', icon: '🔒', label: 'Aviso de privacidad' },
               ].map((item) => (
                 <a key={item.label} href={item.href}
                   className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition"
