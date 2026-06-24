@@ -135,14 +135,15 @@ export default function HomeWorker() {
     // Cargar wallet y ganado este mes
     setWalletSaldo(perfil?.wallet_saldo || 0);
     if (perfil?.rol === 'flekser' || perfil?.rol === 'viajero') {
-      const inicioMes = new Date();
-      inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+      const ahora = new Date();
+      const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+      inicioMes.setHours(0, 0, 0, 0);
       const { data: appsCompletadas } = await supabase
         .from('aplicaciones')
-        .select('precio_ofrecido, servicios(presupuesto)')
+        .select('precio_ofrecido, servicios(presupuesto), updated_at')
         .eq('prestador_id', user.id)
         .eq('estado', 'completado')
-        .gte('created_at', inicioMes.toISOString());
+        .gte('updated_at', inicioMes.toISOString());
       const totalMes = (appsCompletadas || []).reduce((acc: number, a: any) =>
         acc + (a.precio_ofrecido || a.servicios?.presupuesto || 0), 0);
       setGanadoMes(totalMes);
@@ -353,7 +354,7 @@ export default function HomeWorker() {
         </div>
 
         {/* Widget wallet */}
-        {usuario && (
+        {walletSaldo > 0 && (
           <div className="max-w-md mx-auto mb-3">
             <a href="/wallet" className="flex items-center justify-between rounded-2xl px-4 py-2.5 hover:opacity-90 transition" style={{background: '#F5F0FF'}}>
               <div className="flex items-center gap-2">
@@ -367,8 +368,8 @@ export default function HomeWorker() {
                 <p className="text-xs text-gray-400">Wallet</p>
                 <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
               </div>
-            </a>
-                      </div>
+                          </a>
+          </div>
         )}
 
         {/* Buscador */}
@@ -757,7 +758,3 @@ export default function HomeWorker() {
       )}
 
       <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
-      <Nav activo="inicio" />
-          </main>
-  );
-}

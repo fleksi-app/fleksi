@@ -644,15 +644,8 @@ export default function Perfil() {
                 <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">
                   ⚡ {usuario?.rol === 'empresa' ? 'Empresa' : 'Flekser'}
                 </span>
-                {tieneBadge('fundador') && <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">🏅 Fundador</span>}
-                {tieneBadge('pionero') && <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">🚀 Pionero</span>}
                 {tieneBadge('verificado') && <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">✅ Verificado</span>}
-                {tieneBadge('top_rated') && <span className="text-xs bg-yellow-100 text-yellow-600 font-semibold px-2 py-0.5 rounded-full">⭐ Top Rated</span>}
-                {tieneBadge('confianza_maxima') && <span className="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">🛡️ Confianza máxima</span>}
-                {perfilCompleto && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2 py-0.5 rounded-full">🏆 Perfil completo</span>}
-                {usuario?.intencion === 'trabajar' && <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">💼 Busca trabajo</span>}
-                {usuario?.intencion === 'contratar' && <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">🔍 Busca contratar</span>}
-                {usuario?.intencion === 'ambos' && <span className="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">⚡ Trabaja y contrata</span>}
+                {tieneBadge('fundador') && <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">🏅 Fundador</span>}
               </div>
             </div>
           </div>
@@ -772,39 +765,13 @@ export default function Perfil() {
           </div>
         </a>
 
-        {usuario?.codigo_referido && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <div className="mb-3">
-              <h3 className="font-extrabold text-gray-900">🎁 Tu código de referido</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Compártelo y gana cuando tus referidos completen su primer trabajo</p>
-            </div>
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200 rounded-2xl p-4 mb-3 text-center">
-              <p className="text-2xl font-extrabold text-purple-700 tracking-widest">{usuario.codigo_referido}</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3 mb-3">
-              <p className="text-xs text-gray-600 leading-relaxed">
-                💰 Cuando alguien se registra con tu código y completa su primer trabajo,
-                <span className="font-bold text-green-600"> tú recibes un bono directo en tu Wallet.</span>
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={copiarCodigo}
-                className={'flex-1 py-2.5 rounded-xl font-bold text-sm transition ' + (copiado ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}>
-                {copiado ? '✅ ¡Copiado!' : '📋 Copiar código'}
-              </button>
-              <button onClick={() => compartirCodigoWA(usuario.codigo_referido)}
-                className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition">
-                💬 Compartir
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {verificacion?.estado !== 'aprobado' && (
         <a href="/documentos" className={'block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ' + verif.bg + ' ' + verif.border}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">{verif.emoji}</span>
                 <h3 className="font-extrabold text-gray-900">{verif.titulo}</h3>
               </div>
@@ -837,8 +804,7 @@ export default function Perfil() {
             </div>
           </div>
         )}
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📝 Sobre mí</h3>
           {editando ? (
             <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3}
@@ -935,13 +901,16 @@ export default function Perfil() {
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-          <h3 className="font-extrabold text-gray-900 mb-4">🏅 Insignias</h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-extrabold text-gray-900">🏅 Insignias</h3>
+            <span className="text-xs text-gray-400">{badges.length}/{todosLosBadges.length} desbloqueadas</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
             {todosLosBadges.map((badge) => {
               const activo = tieneBadge(badge.tipo);
               return (
-                <div key={badge.tipo} className={'text-center transition ' + (!activo ? 'opacity-30' : '')}>
-                  <div className={'w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-1 mx-auto ' + (activo ? 'bg-gradient-to-r from-blue-50 to-purple-50 shadow-sm' : 'bg-gray-100')}>
+                <div key={badge.tipo} className={'flex-shrink-0 text-center transition w-16 ' + (!activo ? 'opacity-25' : '')}>
+                  <div className={'w-12 h-12 rounded-2xl flex items-center justify-center text-xl mb-1 mx-auto ' + (activo ? 'bg-gradient-to-r from-blue-50 to-purple-50 shadow-sm border border-purple-100' : 'bg-gray-100')}>
                     {badge.emoji}
                   </div>
                   <p className="text-xs text-gray-500 font-semibold leading-tight">{badge.nombre}</p>
@@ -949,9 +918,6 @@ export default function Perfil() {
               );
             })}
           </div>
-          <p className="text-xs text-gray-400 text-center mt-3">
-            {badges.length} de {todosLosBadges.length} insignias desbloqueadas
-          </p>
         </div>
 
         {reseñas.length > 0 && (
@@ -1079,6 +1045,24 @@ export default function Perfil() {
                 </div>
                 {errorCuenta && <p className="text-xs text-red-500 mt-2">{errorCuenta}</p>}
               </div>
+
+              {usuario?.codigo_referido && (
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="font-bold text-gray-700 text-sm mb-3">🎁 Código de referido</p>
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-purple-200 rounded-xl p-4 mb-3 text-center">
+                    <p className="text-xl font-extrabold text-purple-700 tracking-widest">{usuario.codigo_referido}</p>
+                    <p className="text-xs text-gray-400 mt-1">Compártelo y gana cuando tus referidos completen su primer trabajo</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={copiarCodigo} className={'flex-1 py-2.5 rounded-xl font-bold text-sm transition ' + (copiado ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700')}>
+                      {copiado ? '✅ ¡Copiado!' : '📋 Copiar'}
+                    </button>
+                    <button onClick={() => compartirCodigoWA(usuario.codigo_referido)} className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm">
+                      💬 Compartir
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-100 pt-4">
                 <p className="font-bold text-gray-700 text-sm mb-3">🔐 Seguridad</p>
