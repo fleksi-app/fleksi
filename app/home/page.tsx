@@ -758,3 +758,7 @@ export default function HomeWorker() {
       )}
 
       <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
+      <Nav activo="inicio" />
+    </main>
+  );
+}
