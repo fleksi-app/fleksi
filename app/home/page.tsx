@@ -383,7 +383,7 @@ export default function HomeWorker() {
                 <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
               </div>
             </a>
-                      </div>
+          </div>
         )}
 
         {/* Buscador */}
@@ -393,7 +393,7 @@ export default function HomeWorker() {
             <input
               type="text"
               placeholder="¿Qué necesitas hoy?"
-              value={busqueda}
+                            value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-gray-900 placeholder-gray-400 outline-none focus:border-purple-200 transition text-sm"/>
           </div>
@@ -773,10 +773,8 @@ export default function HomeWorker() {
                           {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
                         </div>
                         {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
-                                    <div className="pb-6"/>
-          </div>
-        </div>
-))}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
