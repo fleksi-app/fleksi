@@ -423,10 +423,10 @@ export default function HomeWorker() {
             <h2 className="font-extrabold text-gray-900">Categorías rápidas</h2>
             <a href="/catalogo" className="text-sm font-bold" style={{color: MORADO}}>Ver todas</a>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {categoriasDatos.slice(0, 8).map((cat) => (
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{scrollbarWidth: 'none'}}>
+            {categoriasDatos.map((cat) => (
               <a key={cat.id} href={'/catalogo?categoria=' + cat.id}
-                className="flex flex-col items-center gap-2 p-3 bg-white rounded-2xl border-2 transition shadow-sm active:scale-95"
+                className="flex-shrink-0 flex flex-col items-center gap-2 p-3 bg-white rounded-2xl border-2 transition shadow-sm active:scale-95 w-20"
                 style={{borderColor: '#F1F5F9'}}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background: '#F5F0FF'}}>
                   {cat.icon}
@@ -434,6 +434,12 @@ export default function HomeWorker() {
                 <span className="text-xs font-semibold text-center leading-tight text-gray-500">{cat.label}</span>
               </a>
             ))}
+            <a href="/catalogo" className="flex-shrink-0 flex flex-col items-center gap-2 p-3 bg-white rounded-2xl border-2 transition shadow-sm active:scale-95 w-20" style={{borderColor: '#F1F5F9'}}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background: '#F5F0FF'}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+              </div>
+              <span className="text-xs font-semibold text-center leading-tight text-gray-500">Ver más</span>
+            </a>
           </div>
         </div>
 
