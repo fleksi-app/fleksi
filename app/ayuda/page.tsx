@@ -3,101 +3,294 @@ import { useState } from 'react';
 import Nav from '@/lib/nav';
 
 const MORADO = '#7B2FE0';
-const SOPORTE_EMAIL = 'proveo.dc@gmail.com';
-const SOPORTE_WA = 'https://wa.me/5215538850129?text=Hola%20Fleksi%2C%20necesito%20ayuda';
 
-export default function AyudaPage() {
-  const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [error, setError] = useState('');
+const guias = {
+  flekser: [
+    {
+      id: 'registro',
+      titulo: '1. Crea tu perfil Flekser',
+      emoji: '👤',
+      pasos: [
+        { icono: '📸', texto: 'Sube una foto profesional — fleksers con foto reciben 5x más solicitudes.' },
+        { icono: '🛠️', texto: 'Agrega tus habilidades (limpieza, mecánica, plomería, etc.).' },
+        { icono: '📝', texto: 'Escribe una descripción corta de ti y tu experiencia.' },
+        { icono: '📍', texto: 'Confirma tu ciudad para aparecer en búsquedas locales.' },
+        { icono: '🪪', texto: 'Verifica tu identidad para generar confianza y aparecer primero.' },
+      ],
+      tip: 'Los fleksers con perfil al 100% aparecen primero en el catálogo y reciben más solicitudes.'
+    },
+    {
+      id: 'trabajos',
+      titulo: '2. Encuentra y aplica a trabajos',
+      emoji: '🔍',
+      pasos: [
+        { icono: '🏠', texto: 'En el Home verás trabajos disponibles en tu ciudad.' },
+        { icono: '🔎', texto: 'Usa el buscador para encontrar trabajos por palabra clave.' },
+        { icono: '👆', texto: 'Toca un trabajo para ver todos los detalles.' },
+        { icono: '✋', texto: 'Toca "Aplicar" y propón tu precio u horario.' },
+        { icono: '⏳', texto: 'Espera a que el cliente acepte tu propuesta.' },
+      ],
+      tip: 'Sé el primero en aplicar — los clientes suelen contratar a los primeros fleksers que responden.'
+    },
+    {
+      id: 'checkin',
+      titulo: '3. Realiza el trabajo',
+      emoji: '✅',
+      pasos: [
+        { icono: '📍', texto: 'Cuando llegues, haz Check-in desde la app para registrar tu llegada.' },
+        { icono: '🤝', texto: 'Realiza el trabajo acordado con el cliente.' },
+        { icono: '📷', texto: 'Toma fotos del resultado (antes y después si es posible).' },
+        { icono: '✅', texto: 'Haz Check-out al terminar para registrar la finalización.' },
+        { icono: '⭐', texto: 'El cliente calificará tu trabajo — ¡sé puntual y profesional!' },
+      ],
+      tip: 'Las fotos de tu trabajo se agregan automáticamente a tu portafolio y atraen más clientes.'
+    },
+    {
+      id: 'pago',
+      titulo: '4. Recibe tu pago',
+      emoji: '💰',
+      pasos: [
+        { icono: '⏱️', texto: 'El pago se libera automáticamente 24 horas después de completar el trabajo.' },
+        { icono: '💳', texto: 'El dinero llega a tu Wallet dentro de la app.' },
+        { icono: '🏦', texto: 'Solicita un retiro a tu CLABE interbancaria desde la sección Wallet.' },
+        { icono: '📅', texto: 'Los retiros tardan 1-3 días hábiles en llegar a tu cuenta.' },
+        { icono: '📊', texto: 'Revisa tu historial de ganancias en Wallet → Saldo.' },
+      ],
+      tip: 'Fleksi retiene el 10% como comisión de plataforma. El 90% es tuyo.'
+    },
+    {
+      id: 'crecer',
+      titulo: '5. Crece en Fleksi',
+      emoji: '🚀',
+      pasos: [
+        { icono: '⭐', texto: 'Mantén una calificación alta para aparecer primero en búsquedas.' },
+        { icono: '🏅', texto: 'Desbloquea insignias completando trabajos y verificando tu identidad.' },
+        { icono: '📸', texto: 'Agrega fotos a tu portafolio después de cada trabajo.' },
+        { icono: '🎁', texto: 'Comparte tu código de referido y gana bonos por cada amigo que se registre.' },
+        { icono: '🌆', texto: 'Expande a más ciudades — activa tu modo Viajero si trabajas fuera de tu ciudad.' },
+      ],
+      tip: 'Los mejores fleksers completan su perfil al 100%, verifican su identidad y responden rápido.'
+    },
+  ],
+  empresa: [
+    {
+      id: 'publicar',
+      titulo: '1. Publica una solicitud',
+      emoji: '📋',
+      pasos: [
+        { icono: '➕', texto: 'Toca el botón "Publicar" en el menú inferior.' },
+        { icono: '🏷️', texto: 'Selecciona la categoría del servicio que necesitas.' },
+        { icono: '📝', texto: 'Describe con detalle qué necesitas, cuándo y dónde.' },
+        { icono: '💵', texto: 'Define un presupuesto aproximado — esto atrae mejores candidatos.' },
+        { icono: '🔴', texto: 'Si es urgente, actívalo — recibirás propuestas en minutos.' },
+      ],
+      tip: 'Las solicitudes con descripción detallada y presupuesto definido reciben 3x más propuestas.'
+    },
+    {
+      id: 'seleccionar',
+      titulo: '2. Selecciona al mejor Flekser',
+      emoji: '👥',
+      pasos: [
+        { icono: '📱', texto: 'Recibirás notificaciones cuando Fleksers apliquen a tu solicitud.' },
+        { icono: '👤', texto: 'Revisa el perfil, calificación y portafolio de cada candidato.' },
+        { icono: '✅', texto: 'Acepta la propuesta del flekser que más te convenza.' },
+        { icono: '💬', texto: 'Usa el chat dentro de la app para coordinar detalles.' },
+        { icono: '❌', texto: 'Puedes rechazar propuestas sin penalización si ninguna te convence.' },
+      ],
+      tip: 'Revisa el portafolio y las reseñas de cada flekser antes de aceptar.'
+    },
+    {
+      id: 'servicio',
+      titulo: '3. Coordina el servicio',
+      emoji: '🤝',
+      pasos: [
+        { icono: '📍', texto: 'El flekser hará Check-in cuando llegue — verás la notificación.' },
+        { icono: '💬', texto: 'Comunícate por el chat de la app si necesitas algo.' },
+        { icono: '✅', texto: 'Al terminar, el flekser hará Check-out.' },
+        { icono: '👀', texto: 'Revisa el trabajo realizado y las fotos del resultado.' },
+        { icono: '✓', texto: 'Confirma la finalización para liberar el pago.' },
+      ],
+      tip: 'Si no confirmas en 24 horas, el pago se libera automáticamente para proteger al flekser.'
+    },
+    {
+      id: 'pago_empresa',
+      titulo: '4. Pagos y comisiones',
+      emoji: '💳',
+      pasos: [
+        { icono: '💵', texto: 'Pagas el precio acordado más un 15% de comisión de plataforma.' },
+        { icono: '🔒', texto: 'El pago queda retenido hasta confirmar la finalización del trabajo.' },
+        { icono: '💳', texto: 'Acepta tarjeta de crédito/débito o saldo de tu Wallet.' },
+        { icono: '🧾', texto: 'Descarga tu historial de pagos desde Wallet → Saldo.' },
+        { icono: '↩️', texto: 'Si hay un problema, puedes abrir una disputa dentro de 24 horas.' },
+      ],
+      tip: 'Fleksi actúa solo como intermediario. La comisión del 15% cubre el servicio de la plataforma.'
+    },
+    {
+      id: 'calificar',
+      titulo: '5. Califica y vuelve a contratar',
+      emoji: '⭐',
+      pasos: [
+        { icono: '⭐', texto: 'Califica al flekser honestamente — ayuda a otros clientes a elegir bien.' },
+        { icono: '💬', texto: 'Deja un comentario sobre tu experiencia.' },
+        { icono: '❤️', texto: 'Si quedaste satisfecho, guarda al flekser como favorito.' },
+        { icono: '🔄', texto: 'Puedes volver a contratarlo directamente desde su perfil.' },
+        { icono: '📢', texto: 'Comparte Fleksi con otros — crece la comunidad y hay más opciones.' },
+      ],
+      tip: 'Los fleksers bien calificados se esfuerzan más. Tu calificación importa para toda la comunidad.'
+    },
+  ]
+};
 
-  const enviarCorreo = async () => {
-    if (!nombre.trim() || !email.trim() || !mensaje.trim()) { setError('Por favor llena todos los campos.'); return; }
-    setEnviando(true); setError('');
-    try {
-      const res = await fetch('/api/ayuda', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, email, mensaje }),
-      });
-      if (res.ok) { setEnviado(true); setNombre(''); setEmail(''); setMensaje(''); }
-      else setError('No se pudo enviar. Intenta por WhatsApp.');
-    } catch { setError('No se pudo enviar. Intenta por WhatsApp.'); }
-    finally { setEnviando(false); }
-  };
+const faqs = [
+  { p: '¿Es seguro contratar por Fleksi?', r: 'Sí. Los Fleksers verifican su identidad con documentos oficiales. Además, el pago queda retenido hasta confirmar que el trabajo fue completado correctamente.' },
+  { p: '¿Qué pasa si el trabajo no quedó bien?', r: 'Tienes 24 horas para abrir una disputa desde que el trabajo fue marcado como completado. Fleksi actuará como intermediario para resolver el problema.' },
+  { p: '¿Cuánto cobra Fleksi?', r: 'Fleksi cobra un 15% adicional al cliente sobre el precio del servicio, y retiene un 10% del pago al Flekser. El margen total de la plataforma es del 25%.' },
+  { p: '¿Cuándo recibo mi pago como Flekser?', r: 'El pago se libera automáticamente 24 horas después de que el cliente confirme la finalización. Luego puedes solicitar un retiro a tu CLABE en 1-3 días hábiles.' },
+  { p: '¿Puedo cancelar una solicitud?', r: 'Sí. Puedes cancelar antes de que alguien sea aceptado sin penalización. Si ya hay un flekser aceptado, se recomienda coordinarlo directamente por chat.' },
+  { p: '¿Qué es la verificación de identidad?', r: 'Es un proceso donde subes tu INE, CURP y comprobante de domicilio. Nuestro equipo los revisa en 1-3 días. Los perfiles verificados generan más confianza y aparecen primero.' },
+  { p: '¿Puedo ser Flekser y Empresa al mismo tiempo?', r: 'Sí. Puedes cambiar de modo en el menú de la app. Como Flekser ofreces servicios; como Empresa los contratas.' },
+  { p: '¿Cómo funciona el código de referido?', r: 'Comparte tu código y cuando alguien se registre y complete su primer trabajo, recibes un bono en tu Wallet automáticamente.' },
+];
+
+export default function Ayuda() {
+  const [seccion, setSeccion] = useState<'flekser' | 'empresa'>('flekser');
+  const [guiaAbierta, setGuiaAbierta] = useState<string | null>(null);
+  const [faqAbierta, setFaqAbierta] = useState<number | null>(null);
 
   return (
     <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>
-      <div className="bg-white px-5 pt-12 pb-4 shadow-sm border-b border-gray-100">
-        <div className="max-w-md mx-auto flex items-center gap-4">
-          <button onClick={() => window.history.back()} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">←</button>
-          <h1 className="font-extrabold text-gray-900 text-lg">Ayuda y soporte</h1>
+      <div className="bg-white px-6 pt-12 pb-4 shadow-sm border-b border-gray-100">
+        <div className="max-w-md mx-auto">
+          <a href="/" className="text-gray-400 text-sm">← Volver</a>
+          <h1 className="font-extrabold text-gray-900 text-xl mt-2">❓ Ayuda y soporte</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Aprende a sacarle el máximo a Fleksi</p>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-5 py-5 flex flex-col gap-4">
+      <div className="max-w-md mx-auto px-6 pt-5">
 
-        {/* WhatsApp */}
-        <a href={SOPORTE_WA} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-4 p-5 bg-green-50 border border-green-200 rounded-2xl hover:opacity-90 transition active:scale-95">
-          <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-          </div>
-          <div className="flex-1">
-            <p className="font-extrabold text-green-800">Escríbenos por WhatsApp</p>
-            <p className="text-green-700 text-sm mt-0.5">Respuesta rápida · Lun–Sáb 9am–7pm</p>
-          </div>
-          <span className="text-green-600 font-bold">→</span>
-        </a>
+        {/* Selector */}
+        <div className="flex bg-gray-100 rounded-2xl p-1 mb-6">
+          <button onClick={() => setSeccion('flekser')}
+            className="flex-1 py-3 rounded-xl font-bold text-sm transition"
+            style={{background: seccion === 'flekser' ? MORADO : 'transparent', color: seccion === 'flekser' ? 'white' : '#6B7280'}}>
+            💼 Soy Flekser
+          </button>
+          <button onClick={() => setSeccion('empresa')}
+            className="flex-1 py-3 rounded-xl font-bold text-sm transition"
+            style={{background: seccion === 'empresa' ? MORADO : 'transparent', color: seccion === 'empresa' ? 'white' : '#6B7280'}}>
+            🏢 Soy Empresa
+          </button>
+        </div>
 
-        {/* Formulario de correo */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h2 className="font-extrabold text-gray-900 mb-1">Envíanos un mensaje</h2>
-          <p className="text-gray-400 text-xs mb-4">Te responderemos en menos de 24 horas</p>
-
-          {enviado ? (
-            <div className="text-center py-6">
-              <p className="text-4xl mb-3">✅</p>
-              <p className="font-extrabold text-gray-900 mb-1">¡Mensaje enviado!</p>
-              <p className="text-gray-400 text-sm">Te responderemos pronto.</p>
-              <button onClick={() => setEnviado(false)} className="mt-4 text-sm font-bold" style={{color: MORADO}}>Enviar otro mensaje</button>
-            </div>
+        {/* Banner intro */}
+        <div className="rounded-2xl p-5 mb-5 text-white" style={{background: MORADO}}>
+          {seccion === 'flekser' ? (
+            <>
+              <p className="font-extrabold text-lg mb-1">Gana dinero con tus habilidades 💪</p>
+              <p className="text-white/80 text-sm">Sigue estas guías paso a paso para empezar a recibir trabajos y generar ingresos desde hoy.</p>
+            </>
           ) : (
-            <div className="flex flex-col gap-3">
-              {error && <p className="text-red-500 text-xs font-semibold bg-red-50 p-3 rounded-xl">{error}</p>}
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Tu nombre</label>
-                <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Fernando Nájera"
-                  className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm transition bg-gray-50"/>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Tu correo</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@correo.com"
-                  className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm transition bg-gray-50"/>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">¿En qué podemos ayudarte?</label>
-                <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} rows={4}
-                  placeholder="Describe tu problema o pregunta..."
-                  className="w-full p-3.5 rounded-xl border-2 border-gray-100 focus:border-purple-300 outline-none text-gray-900 text-sm transition bg-gray-50 resize-none"/>
-              </div>
-              <button onClick={enviarCorreo} disabled={enviando}
-                className="w-full py-4 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
-                {enviando ? 'Enviando...' : '✉️ Enviar mensaje'}
-              </button>
-            </div>
+            <>
+              <p className="font-extrabold text-lg mb-1">Encuentra ayuda de confianza 🤝</p>
+              <p className="text-white/80 text-sm">Aprende a publicar solicitudes, seleccionar fleksers y gestionar tus servicios fácilmente.</p>
+            </>
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400">Fleksi · Irapuato, Guanajuato · México</p>
-      </div>
+        {/* Guías paso a paso */}
+        <h2 className="font-extrabold text-gray-900 mb-3">📖 Guías paso a paso</h2>
+        <div className="flex flex-col gap-3 mb-6">
+          {guias[seccion].map((guia) => (
+            <div key={guia.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <button
+                onClick={() => setGuiaAbierta(guiaAbierta === guia.id ? null : guia.id)}
+                className="w-full flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{guia.emoji}</span>
+                  <p className="font-extrabold text-gray-900 text-sm text-left">{guia.titulo}</p>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5"
+                  style={{transform: guiaAbierta === guia.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s'}}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
 
-      <Nav activo="" />
+              {guiaAbierta === guia.id && (
+                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                  <div className="flex flex-col gap-3 mb-4">
+                    {guia.pasos.map((paso, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style={{background: '#F5F0FF'}}>
+                          {paso.icono}
+                        </div>
+                        <div className="flex-1 pt-1">
+                          <p className="text-sm text-gray-700 leading-relaxed">{paso.texto}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-xl p-3" style={{background: '#F5F0FF'}}>
+                    <p className="text-xs font-bold mb-0.5" style={{color: MORADO}}>💡 Tip</p>
+                    <p className="text-xs leading-relaxed" style={{color: '#6D28D9'}}>{guia.tip}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <h2 className="font-extrabold text-gray-900 mb-3">🙋 Preguntas frecuentes</h2>
+        <div className="flex flex-col gap-2 mb-6">
+          {faqs.map((faq, i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <button
+                onClick={() => setFaqAbierta(faqAbierta === i ? null : i)}
+                className="w-full flex items-center justify-between p-4 text-left">
+                <p className="font-semibold text-gray-900 text-sm pr-4">{faq.p}</p>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" className="flex-shrink-0"
+                  style={{transform: faqAbierta === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s'}}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+              {faqAbierta === i && (
+                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                  <p className="text-sm text-gray-600 leading-relaxed">{faq.r}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Contacto */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+          <h3 className="font-extrabold text-gray-900 mb-1">¿Sigues con dudas?</h3>
+          <p className="text-gray-400 text-sm mb-4">Contáctanos y te ayudamos directamente.</p>
+          <div className="flex flex-col gap-2">
+            <a href="https://wa.me/524771234567" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-100 hover:opacity-90 transition">
+              <span className="text-xl">💬</span>
+              <div>
+                <p className="font-bold text-green-700 text-sm">WhatsApp</p>
+                <p className="text-xs text-green-600">Respuesta en minutos</p>
+              </div>
+              <span className="ml-auto text-green-500 font-bold">→</span>
+            </a>
+            <a href="mailto:soporte@fleksiapp.com"
+              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:opacity-90 transition">
+              <span className="text-xl">✉️</span>
+              <div>
+                <p className="font-bold text-gray-700 text-sm">Email</p>
+                <p className="text-xs text-gray-400">soporte@fleksiapp.com</p>
+              </div>
+              <span className="ml-auto text-gray-400 font-bold">→</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+      <Nav activo="inicio" />
     </main>
   );
 }
