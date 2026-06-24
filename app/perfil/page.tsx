@@ -739,72 +739,23 @@ export default function Perfil() {
           )}
         </div>
 
-        <a href="/earnings"
-          className="flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-sm mb-3 hover:opacity-90 transition">
-          <div>
-            <p className="text-white/80 text-xs font-semibold mb-0.5">Total ganado</p>
-            <p className="text-white font-extrabold text-2xl">${totalGanado.toLocaleString()} <span className="text-lg font-normal">MXN</span></p>
-            <p className="text-white/70 text-xs mt-0.5">{usuario?.trabajos_completados || 0} trabajos completados</p>
-          </div>
-          <div className="text-right">
-            <span className="text-4xl">💰</span>
-            <p className="text-white text-xs font-bold mt-1">Ver historial →</p>
-          </div>
-        </a>
 
-        <a href="/wallet"
-          className="flex items-center justify-between bg-gradient-to-r from-teal-500 to-cyan-600 rounded-2xl p-5 shadow-sm mb-4 hover:opacity-90 transition">
-          <div>
-            <p className="text-white/80 text-xs font-semibold mb-0.5">💳 Fleksi Wallet</p>
-            <p className="text-white font-extrabold text-2xl">${walletSaldo.toFixed(2)} <span className="text-lg font-normal">MXN</span></p>
-            <p className="text-white/70 text-xs mt-0.5">Saldo disponible para retirar</p>
-          </div>
-          <div className="text-right">
-            <span className="text-4xl">🏦</span>
-            <p className="text-white text-xs font-bold mt-1">Ver wallet →</p>
-          </div>
-        </a>
 
 
 
         {verificacion?.estado !== 'aprobado' && (
-        <a href="/documentos" className={'block rounded-2xl p-5 shadow-sm border mb-4 transition hover:opacity-90 ' + verif.bg + ' ' + verif.border}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">{verif.emoji}</span>
-                <h3 className="font-extrabold text-gray-900">{verif.titulo}</h3>
-              </div>
-              <p className="text-xs text-gray-500 ml-7">{verif.texto}</p>
-            </div>
-            <span className={'flex-shrink-0 ml-3 px-3 py-2 rounded-xl text-xs font-bold ' + verif.botonColor}>
-              {verif.boton} →
-            </span>
-          </div>
-        </a>
+        <a href="/documentos" className={'flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm border mb-4 transition hover:opacity-90 ' + verif.bg + ' ' + verif.border}>
+          <span className="text-lg flex-shrink-0">{verif.emoji}</span>
+          <p className="text-sm font-bold text-gray-900 flex-1">{verif.titulo}</p>
+          <span className={'flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold ' + verif.botonColor}>{verif.boton} →</span>
+                  </a>
         )}
 
-        {tieneBadge('confianza_maxima') && (
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
-            <span className="text-3xl">🛡️</span>
-            <div>
-              <p className="font-extrabold text-indigo-700 text-sm">¡Confianza máxima!</p>
-              <p className="text-xs text-indigo-500">Tus antecedentes no penales fueron verificados. Los clientes confían más en ti.</p>
-            </div>
-          </div>
-        )}
 
-        {ciudadesVisitadas.length > 0 && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <h3 className="font-extrabold text-gray-900 mb-3">🗺️ Ciudades donde has trabajado</h3>
-            <div className="flex flex-wrap gap-2">
-              {ciudadesVisitadas.map((c, i) => (
-                <span key={i} className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-600">📍 {c}</span>
-              ))}
-            </div>
-          </div>
-        )}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+
+
+
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">📝 Sobre mí</h3>
           {editando ? (
             <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3}
@@ -920,27 +871,7 @@ export default function Perfil() {
           </div>
         </div>
 
-        {reseñas.length > 0 && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <h3 className="font-extrabold text-gray-900 mb-4">💬 Reseñas recientes</h3>
-            <div className="flex flex-col gap-3">
-              {reseñas.map((r) => (
-                <div key={r.id} className="bg-gray-50 rounded-xl p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{r.usuarios?.nombre?.charAt(0) || '?'}</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-900">{r.usuarios?.nombre || 'Cliente'}</p>
-                      <p className="text-xs text-yellow-500">{'⭐'.repeat(r.estrellas)}</p>
-                    </div>
-                  </div>
-                  {r.comentario && <p className="text-sm text-gray-600 italic">"{r.comentario}"</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
           <h3 className="font-extrabold text-gray-900 mb-3">🛠️ Mis habilidades</h3>
