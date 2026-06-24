@@ -776,6 +776,14 @@ export default function HomeWorker() {
                                     <div className="pb-6"/>
           </div>
         </div>
+))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="pb-6"/>
+          </div>
+        </div>
       )}
 
       <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
