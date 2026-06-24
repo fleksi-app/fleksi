@@ -91,7 +91,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes' | 'historial'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes' | 'historial' | 'perfiles'>('dashboard');
 
   // ── HISTORIAL ──
   const [historial, setHistorial] = useState<any[]>([]);
@@ -167,6 +167,13 @@ export default function Admin() {
   const [marcandoLeida, setMarcandoLeida] = useState<string | null>(null);
 
   const [habilidadesPersonalizadas, setHabilidadesPersonalizadas] = useState<{ texto: string; count: number; fleksers: any[] }[]>([]);
+  const [perfilesList, setPerfilesList] = useState<any[]>([]);
+  const [cargandoPerfiles, setCargandoPerfiles] = useState(false);
+  const [perfilEditando, setPerfilEditando] = useState<any>(null);
+  const [perfilForm, setPerfilForm] = useState<any>({});
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [exitoPerfil, setExitoPerfil] = useState('');
+  const [busquedaPerfil, setBusquedaPerfil] = useState('');
   const [cargandoHabilidades, setCargandoHabilidades] = useState(false);
 
   const [usuariosWA, setUsuariosWA] = useState<any[]>([]);
@@ -199,6 +206,38 @@ export default function Admin() {
   useEffect(() => { if (tab === 'habilidades') cargarHabilidadesPersonalizadas(); }, [tab]);
   useEffect(() => { if (tab === 'solicitudes') cargarSolicitudesActivas(); }, [tab]);
   useEffect(() => { if (tab === 'historial') cargarHistorial(); }, [tab, mesHistorial]);
+  useEffect(() => { if (tab === 'perfiles') cargarPerfiles(); }, [tab]);
+
+  const cargarPerfiles = async () => {
+    setCargandoPerfiles(true);
+    try {
+      const { data } = await supabase
+        .from('usuarios')
+        .select('id, nombre, email, telefono, ciudad, rol, foto_url, descripcion, habilidades, verificado, wallet_saldo, trabajos_completados, calificacion, created_at, intencion, progreso_perfil')
+        .order('created_at', { ascending: false });
+      setPerfilesList(data || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoPerfiles(false); }
+  };
+
+  const guardarPerfilAdmin = async () => {
+    if (!perfilEditando) return;
+    setGuardandoPerfil(true);
+    setExitoPerfil('');
+    try {
+      await supabase.from('usuarios').update({
+        nombre: perfilForm.nombre?.trim(),
+        telefono: perfilForm.telefono?.trim() || null,
+        ciudad: perfilForm.ciudad?.trim() || null,
+        descripcion: perfilForm.descripcion?.trim() || null,
+        rol: perfilForm.rol,
+      }).eq('id', perfilEditando.id);
+      setExitoPerfil('✅ Perfil actualizado');
+      await cargarPerfiles();
+      setTimeout(() => { setExitoPerfil(''); setPerfilEditando(null); }, 2000);
+    } catch (e) { console.error(e); }
+    finally { setGuardandoPerfil(false); }
+  };
 
   const cargarHistorial = async () => {
     setCargandoHistorial(true);
@@ -616,7 +655,7 @@ export default function Admin() {
 
   const abrirModalIntencion = async (tipo: string) => {
     setCargandoModalIntencion(true);
-        setModalIntencion({ visible: true, tipo, lista: [] });
+    setModalIntencion({ visible: true, tipo, lista: [] });
     try {
       let query = supabase.from('usuarios').select('id, nombre, email, telefono, ciudad, foto_url, created_at, rol, intencion');
       if (tipo === 'trabajar') query = query.eq('intencion', 'trabajar');
@@ -625,7 +664,7 @@ export default function Admin() {
       else if (tipo === 'sin_dato') query = query.is('intencion', null);
       const { data } = await query.order('created_at', { ascending: false });
       setModalIntencion({ visible: true, tipo, lista: data || [] });
-    } catch (e) { console.error(e); }
+          } catch (e) { console.error(e); }
     finally { setCargandoModalIntencion(false); }
   };
 
@@ -1235,7 +1274,7 @@ export default function Admin() {
             ) : solicitudesActivas.length === 0 ? (
               <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100"><p className="text-4xl mb-3">🎉</p><p className="font-bold text-gray-900 mb-1">¡Todo en orden!</p><p className="text-gray-400 text-sm">Todas las solicitudes activas tienen Flekser aceptado</p></div>
             ) : (
-                            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
                 {solicitudesActivas.map((svc) => {
                   const expandido = solicitudExpandida === svc.id;
                   const apps = svc.aplicaciones || [];
@@ -1291,7 +1330,7 @@ export default function Admin() {
                     ].join('\n');
                   };
                   const keyCliente = svc.id + '_cliente';
-                  const telCliente = svc.usuarios?.telefono?.replace(/\D/g, '');
+                                    const telCliente = svc.usuarios?.telefono?.replace(/\D/g, '');
 
                   return (
                     <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1853,7 +1892,7 @@ export default function Admin() {
                               )}
                             </div>
                           )}
-                                                  </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -1957,7 +1996,7 @@ export default function Admin() {
                 <h3 className="font-extrabold text-gray-900 mb-4">📣 Enviar mensaje masivo</h3>
                 <div className="mb-4">
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">Segmento</label>
-                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-2">
                     {[{ key: 'todos', label: '👥 Todos' }, { key: 'fleksers', label: '⚡ Fleksers' }, { key: 'empresas', label: '🏢 Empresas' }, { key: 'verificados', label: '✅ Verificados' }].map(s => (
                       <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)} className={'py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ' + (segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300')}>{s.label}</button>
                     ))}
@@ -2406,6 +2445,105 @@ export default function Admin() {
 
       </div>
 
+        {tab === 'perfiles' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-extrabold text-gray-900">👥 Perfiles de usuarios</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Edita nombre, teléfono, ciudad, descripción y rol</p>
+              </div>
+              <button onClick={cargarPerfiles} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl">🔄</button>
+            </div>
+
+            <input type="text" placeholder="Buscar por nombre o email..." value={busquedaPerfil}
+              onChange={e => setBusquedaPerfil(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm mb-4"/>
+
+            {cargandoPerfiles ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {perfilesList
+                  .filter(u => !busquedaPerfil || u.nombre?.toLowerCase().includes(busquedaPerfil.toLowerCase()) || u.email?.toLowerCase().includes(busquedaPerfil.toLowerCase()))
+                  .map(u => (
+                  <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="flex items-center gap-3 p-4">
+                      <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {u.foto_url ? <img src={u.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{u.nombre?.charAt(0) || '?'}</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-extrabold text-gray-900 text-sm truncate">{u.nombre}</p>
+                        <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                        <div className="flex gap-2 mt-0.5 flex-wrap">
+                          <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full capitalize">{u.rol}</span>
+                          {u.verificado && <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">✅</span>}
+                          {u.ciudad && <span className="text-xs text-gray-400">📍 {u.ciudad}</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => { setPerfilEditando(u); setPerfilForm({ nombre: u.nombre || '', telefono: u.telefono || '', ciudad: u.ciudad || '', descripcion: u.descripcion || '', rol: u.rol || 'flekser' }); setExitoPerfil(''); }}
+                        className="flex-shrink-0 text-xs font-bold px-3 py-2 rounded-xl transition" style={{background: '#F5F0FF', color: '#7B2FE0'}}>
+                        ✏️ Editar
+                      </button>
+                    </div>
+
+                    {perfilEditando?.id === u.id && (
+                      <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
+                        {exitoPerfil && <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-xl text-xs font-semibold">{exitoPerfil}</div>}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Nombre</label>
+                            <input value={perfilForm.nombre || ''} onChange={e => setPerfilForm((p: any) => ({...p, nombre: e.target.value}))}
+                              className="w-full p-2.5 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm"/>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Teléfono</label>
+                            <input value={perfilForm.telefono || ''} onChange={e => setPerfilForm((p: any) => ({...p, telefono: e.target.value}))}
+                              className="w-full p-2.5 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm"/>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Ciudad</label>
+                            <input value={perfilForm.ciudad || ''} onChange={e => setPerfilForm((p: any) => ({...p, ciudad: e.target.value}))}
+                              className="w-full p-2.5 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm"/>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Rol</label>
+                            <select value={perfilForm.rol || 'flekser'} onChange={e => setPerfilForm((p: any) => ({...p, rol: e.target.value}))}
+                              className="w-full p-2.5 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm bg-white">
+                              <option value="flekser">Flekser</option>
+                              <option value="empresa">Empresa</option>
+                              <option value="viajero">Viajero</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Descripción</label>
+                          <textarea value={perfilForm.descripcion || ''} onChange={e => setPerfilForm((p: any) => ({...p, descripcion: e.target.value}))}
+                            rows={2} className="w-full p-2.5 rounded-xl border-2 border-gray-200 focus:border-purple-300 outline-none text-gray-900 text-sm resize-none"/>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setPerfilEditando(null)} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm">Cancelar</button>
+                          <button onClick={guardarPerfilAdmin} disabled={guardandoPerfil}
+                            className="flex-1 py-2.5 text-white rounded-xl font-bold text-sm disabled:opacity-50" style={{background: '#7B2FE0'}}>
+                            {guardandoPerfil ? 'Guardando...' : '💾 Guardar'}
+                          </button>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
+                          <p className="text-xs text-gray-400 mb-2">Datos adicionales (solo lectura)</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-sm font-extrabold text-gray-900">{u.trabajos_completados || 0}</p><p className="text-xs text-gray-400">Trabajos</p></div>
+                            <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-sm font-extrabold text-gray-900">{u.calificacion || '5.0'}</p><p className="text-xs text-gray-400">⭐ Cal.</p></div>
+                            <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-sm font-extrabold text-gray-900">${(u.wallet_saldo || 0).toFixed(0)}</p><p className="text-xs text-gray-400">Wallet</p></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       {modalUsuarios.visible && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -2470,8 +2608,8 @@ export default function Admin() {
                     </div>
                     {u.email && <p className="text-xs text-gray-500 mt-1">✉️ {u.email}</p>}
                     {u.telefono && <p className="text-xs text-gray-500">📱 {u.telefono}</p>}
-                    </div>
-                    ))}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -2479,27 +2617,40 @@ export default function Admin() {
       )}
 
       {modalServicios.visible && (() => {
-        const estadoLabel = modalServicios.estado === 'activos' ? '⚡ Servicios activos' : modalServicios.estado === 'completados' ? '✅ Servicios completados' : '❌ Servicios cancelados';
+        const tituloModal = modalServicios.estado === 'activos' ? '⚡ Servicios activos' : modalServicios.estado === 'completados' ? '✅ Servicios completados' : '❌ Servicios cancelados';
+        const categoriaEmoji: Record<string, string> = { hogar: '🔧', limpieza: '🧹', eventos: '🍽️', mudanza: '🚚', ejecutivo: '🚗', interprete: '🗣️', cocina: '🍳', jardineria: '🌿', mecanica: '🔩', cerrajeria: '🔑', estetica: '💅', otro: '✨' };
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })}>
             <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4"/>
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-extrabold text-gray-900 text-lg">{estadoLabel}</h3>
+                <h3 className="font-extrabold text-gray-900 text-lg">{tituloModal}</h3>
                 <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
               </div>
               {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
-              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios</p></div>
+              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios en esta categoría</p></div>
               : (
                 <div className="flex flex-col gap-3">
                   <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
                   {modalServicios.lista.map((s: any) => (
                     <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <p className="font-extrabold text-gray-900 text-sm">{s.titulo}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{s.categoria} · {s.estado}</p>
-                      {s.usuarios?.nombre && <p className="text-xs text-gray-500 mt-1">👤 {s.usuarios.nombre}</p>}
-                      {s.presupuesto > 0 && <p className="text-xs font-bold text-gray-700 mt-0.5">${s.presupuesto.toLocaleString('es-MX')} MXN</p>}
-                      <p className="text-xs text-gray-400 mt-1">{new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-gray-900 text-sm truncate">{s.titulo}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{s.usuarios?.nombre || 'Cliente'} · {new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          </div>
+                        </div>
+                        {s.presupuesto > 0 && <span className="text-xs font-bold text-gray-700 flex-shrink-0">${s.presupuesto.toLocaleString('es-MX')} MXN</span>}
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
+                        {s.fecha && <span>📅 {s.fecha}{s.hora ? ' ' + s.hora.slice(0,5) : ''}</span>}
+                        {s.usuarios?.telefono && <span>📱 {s.usuarios.telefono}</span>}
+                      </div>
+                      {s.completado_at && (
+                        <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      )}
                     </div>
                   ))}
                 </div>
