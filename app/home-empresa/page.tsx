@@ -247,21 +247,21 @@ export default function HomeEmpresa() {
             </div>
             <div className="flex-1 overflow-y-auto py-3">
               {[
-                { href: '/perfil-empresa', icon: '🏢', label: 'Mi empresa' },
-                { href: '/metodos-pago', icon: '💳', label: 'Métodos de pago' },
-                { href: '/wallet', icon: '🔄', label: 'Pagos y reembolsos' },
+                { href: '/perfil', icon: '👤', label: 'Mi perfil' },
+                { href: '/wallet', icon: '💳', label: 'Wallet' },
+                { href: '/verificacion', icon: '🛡️', label: 'Verificación' },
                 { href: '/ayuda', icon: '❓', label: 'Ayuda y soporte' },
                 { href: '/terminos', icon: '📄', label: 'Términos y condiciones' },
-                { href: '/privacidad', icon: '🔒', label: 'Protección de datos' },
+                { href: '/privacidad', icon: '🔒', label: 'Aviso de privacidad' },
               ].map(item => (
                 <a key={item.label} href={item.href} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition" onClick={() => setMostrarMenu(false)}>
                   <span className="text-xl w-6 text-center">{item.icon}</span>
                   <span className="font-semibold text-gray-700 text-sm">{item.label}</span>
                 </a>
               ))}
-              <button onClick={() => setMostrarCambioRol(true)} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition w-full">
-                <span className="text-xl w-6 text-center">🔄</span>
-                <span className="font-semibold text-gray-700 text-sm">Cambiar a modo Flekser</span>
+              <button onClick={() => setMostrarCambioRol(true)} className="flex items-center gap-4 px-6 py-4 hover:bg-purple-50 transition w-full">
+                <span className="text-xl w-6 text-center">⚡</span>
+                <span className="font-semibold text-purple-600 text-sm">Cambiar a modo Flekser</span>
               </button>
               <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }} className="flex items-center gap-4 px-6 py-4 hover:bg-red-50 transition w-full">
                 <span className="text-xl w-6 text-center">🚪</span>

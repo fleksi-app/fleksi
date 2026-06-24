@@ -88,6 +88,8 @@ export default function HomeWorker() {
 
   // Menú hamburguesa
   const [mostrarMenu, setMostrarMenu] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [cambiandoRol, setCambiandoRol] = useState(false);
 
   const [ciudadActiva, setCiudadActiva] = useState('');
   const [ciudadesVisitadas, setCiudadesVisitadas] = useState<string[]>([]);
@@ -131,6 +133,7 @@ export default function HomeWorker() {
       if (perfil) cacheSet('perfil_' + user.id, perfil, TTL.PERFIL);
     }
     setUsuario(perfil);
+    setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
 
     // Cargar wallet y ganado este mes
     setWalletSaldo(perfil?.wallet_saldo || 0);
@@ -202,6 +205,17 @@ export default function HomeWorker() {
         }
       } catch (e) {}
     }
+  };
+
+  const cambiarRol = async (nuevoRol: string) => {
+    if (!usuario || cambiandoRol) return;
+    setCambiandoRol(true);
+    try {
+      const rolesActuales = roles.includes(nuevoRol) ? roles : [...roles, nuevoRol];
+      await supabase.from('usuarios').update({ rol_activo: nuevoRol, roles: rolesActuales }).eq('id', usuario.id);
+      window.location.href = nuevoRol === 'empresa' ? '/home-empresa' : '/home';
+    } catch (e) { console.error(e); }
+    finally { setCambiandoRol(false); }
   };
 
   const guardarUbicacionObligatoria = async () => {
@@ -369,7 +383,7 @@ export default function HomeWorker() {
                 <p className="text-sm font-extrabold" style={{color: '#7B2FE0'}}>${walletSaldo.toFixed(0)} MXN →</p>
               </div>
             </a>
-          </div>
+                      </div>
         )}
 
         {/* Buscador */}
@@ -378,7 +392,7 @@ export default function HomeWorker() {
             <svg className="absolute left-4 top-1/2 -translate-y-1/2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input
               type="text"
-                            placeholder="¿Qué necesitas hoy?"
+              placeholder="¿Qué necesitas hoy?"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-gray-900 placeholder-gray-400 outline-none focus:border-purple-200 transition text-sm"/>
@@ -594,6 +608,14 @@ export default function HomeWorker() {
                   <span className="font-semibold text-gray-700 text-sm">{item.label}</span>
                 </a>
               ))}
+              {roles.includes('empresa') && (
+                <button onClick={() => { setMostrarMenu(false); cambiarRol('empresa'); }}
+                  disabled={cambiandoRol}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-purple-50 transition w-full text-left">
+                  <span className="text-xl w-6 text-center">🏢</span>
+                  <span className="font-semibold text-purple-600 text-sm">{cambiandoRol ? 'Cambiando...' : 'Cambiar a modo Empresa'}</span>
+                </button>
+              )}
               <button
                 onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
                 className="flex items-center gap-4 px-6 py-4 hover:bg-red-50 transition w-full text-left">
@@ -751,13 +773,7 @@ export default function HomeWorker() {
                           {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
                         </div>
                         {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="pb-6"/>
+                                    <div className="pb-6"/>
           </div>
         </div>
       )}
