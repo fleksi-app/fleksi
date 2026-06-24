@@ -917,7 +917,7 @@ export default function Perfil() {
                     <button
                       onClick={() => eliminarFotoPortafolio({ id: item.id, foto_url: item.foto })}
                       disabled={eliminandoFoto === item.id}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
+                      className="absolute top-1.5 right-1.5 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg transition hover:bg-red-600 active:scale-95">
                       {eliminandoFoto === item.id ? '⏳' : '✕'}
                     </button>
                   )}
