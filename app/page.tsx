@@ -129,7 +129,7 @@ export default function Home() {
     if (deferredPrompt) {
       return (
         <button onClick={instalarApp}
-          className="mt-3 w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition">
+          className="mt-3 w-full py-3 px-6 text-white rounded-2xl font-semibold text-base flex items-center justify-center gap-2 hover:opacity-90 transition" style={{background: '#7B2FE0'}}>
           📲 Instalar Fleksi
         </button>
       );
@@ -154,7 +154,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #EDE9FE 100%)' }}>
+      style={{ background: 'linear-gradient(160deg, #F5F0FF 0%, #EDE9FA 50%, #DDD6FE 100%)' }}>
 
       <style>{`
         @keyframes fadeSlideUp {
@@ -188,19 +188,13 @@ export default function Home() {
       <div className="max-w-md w-full flex flex-col items-center">
 
         <div className={`flex flex-col items-center mb-2 ${fase === 'blur' ? 'logo-blur' : 'logo-nitido pulse-logo'}`}>
-          <svg width="96" height="96" viewBox="0 0 32 32" fill="none">
-            <defs>
-              <linearGradient id="lg-splash" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#2563EB"/>
-                <stop offset="100%" stopColor="#7C3AED"/>
-              </linearGradient>
-            </defs>
-            <rect width="32" height="32" rx="10" fill="url(#lg-splash)"/>
-            <rect x="8" y="8" width="16" height="3.5" rx="1.75" fill="white"/>
-            <rect x="8" y="14.25" width="11" height="3.5" rx="1.75" fill="white" opacity="0.85"/>
-            <rect x="8" y="20.5" width="7" height="3.5" rx="1.75" fill="white" opacity="0.65"/>
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="120" height="120" rx="24" fill="white" stroke="#EDE9FA" strokeWidth="2"/>
+            <rect x="22" y="32" width="76" height="16" rx="8" fill="#7B2FE0"/>
+            <rect x="22" y="57" width="55" height="16" rx="8" fill="#7B2FE0"/>
+            <rect x="22" y="82" width="38" height="16" rx="8" fill="#7B2FE0"/>
           </svg>
-          <span className="text-4xl font-extrabold mt-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="text-4xl font-extrabold mt-4" style={{color: '#7B2FE0', letterSpacing: '-1px'}}>
             fleksi
           </span>
         </div>
@@ -220,7 +214,7 @@ export default function Home() {
         {fase === 'boton' && (
           <div className="w-full mt-10 fade-up flex flex-col items-center">
             <a href="/login"
-              className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-xl hover:opacity-90 transition text-center">
+              className="w-full py-4 px-6 text-white rounded-2xl font-bold text-lg shadow-xl hover:opacity-90 transition text-center" style={{background: '#7B2FE0'}}>
               Sí, empezar ✨
             </a>
             <p className="mt-4 text-gray-400 text-sm">
