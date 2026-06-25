@@ -17,6 +17,37 @@ const todosLosBadges = [
   { tipo: 'perfil_completo', nombre: 'Perfil completo', emoji: '🏆' },
 ];
 
+
+// Mapa de habilidades → categorías de publicar
+const habilidadACategoria: Record<string, string> = {
+  '🧹 Limpieza del hogar': 'limpieza',
+  '🌿 Jardinería': 'jardineria',
+  '🎨 Pintura': 'hogar',
+  '🔧 Mantenimiento general': 'hogar',
+  '⚡ Electricidad': 'hogar',
+  '🚿 Plomería': 'hogar',
+  '🚚 Fletes y traslados': 'mudanza',
+  '🪑 Armado de muebles': 'hogar',
+  '🔩 Mecánica básica': 'mecanica',
+  '🔑 Cerrajería': 'cerrajeria',
+  '📺 Instalación TV/repisas/cortinas': 'hogar',
+  '🪵 Carpintería ligera': 'hogar',
+  '📦 Mudanza ligera / Ayudante': 'mudanza',
+  '👔 Planchado / Lavandería': 'lavanderia',
+  '💅 Uñas / Estética': 'estetica',
+  '🎪 Staff para eventos': 'eventos',
+  '🍽️ Mesero': 'eventos',
+  '🍳 Cocinero particular': 'cocina',
+  '🚗 Chofer ejecutivo': 'ejecutivo',
+  '🗣️ Intérprete / Traductor': 'interprete',
+};
+
+function getCategoriasFlekser(habilidades: string[]): string {
+  if (!habilidades || habilidades.length === 0) return '';
+  const cats = [...new Set(habilidades.map(h => habilidadACategoria[h]).filter(Boolean))];
+  return cats.join(',');
+}
+
 export default function PerfilPublico() {
   const params = useParams();
   const id = params?.id as string;
@@ -215,7 +246,7 @@ export default function PerfilPublico() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
             <p className="font-extrabold text-gray-900 text-lg mb-1">¿Quieres contratar a {nombreCorto}?</p>
             <p className="text-gray-400 text-sm mb-4">Publica tu solicitud y {nombreCorto} la recibirá al instante.</p>
-            <a href={'/publicar?para=' + id} className="block w-full py-4 text-white rounded-2xl font-extrabold text-center text-lg hover:opacity-90 transition" style={{background: MORADO}}>🎯 Contratar a {nombreCorto}</a>
+            <a href={'/publicar?para=' + id + (perfil?.habilidades?.length > 0 ? '&categorias=' + getCategoriasFlekser(perfil.habilidades) : '')} className="block w-full py-4 text-white rounded-2xl font-extrabold text-center text-lg hover:opacity-90 transition" style={{background: MORADO}}>🎯 Contratar a {nombreCorto}</a>
             <p className="text-xs text-gray-400 text-center mt-3">El pago queda protegido hasta que confirmes que el trabajo fue completado.</p>
           </div>
         )}
