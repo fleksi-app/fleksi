@@ -24,6 +24,8 @@ export default function HomeEmpresa() {
   const [notificaciones, setNotificaciones] = useState<any[]>([]);
   const [noLeidas, setNoLeidas] = useState(0);
   const [mostrarCambioRol, setMostrarCambioRol] = useState(false);
+  const [mostrarBannerPush, setMostrarBannerPush] = useState(false);
+  const [mostrarBannerAyuda, setMostrarBannerAyuda] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [cambiandoRol, setCambiandoRol] = useState(false);
   const [busquedaCiudad, setBusquedaCiudad] = useState('');
@@ -38,6 +40,9 @@ export default function HomeEmpresa() {
     if (!user) { window.location.href = '/login'; return; }
     const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', user.id).single();
     setUsuario(perfil);
+    const yaVioAyuda = localStorage.getItem('fleksi_ayuda_vista_' + user.id);
+    if (!yaVioAyuda) setMostrarBannerAyuda(true);
+    if ('Notification' in window && Notification.permission === 'default') setMostrarBannerPush(true);
     setRoles(perfil?.roles || [perfil?.rol || 'empresa']);
     const { data: serviciosData } = await supabase
       .from('servicios')
@@ -71,6 +76,20 @@ export default function HomeEmpresa() {
     await supabase.from('notificaciones').update({ leida: true }).eq('usuario_id', usuario.id).eq('leida', false);
     setNoLeidas(0);
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  const activarNotificaciones = async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const permiso = await Notification.requestPermission();
+      if (permiso !== 'granted') { setMostrarBannerPush(false); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!) });
+      await fetch('/api/push', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: user.id, subscription: sub.toJSON() }) });
+      setMostrarBannerPush(false);
+    } catch { setMostrarBannerPush(false); }
   };
 
   const cambiarRol = async (nuevoRol: string) => {

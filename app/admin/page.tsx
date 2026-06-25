@@ -91,7 +91,7 @@ export default function Admin() {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [rechazando, setRechazando] = useState('');
   const [filtro, setFiltro] = useState('en_revision');
-  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes' | 'historial' | 'perfiles'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'acciones' | 'documentos' | 'verificaciones' | 'dispersion' | 'retiros' | 'comunicaciones' | 'trabajos' | 'habilidades' | 'solicitudes' | 'historial' | 'perfiles' | 'valoraciones'>('dashboard');
 
   // ── HISTORIAL ──
   const [historial, setHistorial] = useState<any[]>([]);
@@ -168,6 +168,8 @@ export default function Admin() {
 
   const [habilidadesPersonalizadas, setHabilidadesPersonalizadas] = useState<{ texto: string; count: number; fleksers: any[] }[]>([]);
   const [perfilesList, setPerfilesList] = useState<any[]>([]);
+  const [valoraciones, setValoraciones] = useState<any[]>([]);
+  const [cargandoValoraciones, setCargandoValoraciones] = useState(false);
   const [cargandoPerfiles, setCargandoPerfiles] = useState(false);
   const [perfilEditando, setPerfilEditando] = useState<any>(null);
   const [perfilForm, setPerfilForm] = useState<any>({});
@@ -207,6 +209,20 @@ export default function Admin() {
   useEffect(() => { if (tab === 'solicitudes') cargarSolicitudesActivas(); }, [tab]);
   useEffect(() => { if (tab === 'historial') cargarHistorial(); }, [tab, mesHistorial]);
   useEffect(() => { if (tab === 'perfiles') cargarPerfiles(); }, [tab]);
+  useEffect(() => { if (tab === 'valoraciones') cargarValoraciones(); }, [tab]);
+
+  const cargarValoraciones = async () => {
+    setCargandoValoraciones(true);
+    try {
+      const { data } = await supabase
+        .from('valoraciones_app')
+        .select('*, usuarios(nombre, foto_url, rol)')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      setValoraciones(data || []);
+    } catch (e) { console.error(e); }
+    finally { setCargandoValoraciones(false); }
+  };
 
   const cargarPerfiles = async () => {
     setCargandoPerfiles(true);
@@ -648,7 +664,7 @@ export default function Admin() {
     setModalUsuarios({ visible: true, rol, lista: [] });
     try {
       const { data } = await supabase.from('usuarios').select('id, nombre, email, telefono, ciudad, foto_url, created_at, verificado, rol').eq('rol', rol).order('created_at', { ascending: false });
-      setModalUsuarios({ visible: true, rol, lista: data || [] });
+            setModalUsuarios({ visible: true, rol, lista: data || [] });
     } catch (e) { console.error(e); }
     finally { setCargandoModal(false); }
   };
@@ -664,7 +680,7 @@ export default function Admin() {
       else if (tipo === 'sin_dato') query = query.is('intencion', null);
       const { data } = await query.order('created_at', { ascending: false });
       setModalIntencion({ visible: true, tipo, lista: data || [] });
-          } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); }
     finally { setCargandoModalIntencion(false); }
   };
 
@@ -1258,6 +1274,7 @@ export default function Admin() {
             🏦 Retiros {retiros.filter(r => r.estado === 'pendiente').length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{retiros.filter(r => r.estado === 'pendiente').length}</span>}
           </button>
           <button onClick={() => setTab('perfiles')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'perfiles' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>👥 Perfiles</button>
+          <button onClick={() => setTab('valoraciones')} className={'flex-shrink-0 py-3 px-4 rounded-2xl font-bold text-sm transition ' + (tab === 'valoraciones' ? 'bg-purple-700 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-200')}>⭐ Valoraciones</button>
         </div>
 
         {tab === 'solicitudes' && (
@@ -1313,7 +1330,7 @@ export default function Admin() {
                   }).slice(0, 8);
 
                   // Mensaje al cliente avisando que tiene postulantes
-                  const generarMensajeCliente = () => {
+                                    const generarMensajeCliente = () => {
                     const nombre = svc.usuarios?.nombre?.split(' ')[0] || 'cliente';
                     const count = pendientes.length;
                     const link = 'https://fleksi.vercel.app/aplicaciones';
@@ -1330,7 +1347,7 @@ export default function Admin() {
                     ].join('\n');
                   };
                   const keyCliente = svc.id + '_cliente';
-                                    const telCliente = svc.usuarios?.telefono?.replace(/\D/g, '');
+                  const telCliente = svc.usuarios?.telefono?.replace(/\D/g, '');
 
                   return (
                     <div key={svc.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1979,7 +1996,7 @@ export default function Admin() {
                       <div className="w-8 h-8 rounded-lg bg-purple-700 flex items-center justify-center overflow-hidden">
                         {usuarioSeleccionado.foto_url ? <img src={usuarioSeleccionado.foto_url} className="w-full h-full object-cover"/> : <span className="text-white text-xs font-bold">{usuarioSeleccionado.nombre?.charAt(0)}</span>}
                       </div>
-                      <div><p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p><p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p></div>
+                                            <div><p className="font-bold text-purple-900 text-sm">{usuarioSeleccionado.nombre}</p><p className="text-xs text-purple-600">{usuarioSeleccionado.email}</p></div>
                     </div>
                     <button onClick={() => { setUsuarioSeleccionado(null); setBusquedaUsuario(''); }} className="text-purple-400 hover:text-purple-600 font-bold">✕</button>
                   </div>
@@ -1996,7 +2013,7 @@ export default function Admin() {
                 <h3 className="font-extrabold text-gray-900 mb-4">📣 Enviar mensaje masivo</h3>
                 <div className="mb-4">
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">Segmento</label>
-                                    <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[{ key: 'todos', label: '👥 Todos' }, { key: 'fleksers', label: '⚡ Fleksers' }, { key: 'empresas', label: '🏢 Empresas' }, { key: 'verificados', label: '✅ Verificados' }].map(s => (
                       <button key={s.key} onClick={() => setSegmentoMasivo(s.key as any)} className={'py-2.5 px-3 rounded-xl text-xs font-bold transition border-2 ' + (segmentoMasivo === s.key ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300')}>{s.label}</button>
                     ))}
@@ -2544,6 +2561,60 @@ export default function Admin() {
           </div>
         )}
 
+        {tab === 'valoraciones' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-extrabold text-gray-900">⭐ Valoraciones de la app</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Opiniones de los usuarios sobre Fleksi</p>
+              </div>
+              <button onClick={cargarValoraciones} className="text-xs text-purple-600 font-bold px-3 py-2 bg-purple-50 rounded-xl">🔄</button>
+            </div>
+            {valoraciones.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-2xl font-extrabold text-yellow-500">{(valoraciones.reduce((acc, v) => acc + v.estrellas, 0) / valoraciones.length).toFixed(1)}</p>
+                  <p className="text-xs text-gray-400">Promedio ⭐</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-2xl font-extrabold text-gray-900">{valoraciones.length}</p>
+                  <p className="text-xs text-gray-400">Total</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                  <p className="text-2xl font-extrabold text-green-600">{valoraciones.filter(v => v.estrellas >= 4).length}</p>
+                  <p className="text-xs text-gray-400">Positivas</p>
+                </div>
+              </div>
+            )}
+            {cargandoValoraciones ? (
+              <div className="flex items-center justify-center py-16"><div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+            ) : valoraciones.length === 0 ? (
+              <div className="text-center py-16"><p className="text-3xl mb-2">⭐</p><p className="text-gray-400">Sin valoraciones todavía</p></div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {valoraciones.map(v => (
+                  <div key={v.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-xl bg-purple-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {v.usuarios?.foto_url ? <img src={v.usuarios.foto_url} className="w-full h-full object-cover"/> : <span className="text-white font-bold text-sm">{v.usuarios?.nombre?.charAt(0) || '?'}</span>}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-extrabold text-gray-900 text-sm">{v.usuarios?.nombre || 'Usuario'}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-yellow-500 text-sm">{'⭐'.repeat(v.estrellas)}</span>
+                          <span className="text-xs text-gray-400 capitalize">{v.categoria}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400">{new Date(v.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                    {v.comentario && <p className="text-sm text-gray-600 italic bg-gray-50 rounded-xl p-3">"{v.comentario}"</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       {modalUsuarios.visible && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => setModalUsuarios({ visible: false, rol: '', lista: [] })}>
           <div className="w-full bg-white rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -2627,13 +2698,7 @@ export default function Admin() {
                 <h3 className="font-extrabold text-gray-900 text-lg">{tituloModal}</h3>
                 <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
               </div>
-              {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
-              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios en esta categoría</p></div>
-              : (
-                <div className="flex flex-col gap-3">
-                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
-                  {modalServicios.lista.map((s: any) => (
-                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                  <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-start gap-2 flex-1 min-w-0">
                           <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
