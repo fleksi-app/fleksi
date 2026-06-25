@@ -199,6 +199,25 @@ export default function CheckIn() {
         </div>
       </div>
 
+      {/* Banner perfil incompleto */}
+      {progresoPerfilCheckin < 100 && (
+        <div className="max-w-md mx-auto px-5 pt-4">
+          <a href="/perfil" className="flex items-start gap-3 rounded-2xl p-4 border-2" style={{background: '#FEF3C7', borderColor: '#F59E0B'}}>
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div className="flex-1">
+              <p className="font-extrabold text-amber-900 text-sm mb-1">Tu perfil está incompleto ({progresoPerfilCheckin}%)</p>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                <span className="font-bold">No podrás hacer check-in</span> en futuros trabajos si tu perfil no está completo. Complétalo ahora para no perder contratos.
+              </p>
+              <div className="w-full bg-amber-100 rounded-full h-1.5 mt-2">
+                <div className="h-1.5 rounded-full" style={{width: progresoPerfilCheckin + '%', background: '#F59E0B'}}/>
+              </div>
+              <p className="text-xs font-bold text-amber-700 mt-1.5">Completar perfil →</p>
+            </div>
+          </a>
+        </div>
+      )}
+
       <div className="max-w-md mx-auto px-6 py-4">
         {trabajos.length === 0 ? (
           <div className="text-center py-16">
@@ -287,10 +306,16 @@ export default function CheckIn() {
                           <span className="text-gray-600 font-semibold text-sm">Verificando ubicación...</span>
                         </div>
                       ) : (
-                        <button onClick={() => handleCheckin(app)} disabled={procesando === app.id || !esDia}
-                          className="w-full py-4 text-white rounded-2xl font-extrabold text-lg hover:opacity-90 transition disabled:opacity-50" style={{background: MORADO}}>
-                          {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '📍 Check-in — Llegué'}
-                        </button>
+                        progresoPerfilCheckin < 100 ? (
+                          <a href="/perfil" className="block w-full py-4 text-center font-extrabold text-lg rounded-2xl" style={{background: '#FEF3C7', color: '#92400E'}}>
+                            ⚠️ Completa tu perfil para hacer check-in
+                          </a>
+                        ) : (
+                          <button onClick={() => handleCheckin(app)} disabled={procesando === app.id || !esDia}
+                            className="w-full py-4 text-white rounded-2xl font-extrabold text-lg hover:opacity-90 transition disabled:opacity-50" style={{background: MORADO}}>
+                            {procesando === app.id ? (subiendoFotos ? '📤 Subiendo fotos...' : 'Registrando...') : '📍 Check-in — Llegué'}
+                          </button>
+                        )
                       )}
 
                       {confirmandoCancelar === app.id ? (
@@ -392,4 +417,3 @@ export default function CheckIn() {
     </main>
   );
 }
-OK - banner: True
