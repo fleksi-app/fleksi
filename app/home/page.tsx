@@ -789,4 +789,60 @@ export default function HomeWorker() {
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-extrabold text-gray-900 text-lg">Cambiar ubicación</h3>
-                
+                <p className="text-gray-400 text-xs mt-0.5">Verás trabajos en la ciudad que elijas</p>
+              </div>
+              <button onClick={() => setMostrarSelectorCiudad(false)} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 text-sm">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-4">
+              <div>
+                <label className="text-sm font-extrabold text-gray-900 mb-2 block">Estado</label>
+                <select value={estadoSelectorOpc} onChange={e => { setEstadoSelectorOpc(e.target.value); setCiudadSelectorOpc(''); }}
+                  className="w-full p-3 rounded-2xl border-2 border-gray-200 outline-none text-gray-900 text-sm bg-white">
+                  <option value="">Selecciona...</option>
+                  {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+              {estadoSelectorOpc && (
+                <div>
+                  <label className="text-sm font-extrabold text-gray-900 mb-2 block">Ciudad</label>
+                  <select value={ciudadSelectorOpc} onChange={e => setCiudadSelectorOpc(e.target.value)}
+                    className="w-full p-3 rounded-2xl border-2 border-gray-200 outline-none text-gray-900 text-sm bg-white">
+                    <option value="">Selecciona...</option>
+                    {ciudadesDelEstadoOpc.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={aplicarCiudadOpcional} disabled={guardandoCiudad || !estadoSelectorOpc || !ciudadSelectorOpc}
+                className="w-full py-3 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
+                {guardandoCiudad ? 'Guardando...' : 'Aplicar ubicación'}
+              </button>
+              {ciudadesSugeridas.length > 0 && (
+                <div>
+                  <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades guardadas</p>
+                  <div className="flex flex-col gap-2">
+                    {ciudadesSugeridas.map(c => (
+                      <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
+                        className="flex items-center gap-4 p-4 rounded-2xl border-2 transition"
+                        style={{borderColor: ciudadActiva === c ? MORADO : '#E5E7EB', background: ciudadActiva === c ? '#F5F0FF' : 'white'}}>
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
+                        <div className="flex-1 text-left">
+                          <p className="font-bold text-gray-900">{c}</p>
+                          {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
+                        </div>
+                        {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="pb-6"/>
+          </div>
+        </div>
+      )}
+
+      <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
+      <Nav activo="inicio" />
+    </main>
+  );
+}
