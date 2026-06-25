@@ -4,8 +4,6 @@ import { supabase } from '@/lib/supabase';
 import Nav from '@/lib/nav';
 
 const MORADO = '#7B2FE0';
-
-const MORADO = '#7B2FE0';
 const categoriaIcono: any = {
   hogar: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,
   limpieza: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={MORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l9-9"/><path d="M12.5 8.5L16 5l3 3-7.5 7.5"/><path d="M15 6l1.5-1.5a2.12 2.12 0 013 3L18 9"/></svg>,

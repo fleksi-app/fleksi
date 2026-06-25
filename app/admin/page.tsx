@@ -2717,6 +2717,35 @@ export default function Admin() {
                         <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       )}
                     </div>
+{cargandoModalServicios ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
+                </div>
+              ) : modalServicios.lista.length === 0 ? (
+                <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios</p></div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
+                  {modalServicios.lista.map((s: any) => (
+                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-gray-900 text-sm truncate">{s.titulo}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{s.usuarios?.nombre || 'Cliente'} · {new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          </div>
+                        </div>
+                        {s.presupuesto > 0 && <span className="text-xs font-bold text-gray-700 flex-shrink-0">${s.presupuesto.toLocaleString('es-MX')} MXN</span>}
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500">
+                        {s.fecha && <span>📅 {s.fecha}{s.hora ? ' ' + s.hora.slice(0,5) : ''}</span>}
+                        {s.usuarios?.telefono && <span>📱 {s.usuarios.telefono}</span>}
+                      </div>
+                      {s.completado_at && (
+                        <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
