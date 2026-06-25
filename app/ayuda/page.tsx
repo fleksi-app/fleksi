@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Nav from '@/lib/nav';
+import { supabase } from '@/lib/supabase';
 
 const MORADO = '#7B2FE0';
 
@@ -156,6 +157,13 @@ export default function Ayuda() {
   const [seccion, setSeccion] = useState<'flekser' | 'empresa'>('flekser');
   const [guiaAbierta, setGuiaAbierta] = useState<string | null>(null);
   const [faqAbierta, setFaqAbierta] = useState<number | null>(null);
+
+  // Marcar ayuda como vista al entrar — desaparece el banner del home
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) localStorage.setItem('fleksi_ayuda_vista_' + user.id, '1');
+    });
+  }, []);
 
   return (
     <main className="min-h-screen pb-32" style={{background: '#F8FAFC'}}>

@@ -103,6 +103,7 @@ export default function HomeWorker() {
   const [guardandoCiudad, setGuardandoCiudad] = useState(false);
 
   const [mostrarBannerInstalar, setMostrarBannerInstalar] = useState(false);
+  const [mostrarBannerAyuda, setMostrarBannerAyuda] = useState(false);
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [ganadoMes, setGanadoMes] = useState(0);
   const [esIOS, setEsIOS] = useState(false);
@@ -134,6 +135,9 @@ export default function HomeWorker() {
     }
     setUsuario(perfil);
     setRoles(perfil?.roles || [perfil?.rol || 'flekser']);
+    // Mostrar banner de ayuda si nunca ha visto la guía
+    const yaVioAyuda = localStorage.getItem('fleksi_ayuda_vista_' + user.id);
+    if (!yaVioAyuda) setMostrarBannerAyuda(true);
 
     // Cargar wallet y ganado este mes
     setWalletSaldo(perfil?.wallet_saldo || 0);
@@ -393,8 +397,8 @@ export default function HomeWorker() {
             <input
               type="text"
               placeholder="¿Qué necesitas hoy?"
-                            value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              value={busqueda}
+                            onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-gray-900 placeholder-gray-400 outline-none focus:border-purple-200 transition text-sm"/>
           </div>
         </div>
@@ -427,6 +431,28 @@ export default function HomeWorker() {
             <div className="flex gap-2">
               <button onClick={() => setMostrarBannerPush(false)} className="text-xs text-gray-400 font-semibold">No</button>
               <button onClick={activarNotificaciones} className="text-xs text-white font-bold px-3 py-1.5 rounded-xl" style={{background: MORADO}}>Activar</button>
+            </div>
+          </div>
+        )}
+
+        {/* Banner ayuda para nuevos usuarios */}
+        {mostrarBannerAyuda && (
+          <div className="rounded-2xl p-4 mb-5 border-2 flex items-start gap-3" style={{background: '#F5F0FF', borderColor: '#DDD6FE'}}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style={{background: '#EDE9FA'}}>❓</div>
+            <div className="flex-1">
+              <p className="font-extrabold text-sm mb-0.5" style={{color: '#1A1A2E'}}>¿Primera vez en Fleksi?</p>
+              <p className="text-xs text-gray-500 mb-3">Aprende a usar la app en menos de 5 minutos con nuestras guías.</p>
+              <div className="flex gap-2">
+                <a href="/ayuda" className="flex-1 py-2 text-center text-white rounded-xl font-bold text-xs" style={{background: '#7B2FE0'}}>
+                  Ver guías →
+                </a>
+                <button onClick={() => {
+                  localStorage.setItem('fleksi_ayuda_vista_' + usuario?.id, '1');
+                  setMostrarBannerAyuda(false);
+                }} className="px-4 py-2 rounded-xl font-bold text-xs text-gray-400 bg-white border border-gray-200">
+                  Ver después
+                </button>
+              </div>
             </div>
           </div>
         )}
