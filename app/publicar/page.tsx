@@ -105,9 +105,11 @@ const preguntasPorCategoria: Record<string, { id: string; pregunta: string; plac
   ],
 };
 
+// v2
 function PublicarForm() {
   const searchParams = useSearchParams();
   const paraId = searchParams.get('para');
+  const categoriasPermitidas = (searchParams.get('categorias') || '').split(',').filter(Boolean);
   const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const [paso, setPaso] = useState(1);
@@ -398,7 +400,7 @@ function PublicarForm() {
               <span className="text-gray-400 text-sm">Fecha{fechas.length > 1 ? 's' : ''}</span>
               <span className="font-semibold text-sm text-gray-900 text-right max-w-48">
                 {fechas.length === 1 ? fechas[0] + (hora ? ' ' + hora : '') : fechas.length + ' días seleccionados'}
-                              </span>
+              </span>
             </div>
             {direccion && <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Dirección</span><span className="font-semibold text-sm text-gray-900 text-right max-w-48">{direccion}</span></div>}
             <div className="flex justify-between mb-2"><span className="text-gray-400 text-sm">Precio</span><span className="font-semibold text-sm text-blue-600">Los Fleksers propondrán su precio</span></div>
@@ -408,7 +410,7 @@ function PublicarForm() {
           </div>
           <a href="/aplicaciones" className="block w-full py-4 text-white rounded-2xl font-bold text-lg shadow-sm mb-3" style={{background: '#7B2FE0'}}>Ver propuestas</a>
           <a href={homeUrl} className="block w-full py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-lg hover:border-purple-400 transition">Volver al inicio</a>
-        </div>
+                  </div>
       </main>
     );
   }
@@ -452,8 +454,14 @@ function PublicarForm() {
           <div>
             <h2 className="text-xl font-extrabold text-gray-900 mb-2">¿Qué necesitas?</h2>
             <p className="text-gray-400 mb-6 text-sm">Elige la categoría que mejor describe tu solicitud</p>
+            {categoriasPermitidas.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-3 flex items-start gap-2">
+                <span className="text-lg flex-shrink-0">⚠️</span>
+                <p className="text-xs text-amber-800 leading-relaxed">Este flekser ofrece servicios específicos. Solo puedes solicitar lo que está dentro de sus habilidades.</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
-              {categorias.map((cat) => (
+              {categorias.filter(cat => categoriasPermitidas.length === 0 || categoriasPermitidas.includes(cat.id)).map((cat) => (
                 <button key={cat.id} onClick={() => setCategoriaSeleccionada(cat.id)}
                   className="p-4 rounded-2xl border-2 text-left transition"
                   style={{borderColor: categoriaSeleccionada === cat.id ? '#7B2FE0' : '#F1F5F9', background: categoriaSeleccionada === cat.id ? '#F5F0FF' : 'white'}}>
@@ -798,7 +806,13 @@ function PublicarForm() {
             </button>
           )}
         </div>
-          return (
+      </div>
+    </main>
+  );
+}
+
+export default function Publicar() {
+  return (
     <Suspense fallback={
       <main className="min-h-screen flex items-center justify-center" style={{background: '#F8FAFC'}}>
         <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor: '#7B2FE0', borderTopColor: 'transparent'}}/>
