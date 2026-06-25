@@ -2698,7 +2698,15 @@ export default function Admin() {
                 <h3 className="font-extrabold text-gray-900 text-lg">{tituloModal}</h3>
                 <button onClick={() => setModalServicios({ visible: false, estado: '', lista: [] })} className="text-gray-400 text-xl font-bold">✕</button>
               </div>
-                                  <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              {cargandoModalServicios ? (
+                <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+              ) : modalServicios.lista.length === 0 ? (
+                <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios</p></div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
+                  {modalServicios.lista.map((s: any) => (
+                    <div key={s.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-start gap-2 flex-1 min-w-0">
                           <span className="text-lg flex-shrink-0 mt-0.5">{categoriaEmoji[s.categoria] || '✨'}</span>
@@ -2717,13 +2725,12 @@ export default function Admin() {
                         <p className="text-xs text-green-600 font-semibold mt-1">✓ Completado: {new Date(s.completado_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       )}
                     </div>
-{cargandoModalServicios ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/>
+                  ))}
                 </div>
-              ) : modalServicios.lista.length === 0 ? (
-                <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios</p></div>
-              ) : (
+              )}
+              {cargandoModalServicios ? <div className="flex items-center justify-center py-10"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>
+              : modalServicios.lista.length === 0 ? <div className="text-center py-10"><p className="text-3xl mb-2">📭</p><p className="text-gray-400">Sin servicios en esta categoría</p></div>
+              : (
                 <div className="flex flex-col gap-3">
                   <p className="text-xs text-gray-400 mb-1">{modalServicios.lista.length} servicio{modalServicios.lista.length !== 1 ? 's' : ''}</p>
                   {modalServicios.lista.map((s: any) => (
