@@ -104,6 +104,7 @@ export default function HomeWorker() {
 
   const [mostrarBannerInstalar, setMostrarBannerInstalar] = useState(false);
   const [mostrarBannerAyuda, setMostrarBannerAyuda] = useState(false);
+  const [mostrarPopupValorar, setMostrarPopupValorar] = useState(false);
   const [walletSaldo, setWalletSaldo] = useState(0);
   const [ganadoMes, setGanadoMes] = useState(0);
   const [esIOS, setEsIOS] = useState(false);
@@ -138,6 +139,14 @@ export default function HomeWorker() {
     // Mostrar banner de ayuda si nunca ha visto la guía
     const yaVioAyuda = localStorage.getItem('fleksi_ayuda_vista_' + user.id);
     if (!yaVioAyuda) setMostrarBannerAyuda(true);
+    // Contar visitas al home y mostrar popup de valoración en la 3era
+    const yaValoro = localStorage.getItem('fleksi_valoro_app_' + user.id);
+    const yaOcultoValorar = localStorage.getItem('fleksi_oculto_valorar_' + user.id);
+    if (!yaValoro && !yaOcultoValorar) {
+      const visitas = parseInt(localStorage.getItem('fleksi_visitas_home_' + user.id) || '0') + 1;
+      localStorage.setItem('fleksi_visitas_home_' + user.id, String(visitas));
+      if (visitas >= 3) setMostrarPopupValorar(true);
+    }
 
     // Cargar wallet y ganado este mes
     setWalletSaldo(perfil?.wallet_saldo || 0);
@@ -389,8 +398,7 @@ export default function HomeWorker() {
             </a>
           </div>
         )}
-
-        {/* Buscador */}
+                {/* Buscador */}
         <div className="max-w-md mx-auto">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -398,7 +406,7 @@ export default function HomeWorker() {
               type="text"
               placeholder="¿Qué necesitas hoy?"
               value={busqueda}
-                            onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => setBusqueda(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 text-gray-900 placeholder-gray-400 outline-none focus:border-purple-200 transition text-sm"/>
           </div>
         </div>
@@ -683,10 +691,10 @@ export default function HomeWorker() {
 
             {/* Footer del menú */}
             <div className="px-6 py-4 border-t border-gray-100">
-              <button className="flex items-center gap-4 w-full hover:opacity-80 transition">
+              <a href="/valorar-app" className="flex items-center gap-4 w-full hover:opacity-80 transition" onClick={() => setMostrarMenu(false)}>
                 <span className="text-xl">⭐</span>
                 <span className="font-semibold text-gray-700 text-sm">Valorar la app</span>
-              </button>
+              </a>
               <p className="text-xs text-gray-400 mt-3">Fleksi v1.0 · Irapuato, Gto.</p>
             </div>
           </div>
@@ -809,40 +817,3 @@ export default function HomeWorker() {
                     className="w-full p-3 rounded-2xl border-2 border-gray-200 outline-none text-gray-900 text-sm bg-white">
                     <option value="">Selecciona...</option>
                     {ciudadesDelEstadoOpc.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              )}
-              <button onClick={aplicarCiudadOpcional} disabled={guardandoCiudad || !estadoSelectorOpc || !ciudadSelectorOpc}
-                className="w-full py-3 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
-                {guardandoCiudad ? 'Guardando...' : 'Aplicar ubicación'}
-              </button>
-              {ciudadesSugeridas.length > 0 && (
-                <div>
-                  <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades guardadas</p>
-                  <div className="flex flex-col gap-2">
-                    {ciudadesSugeridas.map(c => (
-                      <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
-                        className="flex items-center gap-4 p-4 rounded-2xl border-2 transition"
-                        style={{borderColor: ciudadActiva === c ? MORADO : '#E5E7EB', background: ciudadActiva === c ? '#F5F0FF' : 'white'}}>
-                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
-                        <div className="flex-1 text-left">
-                          <p className="font-bold text-gray-900">{c}</p>
-                          {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
-                        </div>
-                        {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="pb-6"/>
-          </div>
-        </div>
-      )}
-
-      <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
-      <Nav activo="inicio" />
-    </main>
-  );
-}
