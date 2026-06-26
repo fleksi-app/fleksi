@@ -817,3 +817,65 @@ export default function HomeWorker() {
                     className="w-full p-3 rounded-2xl border-2 border-gray-200 outline-none text-gray-900 text-sm bg-white">
                     <option value="">Selecciona...</option>
                     {ciudadesDelEstadoOpc.map(c => <option key={c} value={c}>{c}</option>)}
+                    {ciudadesDelEstadoOpc.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={aplicarCiudadOpcional} disabled={guardandoCiudad || !estadoSelectorOpc || !ciudadSelectorOpc}
+                className="w-full py-3 text-white rounded-2xl font-bold text-sm disabled:opacity-50 transition" style={{background: MORADO}}>
+                {guardandoCiudad ? 'Guardando...' : 'Aplicar ubicación'}
+              </button>
+              {ciudadesSugeridas.length > 0 && (
+                <div>
+                  <p className="text-sm font-extrabold text-gray-900 mb-3">📍 Tus ciudades guardadas</p>
+                  <div className="flex flex-col gap-2">
+                    {ciudadesSugeridas.map(c => (
+                      <button key={c} onClick={() => { setCiudadActiva(c); setMostrarSelectorCiudad(false); }}
+                        className="flex items-center gap-4 p-4 rounded-2xl border-2 transition"
+                        style={{borderColor: ciudadActiva === c ? MORADO : '#E5E7EB', background: ciudadActiva === c ? '#F5F0FF' : 'white'}}>
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📍</div>
+                        <div className="flex-1 text-left">
+                          <p className="font-bold text-gray-900">{c}</p>
+                          {c === (usuario?.ciudad_base || usuario?.ciudad) && <p className="text-xs text-gray-400 mt-0.5">Tu ciudad base</p>}
+                        </div>
+                        {ciudadActiva === c && <span className="text-xs font-bold px-2 py-1 rounded-full" style={{background: '#F5F0FF', color: MORADO}}>Activo</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="pb-6"/>
+          </div>
+        </div>
+      )}
+
+      {/* Popup valorar app */}
+      {mostrarPopupValorar && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={() => { setMostrarPopupValorar(false); localStorage.setItem('fleksi_oculto_valorar_' + usuario?.id, '1'); }}>
+          <div className="w-full bg-white rounded-t-3xl p-6 pb-10" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5"/>
+            <div className="text-center mb-5">
+              <div className="text-5xl mb-3">⭐</div>
+              <h3 className="font-extrabold text-gray-900 text-xl mb-2">¿Cómo va tu experiencia?</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">Tu opinión nos ayuda a mejorar Fleksi para ti y para toda la comunidad.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <a href="/valorar-app" onClick={() => { setMostrarPopupValorar(false); localStorage.setItem('fleksi_valoro_app_' + usuario?.id, '1'); }}
+                className="block w-full py-4 text-white rounded-2xl font-bold text-center text-lg" style={{background: '#7B2FE0'}}>
+                ⭐ Valorar ahora
+              </a>
+              <button onClick={() => { setMostrarPopupValorar(false); localStorage.setItem('fleksi_oculto_valorar_' + usuario?.id, '1'); }}
+                className="w-full py-3 text-gray-400 font-semibold text-sm">
+                Ahora no
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <TourInicial rol={usuario?.rol_activo || usuario?.rol || 'flekser'} />
+      <Nav activo="inicio" />
+    </main>
+  );
+}
